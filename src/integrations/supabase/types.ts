@@ -352,6 +352,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_monthly_income_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          projected_income: number
+          income_so_far: number
+          total_cases: number
+          reported_cases: number
+        }[]
+      }
+      get_weekly_income_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          projected_income: number
+          income_so_far: number
+          total_cases: number
+          reported_cases: number
+        }[]
+      }
     }
     Enums: {
       case_status:

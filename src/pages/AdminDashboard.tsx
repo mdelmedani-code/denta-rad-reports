@@ -18,7 +18,10 @@ import {
   LogOut,
   Users,
   BarChart3,
-  Clock
+  Clock,
+  TrendingUp,
+  DollarSign,
+  Calendar
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +43,13 @@ interface Case {
   };
 }
 
+interface IncomeStats {
+  projected_income: number;
+  income_so_far: number;
+  total_cases: number;
+  reported_cases: number;
+}
+
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
@@ -50,11 +60,14 @@ const AdminDashboard = () => {
   const [urgencyFilter, setUrgencyFilter] = useState("all");
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [reportText, setReportText] = useState("");
+  const [weeklyStats, setWeeklyStats] = useState<IncomeStats | null>(null);
+  const [monthlyStats, setMonthlyStats] = useState<IncomeStats | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchCases();
+    fetchIncomeStats();
   }, []);
 
   useEffect(() => {
@@ -84,6 +97,30 @@ const AdminDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchIncomeStats = async () => {
+    try {
+      // Fetch weekly stats
+      const { data: weeklyData, error: weeklyError } = await supabase
+        .rpc('get_weekly_income_stats');
+      
+      if (weeklyError) throw weeklyError;
+      setWeeklyStats(weeklyData?.[0] || null);
+
+      // Fetch monthly stats
+      const { data: monthlyData, error: monthlyError } = await supabase
+        .rpc('get_monthly_income_stats');
+      
+      if (monthlyError) throw monthlyError;
+      setMonthlyStats(monthlyData?.[0] || null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load income stats: " + error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -124,6 +161,7 @@ const AdminDashboard = () => {
       });
 
       fetchCases();
+      fetchIncomeStats(); // Refresh income stats when case status changes
     } catch (error: any) {
       toast({
         title: "Error",
@@ -245,6 +283,95 @@ const AdminDashboard = () => {
                 <div className="ml-3">
                   <p className="text-sm text-muted-foreground">Urgent</p>
                   <p className="text-2xl font-bold">{stats.urgent}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Income Tracker */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Weekly Income Tracker */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-blue-600" />
+                This Week
+              </CardTitle>
+              <CardDescription>Income tracking for current week</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <TrendingUp className="w-8 h-8 text-green-600" />
+                    <div className="ml-3">
+                      <p className="text-sm text-muted-foreground">Projected Income</p>
+                      <p className="text-2xl font-bold">
+                        £{weeklyStats?.projected_income?.toFixed(2) || '0.00'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {weeklyStats?.total_cases || 0} total cases
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between border-t pt-4">
+                  <div className="flex items-center">
+                    <DollarSign className="w-8 h-8 text-blue-600" />
+                    <div className="ml-3">
+                      <p className="text-sm text-muted-foreground">Income So Far</p>
+                      <p className="text-2xl font-bold">
+                        £{weeklyStats?.income_so_far?.toFixed(2) || '0.00'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {weeklyStats?.reported_cases || 0} completed cases
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Income Tracker */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
+                This Month
+              </CardTitle>
+              <CardDescription>Income tracking for current month</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <TrendingUp className="w-8 h-8 text-green-600" />
+                    <div className="ml-3">
+                      <p className="text-sm text-muted-foreground">Projected Income</p>
+                      <p className="text-2xl font-bold">
+                        £{monthlyStats?.projected_income?.toFixed(2) || '0.00'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {monthlyStats?.total_cases || 0} total cases
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between border-t pt-4">
+                  <div className="flex items-center">
+                    <DollarSign className="w-8 h-8 text-blue-600" />
+                    <div className="ml-3">
+                      <p className="text-sm text-muted-foreground">Income So Far</p>
+                      <p className="text-2xl font-bold">
+                        £{monthlyStats?.income_so_far?.toFixed(2) || '0.00'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {monthlyStats?.reported_cases || 0} completed cases
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
