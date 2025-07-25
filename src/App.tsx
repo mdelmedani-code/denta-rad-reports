@@ -36,11 +36,7 @@ const App = () => (
             />
             <Route 
               path="/upload-case" 
-              element={
-                <ProtectedRoute requiredRole="clinic">
-                  <UploadCase />
-                </ProtectedRoute>
-              } 
+              element={<UploadCase />}
             />
             <Route 
               path="/admin" 
