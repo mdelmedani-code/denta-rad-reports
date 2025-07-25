@@ -68,6 +68,19 @@ const Hero = () => {
               Register for Access
             </Button>
           </div>
+          
+          {/* Clinic Login */}
+          <div className="mt-8 pt-8 border-t border-white/20">
+            <p className="text-white/70 mb-4">Existing clinic? Access your secure portal</p>
+            <Button 
+              variant="secondary" 
+              size="lg" 
+              className="bg-white/90 text-navy hover:bg-white"
+              onClick={() => window.location.href = '/login'}
+            >
+              Clinic Login
+            </Button>
+          </div>
         </div>
       </div>
     </section>
