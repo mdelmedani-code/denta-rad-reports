@@ -27,6 +27,8 @@ const ADDON_PRICES = {
   implant_planning: 125,
   orthodontic_analysis: 85,
   pathology_screening: 60,
+  ian_nerve_tracing_left: 50,
+  ian_nerve_tracing_right: 50,
 };
 
 const UploadCase = () => {
@@ -39,7 +41,7 @@ const UploadCase = () => {
     patientInternalId: "",
     patientDob: "",
     clinicalQuestion: "",
-    fieldOfView: "small" as "small" | "large",
+    fieldOfView: "up_to_5x5" as "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8",
     urgency: "standard" as "standard" | "urgent",
     addons: [] as string[],
   });
@@ -48,10 +50,17 @@ const UploadCase = () => {
   const [uploading, setUploading] = useState(false);
 
   const calculatePricing = (): PricingBreakdown => {
-    const basePrice = 150;
-    const fovSurcharge = formData.fieldOfView === "large" ? 100 : 0;
-    const subtotal = basePrice + fovSurcharge;
-    const urgencySurcharge = formData.urgency === "urgent" ? subtotal * 0.5 : 0;
+    const basePrices = {
+      up_to_5x5: 125,
+      up_to_8x5: 145,
+      up_to_8x8: 165,
+      over_8x8: 185,
+    };
+    
+    const basePrice = basePrices[formData.fieldOfView];
+    const fovSurcharge = 0; // Price is already included in base price
+    const subtotal = basePrice;
+    const urgencySurcharge = formData.urgency === "urgent" ? 50 : 0;
     
     const addons = formData.addons.map(addon => ({
       name: addon.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
@@ -241,9 +250,9 @@ const UploadCase = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="fieldOfView">Field of View *</Label>
-                      <Select 
+                       <Select 
                         value={formData.fieldOfView} 
-                        onValueChange={(value: "small" | "large") => 
+                        onValueChange={(value: "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8") => 
                           setFormData(prev => ({ ...prev, fieldOfView: value }))
                         }
                       >
@@ -251,8 +260,10 @@ const UploadCase = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="small">Small FOV (+$0)</SelectItem>
-                          <SelectItem value="large">Large FOV (+$100)</SelectItem>
+                          <SelectItem value="up_to_5x5">Up to 5×5cm (£125)</SelectItem>
+                          <SelectItem value="up_to_8x5">Up to 8×5cm (£145)</SelectItem>
+                          <SelectItem value="up_to_8x8">Up to 8×8cm (£165)</SelectItem>
+                          <SelectItem value="over_8x8">Over 8×8cm (£185)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -269,8 +280,8 @@ const UploadCase = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="standard">Standard (No surcharge)</SelectItem>
-                          <SelectItem value="urgent">Urgent (+50% surcharge)</SelectItem>
+                          <SelectItem value="standard">Standard (3-5 working days)</SelectItem>
+                          <SelectItem value="urgent">Priority 24h Service (+£50)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
