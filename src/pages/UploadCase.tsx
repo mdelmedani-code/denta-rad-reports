@@ -22,11 +22,7 @@ interface PricingBreakdown {
 }
 
 const ADDON_PRICES = {
-  airway_analysis: 75,
-  tmj_analysis: 100,
-  implant_planning: 125,
-  orthodontic_analysis: 85,
-  pathology_screening: 60,
+  implant_planning: 100,
   ian_nerve_tracing_left: 50,
   ian_nerve_tracing_right: 50,
 };
