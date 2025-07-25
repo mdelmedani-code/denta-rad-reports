@@ -144,7 +144,7 @@ const UploadCase = () => {
 
       toast({
         title: "Case Uploaded Successfully",
-        description: `Case submitted with estimated cost: $${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
+        description: `Case submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
       });
 
       navigate("/dashboard");
@@ -306,7 +306,7 @@ const UploadCase = () => {
                         onCheckedChange={(checked) => handleAddonChange(id, checked as boolean)}
                       />
                       <Label htmlFor={id} className="flex-1 cursor-pointer">
-                        {id.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())} (+${price})
+                        {id.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())} (+£{price})
                       </Label>
                     </div>
                   ))}
@@ -376,27 +376,27 @@ const UploadCase = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Base Analysis</span>
-                    <span>${pricing.basePrice.toFixed(2)}</span>
+                    <span>£{pricing.basePrice.toFixed(2)}</span>
                   </div>
                   
                   {pricing.fovSurcharge > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Large FOV Surcharge</span>
-                      <span>+${pricing.fovSurcharge.toFixed(2)}</span>
+                      <span>+£{pricing.fovSurcharge.toFixed(2)}</span>
                     </div>
                   )}
                   
                   {pricing.urgencySurcharge > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>Urgent Surcharge (50%)</span>
-                      <span>+${pricing.urgencySurcharge.toFixed(2)}</span>
+                      <span>Priority 24h Service</span>
+                      <span>+£{pricing.urgencySurcharge.toFixed(2)}</span>
                     </div>
                   )}
                   
                   {pricing.addons.map(addon => (
                     <div key={addon.name} className="flex justify-between text-sm">
                       <span>{addon.name}</span>
-                      <span>+${addon.price.toFixed(2)}</span>
+                      <span>+£{addon.price.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -405,7 +405,7 @@ const UploadCase = () => {
                 
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>${pricing.total.toFixed(2)}</span>
+                  <span>£{pricing.total.toFixed(2)}</span>
                 </div>
                 
                 <div className="text-sm text-muted-foreground">

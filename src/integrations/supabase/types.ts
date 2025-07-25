@@ -294,7 +294,7 @@ export type Database = {
         | "in_progress"
         | "report_ready"
         | "awaiting_payment"
-      field_of_view: "small" | "large"
+      field_of_view: "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8"
       urgency_level: "standard" | "urgent"
       user_role: "clinic" | "admin"
     }
@@ -430,7 +430,7 @@ export const Constants = {
         "report_ready",
         "awaiting_payment",
       ],
-      field_of_view: ["small", "large"],
+      field_of_view: ["up_to_5x5", "up_to_8x5", "up_to_8x8", "over_8x8"],
       urgency_level: ["standard", "urgent"],
       user_role: ["clinic", "admin"],
     },

@@ -16,7 +16,7 @@ interface Case {
   clinical_question: string;
   status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
   urgency: 'standard' | 'urgent';
-  field_of_view: 'small' | 'large';
+  field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
 }
 
 const Dashboard = () => {
