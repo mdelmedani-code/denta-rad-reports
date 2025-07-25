@@ -11,6 +11,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
+import Invoices from "./pages/Invoices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/invoices" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <Invoices />
                 </ProtectedRoute>
               } 
             />

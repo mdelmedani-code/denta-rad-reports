@@ -211,17 +211,25 @@ const AdminDashboard = () => {
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center">
-                <FileText className="w-6 h-6 mr-2 text-primary" />
-                DentaRad Admin Dashboard
-              </h1>
-              <p className="text-muted-foreground">Manage all clinic cases and reports</p>
+            <div className="flex items-center space-x-4">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground flex items-center">
+                  <FileText className="w-6 h-6 mr-2 text-primary" />
+                  DentaRad Admin Dashboard
+                </h1>
+                <p className="text-muted-foreground">Manage all clinic cases and reports</p>
+              </div>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button variant="default" onClick={() => navigate("/admin/invoices")}>
+                <FileText className="w-4 h-4 mr-2" />
+                View Invoices
+              </Button>
+              <Button variant="outline" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
