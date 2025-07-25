@@ -97,12 +97,49 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          email_sent: boolean | null
+          id: string
+          message: string
+          recipient_id: string
+          sent_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          email_sent?: boolean | null
+          id?: string
+          message: string
+          recipient_id: string
+          sent_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          email_sent?: boolean | null
+          id?: string
+          message?: string
+          recipient_id?: string
+          sent_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           clinic_id: string | null
           created_at: string | null
           email: string
           id: string
+          notification_preferences: Json | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
         }
@@ -111,6 +148,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          notification_preferences?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
@@ -119,6 +157,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          notification_preferences?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
