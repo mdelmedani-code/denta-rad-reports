@@ -20,7 +20,7 @@ import {
   BarChart3,
   Clock,
   TrendingUp,
-  DollarSign,
+  PoundSterling,
   Calendar
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -318,7 +318,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="flex items-center justify-between border-t pt-4">
                   <div className="flex items-center">
-                    <DollarSign className="w-8 h-8 text-blue-600" />
+                    <PoundSterling className="w-8 h-8 text-blue-600" />
                     <div className="ml-3">
                       <p className="text-sm text-muted-foreground">Income So Far</p>
                       <p className="text-2xl font-bold">
@@ -361,7 +361,7 @@ const AdminDashboard = () => {
                 </div>
                 <div className="flex items-center justify-between border-t pt-4">
                   <div className="flex items-center">
-                    <DollarSign className="w-8 h-8 text-blue-600" />
+                    <PoundSterling className="w-8 h-8 text-blue-600" />
                     <div className="ml-3">
                       <p className="text-sm text-muted-foreground">Income So Far</p>
                       <p className="text-2xl font-bold">
