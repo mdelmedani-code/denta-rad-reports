@@ -50,6 +50,7 @@ interface IncomeStats {
   reported_cases: number;
 }
 
+// Admin Dashboard Component - Updated icons to use PoundSterling
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
