@@ -97,6 +97,56 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount: number
+          case_id: string
+          clinic_id: string
+          created_at: string
+          currency: string
+          due_date: string
+          id: string
+          invoice_number: string
+          line_items: Json
+          paid_at: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          case_id: string
+          clinic_id: string
+          created_at?: string
+          currency?: string
+          due_date?: string
+          id?: string
+          invoice_number: string
+          line_items?: Json
+          paid_at?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          case_id?: string
+          clinic_id?: string
+          created_at?: string
+          currency?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          line_items?: Json
+          paid_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -217,6 +267,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_case_price: {
+        Args: {
+          p_field_of_view: Database["public"]["Enums"]["field_of_view"]
+          p_urgency: Database["public"]["Enums"]["urgency_level"]
+          p_addons?: string[]
+        }
+        Returns: number
+      }
+      generate_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_user_clinic: {
         Args: Record<PropertyKey, never>
         Returns: string
