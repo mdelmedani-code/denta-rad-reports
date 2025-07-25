@@ -14,12 +14,17 @@ import {
   ArrowLeft,
   Calendar,
   PoundSterling,
-  Clock
+  Clock,
+  Edit,
+  Save,
+  X
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Invoice {
   id: string;
@@ -70,6 +75,13 @@ const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"individual" | "monthly">("individual");
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | MonthlyInvoice | null>(null);
+  const [editForm, setEditForm] = useState({
+    amount: 0,
+    status: "",
+    due_date: "",
+    line_items: ""
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -204,6 +216,61 @@ const Invoices = () => {
   };
 
   const stats = getTotalStats();
+
+  const openEditModal = (invoice: Invoice | MonthlyInvoice) => {
+    setEditingInvoice(invoice);
+    setEditForm({
+      amount: activeTab === "individual" ? (invoice as Invoice).amount : (invoice as MonthlyInvoice).total_amount,
+      status: invoice.status,
+      due_date: invoice.due_date.split('T')[0],
+      line_items: activeTab === "individual" ? JSON.stringify((invoice as Invoice).line_items, null, 2) : ""
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingInvoice) return;
+
+    try {
+      const table = activeTab === "individual" ? "invoices" : "monthly_invoices";
+      const amountField = activeTab === "individual" ? "amount" : "total_amount";
+      
+      const updateData: any = {
+        [amountField]: editForm.amount,
+        status: editForm.status,
+        due_date: editForm.due_date
+      };
+
+      if (activeTab === "individual") {
+        updateData.line_items = JSON.parse(editForm.line_items);
+      }
+
+      const { error } = await supabase
+        .from(table)
+        .update(updateData)
+        .eq('id', editingInvoice.id);
+
+      if (error) throw error;
+
+      // Refresh data
+      if (activeTab === "individual") {
+        await fetchInvoices();
+      } else {
+        await fetchMonthlyInvoices();
+      }
+
+      setEditingInvoice(null);
+      toast({
+        title: "Success",
+        description: "Invoice updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update invoice: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -421,13 +488,20 @@ const Invoices = () => {
                           </Badge>
                         </td>
                         <td className="py-3">{new Date(invoice.due_date).toLocaleDateString()}</td>
-                        <td className="py-3">
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
+                         <td className="py-3">
+                           <div className="flex space-x-2">
+                             <Button 
+                               variant="outline" 
+                               size="sm"
+                               onClick={() => openEditModal(invoice)}
+                             >
+                               <Edit className="w-4 h-4" />
+                             </Button>
+                             <Button variant="outline" size="sm">
+                               <Download className="w-4 h-4" />
+                             </Button>
+                           </div>
+                         </td>
                       </tr>
                     ))}
                   </tbody>
@@ -437,6 +511,76 @@ const Invoices = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Invoice Modal */}
+      <Dialog open={!!editingInvoice} onOpenChange={() => setEditingInvoice(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Invoice</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="amount">Amount (£)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={editForm.status} onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="due_date">Due Date</Label>
+              <Input
+                id="due_date"
+                type="date"
+                value={editForm.due_date}
+                onChange={(e) => setEditForm(prev => ({ ...prev, due_date: e.target.value }))}
+              />
+            </div>
+
+            {activeTab === "individual" && (
+              <div>
+                <Label htmlFor="line_items">Line Items (JSON)</Label>
+                <Textarea
+                  id="line_items"
+                  value={editForm.line_items}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, line_items: e.target.value }))}
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setEditingInvoice(null)}>
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
