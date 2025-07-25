@@ -22,6 +22,8 @@ export type Database = {
           field_of_view: Database["public"]["Enums"]["field_of_view"]
           file_path: string | null
           id: string
+          monthly_billed: boolean | null
+          monthly_invoice_id: string | null
           patient_dob: string | null
           patient_internal_id: string | null
           patient_name: string
@@ -38,6 +40,8 @@ export type Database = {
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
+          monthly_billed?: boolean | null
+          monthly_invoice_id?: string | null
           patient_dob?: string | null
           patient_internal_id?: string | null
           patient_name: string
@@ -54,6 +58,8 @@ export type Database = {
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
+          monthly_billed?: boolean | null
+          monthly_invoice_id?: string | null
           patient_dob?: string | null
           patient_internal_id?: string | null
           patient_name?: string
@@ -69,6 +75,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cases_monthly_invoice_id_fkey"
+            columns: ["monthly_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -146,6 +159,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      monthly_invoices: {
+        Row: {
+          case_count: number
+          clinic_id: string
+          created_at: string
+          due_date: string
+          id: string
+          invoice_number: string
+          month: number
+          status: string
+          total_amount: number
+          year: number
+        }
+        Insert: {
+          case_count?: number
+          clinic_id: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_number: string
+          month: number
+          status?: string
+          total_amount?: number
+          year: number
+        }
+        Update: {
+          case_count?: number
+          clinic_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          month?: number
+          status?: string
+          total_amount?: number
+          year?: number
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -278,6 +330,19 @@ export type Database = {
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      generate_monthly_invoice_number: {
+        Args: { p_clinic_id: string; p_month: number; p_year: number }
+        Returns: string
+      }
+      generate_monthly_invoices: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          clinic_id: string
+          invoice_id: string
+          total_amount: number
+          case_count: number
+        }[]
       }
       get_current_user_clinic: {
         Args: Record<PropertyKey, never>
