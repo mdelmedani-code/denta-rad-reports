@@ -14,16 +14,188 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cases: {
+        Row: {
+          clinic_id: string
+          clinical_question: string
+          created_at: string | null
+          field_of_view: Database["public"]["Enums"]["field_of_view"]
+          file_path: string | null
+          id: string
+          patient_dob: string | null
+          patient_internal_id: string | null
+          patient_name: string
+          report_path: string | null
+          status: Database["public"]["Enums"]["case_status"]
+          updated_at: string | null
+          upload_date: string | null
+          urgency: Database["public"]["Enums"]["urgency_level"]
+        }
+        Insert: {
+          clinic_id: string
+          clinical_question: string
+          created_at?: string | null
+          field_of_view?: Database["public"]["Enums"]["field_of_view"]
+          file_path?: string | null
+          id?: string
+          patient_dob?: string | null
+          patient_internal_id?: string | null
+          patient_name: string
+          report_path?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          updated_at?: string | null
+          upload_date?: string | null
+          urgency?: Database["public"]["Enums"]["urgency_level"]
+        }
+        Update: {
+          clinic_id?: string
+          clinical_question?: string
+          created_at?: string | null
+          field_of_view?: Database["public"]["Enums"]["field_of_view"]
+          file_path?: string | null
+          id?: string
+          patient_dob?: string | null
+          patient_internal_id?: string | null
+          patient_name?: string
+          report_path?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          updated_at?: string | null
+          upload_date?: string | null
+          urgency?: Database["public"]["Enums"]["urgency_level"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinics: {
+        Row: {
+          address: string | null
+          contact_email: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          contact_email: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          clinic_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string | null
+          email: string
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          author_id: string | null
+          billed: boolean | null
+          billed_date: string | null
+          case_id: string
+          created_at: string | null
+          id: string
+          pdf_url: string | null
+          report_text: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          billed?: boolean | null
+          billed_date?: string | null
+          case_id: string
+          created_at?: string | null
+          id?: string
+          pdf_url?: string | null
+          report_text?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          billed?: boolean | null
+          billed_date?: string | null
+          case_id?: string
+          created_at?: string | null
+          id?: string
+          pdf_url?: string | null
+          report_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_clinic: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      case_status:
+        | "uploaded"
+        | "in_progress"
+        | "report_ready"
+        | "awaiting_payment"
+      field_of_view: "small" | "large"
+      urgency_level: "standard" | "urgent"
+      user_role: "clinic" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +322,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      case_status: [
+        "uploaded",
+        "in_progress",
+        "report_ready",
+        "awaiting_payment",
+      ],
+      field_of_view: ["small", "large"],
+      urgency_level: ["standard", "urgent"],
+      user_role: ["clinic", "admin"],
+    },
   },
 } as const
