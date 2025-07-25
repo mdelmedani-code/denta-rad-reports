@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { NotificationPreferences } from "@/components/NotificationPreferences";
 
 interface Case {
   id: string;
@@ -112,6 +113,11 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Notification Preferences */}
+        <div className="mb-8">
+          <NotificationPreferences />
         </div>
 
         {/* Cases Table */}
