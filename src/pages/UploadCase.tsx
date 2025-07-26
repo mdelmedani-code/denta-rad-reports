@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Upload, FileText, Calculator, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 interface PricingBreakdown {
@@ -31,6 +31,7 @@ const UploadCase = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -44,6 +45,47 @@ const UploadCase = () => {
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isReupload, setIsReupload] = useState(false);
+  const [caseId, setCaseId] = useState<string | null>(null);
+
+  // Load existing case data if in reupload mode
+  useEffect(() => {
+    const reuploadId = searchParams.get('reupload');
+    if (reuploadId) {
+      setIsReupload(true);
+      setCaseId(reuploadId);
+      loadExistingCaseData(reuploadId);
+    }
+  }, [searchParams]);
+
+  const loadExistingCaseData = async (id: string) => {
+    try {
+      const { data: caseData, error } = await supabase
+        .from('cases')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      // Pre-populate form with existing data
+      setFormData({
+        patientName: caseData.patient_name || "",
+        patientInternalId: caseData.patient_internal_id || "",
+        patientDob: caseData.patient_dob || "",
+        clinicalQuestion: caseData.clinical_question || "",
+        fieldOfView: caseData.field_of_view || "up_to_5x5",
+        urgency: caseData.urgency || "standard",
+        addons: [], // Reset addons as they're not stored in the database
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load case data: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const calculatePricing = (): PricingBreakdown => {
     const basePrices = {
@@ -120,58 +162,82 @@ const UploadCase = () => {
         throw new Error('Unable to determine clinic association');
       }
 
-      // Create case record
-      const { data: caseData, error: caseError } = await supabase
-        .from('cases')
-        .insert({
-          patient_name: formData.patientName,
-          patient_internal_id: formData.patientInternalId || null,
-          patient_dob: formData.patientDob || null,
-          clinical_question: formData.clinicalQuestion,
-          field_of_view: formData.fieldOfView,
-          urgency: formData.urgency,
-          clinic_id: profile.clinic_id,
-          file_path: uploadData.path,
-        })
-        .select()
-        .single();
+      if (isReupload && caseId) {
+        // Update existing case
+        const { error: updateError } = await supabase
+          .from('cases')
+          .update({
+            patient_name: formData.patientName,
+            patient_internal_id: formData.patientInternalId || null,
+            patient_dob: formData.patientDob || null,
+            clinical_question: formData.clinicalQuestion,
+            field_of_view: formData.fieldOfView,
+            urgency: formData.urgency,
+            file_path: uploadData.path,
+            status: 'uploaded', // Reset status back to uploaded
+          })
+          .eq('id', caseId);
 
-      if (caseError) throw caseError;
+        if (updateError) throw updateError;
 
-      // If uploaded file is a ZIP, extract DICOM files
-      if (selectedFile.name.toLowerCase().endsWith('.zip')) {
         toast({
-          title: "Extracting DICOM files...",
-          description: "Processing ZIP file to extract DICOM images.",
+          title: "Case Updated Successfully",
+          description: "File and case information have been updated.",
         });
+      } else {
+        // Create new case
+        const { data: caseData, error: caseError } = await supabase
+          .from('cases')
+          .insert({
+            patient_name: formData.patientName,
+            patient_internal_id: formData.patientInternalId || null,
+            patient_dob: formData.patientDob || null,
+            clinical_question: formData.clinicalQuestion,
+            field_of_view: formData.fieldOfView,
+            urgency: formData.urgency,
+            clinic_id: profile.clinic_id,
+            file_path: uploadData.path,
+          })
+          .select()
+          .single();
 
-        try {
-          const { data: extractResult, error: extractError } = await supabase.functions
-            .invoke('extract-dicom-zip', {
-              body: {
-                caseId: caseData.id,
-                zipFilePath: uploadData.path
-              }
-            });
+        if (caseError) throw caseError;
 
-          if (extractError) {
-            console.error('Extract error:', extractError);
-          } else if (extractResult?.success) {
-            toast({
-              title: "DICOM Files Extracted",
-              description: `Successfully extracted ${extractResult.extractedCount} DICOM files.`,
-            });
+        // If uploaded file is a ZIP, extract DICOM files
+        if (selectedFile.name.toLowerCase().endsWith('.zip')) {
+          toast({
+            title: "Extracting DICOM files...",
+            description: "Processing ZIP file to extract DICOM images.",
+          });
+
+          try {
+            const { data: extractResult, error: extractError } = await supabase.functions
+              .invoke('extract-dicom-zip', {
+                body: {
+                  caseId: caseData.id,
+                  zipFilePath: uploadData.path
+                }
+              });
+
+            if (extractError) {
+              console.error('Extract error:', extractError);
+            } else if (extractResult?.success) {
+              toast({
+                title: "DICOM Files Extracted",
+                description: `Successfully extracted ${extractResult.extractedCount} DICOM files.`,
+              });
+            }
+          } catch (extractError) {
+            console.error('ZIP extraction failed:', extractError);
+            // Don't fail the upload, just log the error
           }
-        } catch (extractError) {
-          console.error('ZIP extraction failed:', extractError);
-          // Don't fail the upload, just log the error
         }
-      }
 
-      toast({
-        title: "Case Uploaded Successfully",
-        description: `Case submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
-      });
+        toast({
+          title: "Case Uploaded Successfully",
+          description: `Case submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
+        });
+      }
 
       navigate("/dashboard");
     } catch (error: any) {
@@ -200,8 +266,12 @@ const UploadCase = () => {
               Back to Dashboard
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Upload New Case</h1>
-              <p className="text-muted-foreground">Submit a CBCT scan for analysis</p>
+              <h1 className="text-2xl font-bold text-foreground">
+                {isReupload ? "Reupload Case" : "Upload New Case"}
+              </h1>
+              <p className="text-muted-foreground">
+                {isReupload ? "Update file and case information" : "Submit a CBCT scan for analysis"}
+              </p>
             </div>
           </div>
         </div>
@@ -381,7 +451,7 @@ const UploadCase = () => {
                 disabled={uploading || !selectedFile || !formData.patientName || !formData.clinicalQuestion}
                 className="w-full"
               >
-                {uploading ? "Uploading..." : "Submit Case"}
+                {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit Case"}
               </Button>
             </form>
           </div>
