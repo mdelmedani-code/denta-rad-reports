@@ -88,6 +88,23 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
     }
   };
 
+  const openOHIFInNewWindow = () => {
+    // Create DICOMweb configuration for standard OHIF viewer
+    const dicomwebConfig = {
+      studyInstanceUIDs: [`${caseId}`],
+      seriesInstanceUIDs: [`${caseId}.1`],
+      sopInstanceUIDs: [`${caseId}.1.1`],
+      caseId: caseId,
+      patientName: `Patient-${caseId}`,
+      studyDescription: 'CBCT Scan',
+      dicomwebEndpoint: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server'
+    };
+
+    // Open standard OHIF in a new window connected to dicomweb backend
+    const ohifUrl = `/ohif-viewer?config=${encodeURIComponent(JSON.stringify(dicomwebConfig))}`;
+    window.open(ohifUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no');
+  };
+
   const openOHIFViewer = () => {
     if (!fileUrl) return;
     
@@ -336,11 +353,19 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
               <div className="space-y-3">
                 <div className="flex gap-3 justify-center flex-wrap">
                   <Button 
-                    onClick={() => setShowOHIFViewer(true)}
-                    className="bg-purple-600 hover:bg-purple-700"
+                    onClick={openOHIFInNewWindow}
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    View Images
+                    Open OHIF Viewer
+                  </Button>
+                  <Button 
+                    onClick={() => setShowOHIFViewer(true)}
+                    variant="outline"
+                    className="border-purple-500 text-purple-300 hover:bg-purple-600/20"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Enhanced Viewer (Beta)
                   </Button>
                   <Button 
                     onClick={handleDownload}
