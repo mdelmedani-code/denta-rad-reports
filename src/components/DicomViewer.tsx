@@ -340,23 +340,7 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
                     className="bg-purple-600 hover:bg-purple-700"
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    Enhanced MPR Viewer
-                  </Button>
-                  {isImageFile && (
-                    <Button 
-                      onClick={() => setShowViewer(true)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      2D Annotate
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={openOHIFViewer}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    OHIF (New Tab)
+                    View Images
                   </Button>
                   <Button 
                     onClick={handleDownload}
@@ -364,20 +348,12 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
                     className="border-blue-500 text-blue-300 hover:bg-blue-600/20"
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Download File
-                  </Button>
-                  <Button 
-                    onClick={openExternalViewer}
-                    variant="outline"
-                    className="border-blue-500 text-blue-300 hover:bg-blue-600/20"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Other Viewers
+                    Download for External Software
                   </Button>
                 </div>
                 
-                <p className="text-xs text-gray-400">
-                  Professional DICOM viewers provide 3D reconstruction, measurements, and advanced analysis tools
+                <p className="text-xs text-gray-400 text-center">
+                  Use "View Images" for built-in analysis or download to open with professional DICOM software
                 </p>
               </div>
             </div>

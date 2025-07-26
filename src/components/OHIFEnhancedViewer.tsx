@@ -330,6 +330,22 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
 
       {/* Main DICOM Viewing Area - Maximum Screen Real Estate */}
       <div className="flex-1 relative bg-black" onContextMenu={handleRightClick}>
+        {/* Show Tools Button - Only visible when toolbar is collapsed */}
+        {isToolbarCollapsed && (
+          <div className="absolute top-4 left-4 z-20">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => setIsToolbarCollapsed(false)}
+              className="bg-gray-800/90 hover:bg-gray-700 text-white border border-gray-600"
+              title="Show tools"
+            >
+              <Menu className="h-4 w-4 mr-2" />
+              Show Tools
+            </Button>
+          </div>
+        )}
+
         {fileUrl ? (
           <div className="w-full h-full flex items-center justify-center">
             <img 
@@ -337,13 +353,21 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
               alt="DICOM"
               className="max-w-full max-h-full object-contain"
               style={{ imageRendering: 'pixelated' }}
+              onError={(e) => {
+                console.error('Failed to load DICOM image:', e);
+                setError('Failed to display DICOM image');
+              }}
+              onLoad={() => {
+                console.log('DICOM image loaded successfully');
+                setIsLoading(false);
+              }}
             />
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-white">
             <div className="text-center">
               <FileImage className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <p>No DICOM file available</p>
+              <p>Loading DICOM file...</p>
             </div>
           </div>
         )}
