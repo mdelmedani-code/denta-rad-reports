@@ -60,6 +60,26 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
     }
   };
 
+  const openOHIFViewer = () => {
+    if (!fileUrl) return;
+    
+    // Create OHIF viewer URL with our case data
+    // We'll create a simple OHIF configuration that can load our DICOM file
+    const ohifConfig = {
+      studyInstanceUIDs: [`1.2.826.0.1.3680043.8.498.${Date.now()}`],
+      seriesInstanceUIDs: [`1.2.826.0.1.3680043.8.498.${Date.now()}.1`],
+      sopInstanceUIDs: [`1.2.826.0.1.3680043.8.498.${Date.now()}.1.1`],
+      url: fileUrl,
+      caseId: caseId,
+      patientName: `Patient-${caseId}`,
+      studyDescription: 'CBCT Scan'
+    };
+
+    // Open OHIF in a new tab with our configuration
+    const ohifUrl = `/ohif-viewer?config=${encodeURIComponent(JSON.stringify(ohifConfig))}`;
+    window.open(ohifUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const handleDownload = () => {
     if (fileUrl) {
       const link = document.createElement('a');
