@@ -104,12 +104,12 @@ const Dashboard = () => {
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">DentaRad Portal</h1>
-              <p className="text-muted-foreground">Welcome back, {user?.email}</p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">DentaRad Portal</h1>
+              <p className="text-sm sm:text-base text-muted-foreground truncate">Welcome back, {user?.email}</p>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
+            <Button variant="outline" onClick={handleSignOut} className="w-full sm:w-auto">
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>
@@ -131,14 +131,16 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => navigate("/upload-case")} className="mr-4">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload New Case
-              </Button>
-              <Button variant="outline">
-                <FileText className="w-4 h-4 mr-2" />
-                View Reports
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={() => navigate("/upload-case")} className="w-full sm:w-auto">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload New Case
+                </Button>
+                <Button variant="outline" className="w-full sm:w-auto">
+                  <FileText className="w-4 h-4 mr-2" />
+                  View Reports
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -148,7 +150,7 @@ const Dashboard = () => {
           <NotificationPreferences />
         </div>
 
-        {/* Cases Table */}
+        {/* Cases Section - Mobile Optimized */}
         <Card>
           <CardHeader>
             <CardTitle>Your Cases</CardTitle>
@@ -174,50 +176,127 @@ const Dashboard = () => {
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Patient Name</th>
-                      <th className="text-left py-2">Upload Date</th>
-                      <th className="text-left py-2">Clinical Question</th>
-                      <th className="text-left py-2">Urgency</th>
-                      <th className="text-left py-2">FOV</th>
-                      <th className="text-left py-2">Status</th>
-                      <th className="text-left py-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cases.map((case_) => (
-                      <tr key={case_.id} className="border-b">
-                        <td className="py-2">{case_.patient_name}</td>
-                        <td className="py-2">
-                          {new Date(case_.upload_date).toLocaleDateString()}
-                        </td>
-                        <td className="py-2 max-w-xs truncate">
-                          {case_.clinical_question}
-                        </td>
-                        <td className="py-2">
-                          <Badge 
-                            variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
-                          >
-                            {case_.urgency}
-                          </Badge>
-                        </td>
-                        <td className="py-2">{case_.field_of_view}</td>
-                        <td className="py-2">
-                          <Badge className={getStatusColor(case_.status)}>
-                            {formatStatus(case_.status)}
-                          </Badge>
-                        </td>
-                        <td className="py-2">
-                          <div className="flex gap-2">
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Patient Name</th>
+                        <th className="text-left py-2">Upload Date</th>
+                        <th className="text-left py-2">Clinical Question</th>
+                        <th className="text-left py-2">Urgency</th>
+                        <th className="text-left py-2">FOV</th>
+                        <th className="text-left py-2">Status</th>
+                        <th className="text-left py-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cases.map((case_) => (
+                        <tr key={case_.id} className="border-b">
+                          <td className="py-2">{case_.patient_name}</td>
+                          <td className="py-2">
+                            {new Date(case_.upload_date).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 max-w-xs truncate">
+                            {case_.clinical_question}
+                          </td>
+                          <td className="py-2">
+                            <Badge 
+                              variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
+                            >
+                              {case_.urgency}
+                            </Badge>
+                          </td>
+                          <td className="py-2">{case_.field_of_view}</td>
+                          <td className="py-2">
+                            <Badge className={getStatusColor(case_.status)}>
+                              {formatStatus(case_.status)}
+                            </Badge>
+                          </td>
+                          <td className="py-2">
+                            <div className="flex gap-2">
+                              {case_.status === 'uploaded' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleReupload(case_.id)}
+                                  >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Reupload
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteFile(case_.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </Button>
+                                </>
+                              )}
+                              {case_.status === 'report_ready' && (
+                                <Button variant="outline" size="sm">
+                                  Download Report
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="lg:hidden space-y-4">
+                  {cases.map((case_) => (
+                    <Card key={case_.id} className="border border-border">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold text-lg">{case_.patient_name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(case_.upload_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Badge className={getStatusColor(case_.status)}>
+                              {formatStatus(case_.status)}
+                            </Badge>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-sm font-medium">Clinical Question:</p>
+                              <p className="text-sm text-muted-foreground">
+                                {case_.clinical_question}
+                              </p>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2">
+                              <Badge 
+                                variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {case_.urgency}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                FOV: {case_.field_of_view}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Mobile Actions */}
+                          <div className="flex flex-col sm:flex-row gap-2 pt-2">
                             {case_.status === 'uploaded' && (
                               <>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleReupload(case_.id)}
+                                  className="w-full sm:w-auto"
                                 >
                                   <Upload className="h-4 w-4 mr-2" />
                                   Reupload
@@ -226,6 +305,7 @@ const Dashboard = () => {
                                   variant="destructive"
                                   size="sm"
                                   onClick={() => handleDeleteFile(case_.id)}
+                                  className="w-full sm:w-auto"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete
@@ -233,17 +313,17 @@ const Dashboard = () => {
                               </>
                             )}
                             {case_.status === 'report_ready' && (
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" className="w-full sm:w-auto">
                                 Download Report
                               </Button>
                             )}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
