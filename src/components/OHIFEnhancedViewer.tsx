@@ -152,6 +152,44 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
     loadDICOMData();
   }, [caseId]);
 
+  // Initialize Cornerstone.js viewer when file URL is available
+  useEffect(() => {
+    if (!fileUrl || !viewerContainerRef.current || !isInitialized) {
+      return;
+    }
+
+    const initViewer = async () => {
+      try {
+        const element = viewerContainerRef.current;
+        if (!element) return;
+        
+        console.log('Initializing DICOM viewer with URL:', fileUrl);
+        
+        // For now, let's just display that we have the URL and the viewer is ready
+        // The actual DICOM rendering will be implemented once we resolve the API compatibility
+        element.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; text-align: center;">
+            <div>
+              <div style="margin-bottom: 16px; font-size: 18px;">DICOM Viewer Ready</div>
+              <div style="color: #9CA3AF; font-size: 14px;">File URL: ${fileUrl}</div>
+              <div style="color: #9CA3AF; font-size: 12px; margin-top: 8px;">Cornerstone.js integration in progress...</div>
+            </div>
+          </div>
+        `;
+        
+        console.log('DICOM viewer initialized - ready for image display');
+        setIsLoading(false);
+        
+      } catch (error) {
+        console.error('Failed to initialize Cornerstone viewer:', error);
+        setError(`Failed to display DICOM image: ${error.message}`);
+        setIsLoading(false);
+      }
+    };
+
+    initViewer();
+  }, [fileUrl, isInitialized]);
+
   const handleToolChange = (tool: string) => {
     setActiveTool(tool);
   };
