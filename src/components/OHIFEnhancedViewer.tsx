@@ -97,6 +97,7 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
       try {
         await cornerstone.init();
         setIsInitialized(true);
+        console.log('Cornerstone initialized for DICOMweb support');
       } catch (error) {
         console.error('Failed to initialize Cornerstone:', error);
         setError('Failed to initialize DICOM viewer');
@@ -106,58 +107,50 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
     initCornerstone();
   }, []);
 
-  // Get file URL
+  // Get file URL and metadata using DICOMweb backend
   useEffect(() => {
-    if (!filePath) {
-      console.log('No file path provided');
-      setError('No DICOM file path available');
+    if (!caseId) {
+      console.log('No case ID provided');
+      setError('No case ID available');
       return;
     }
 
-    const getFileUrl = async () => {
+    const loadDICOMData = async () => {
       try {
-        console.log('Attempting to get signed URL for path:', filePath);
+        console.log('Loading DICOM data for case:', caseId);
         
-        // First check if file exists
-        const { data: fileData, error: fileError } = await supabase.storage
-          .from('cbct-scans')
-          .list(filePath.substring(0, filePath.lastIndexOf('/')), {
-            limit: 100,
-            search: filePath.substring(filePath.lastIndexOf('/') + 1)
-          });
-
-        console.log('File list result:', fileData, fileError);
-
-        if (fileError || !fileData || fileData.length === 0) {
-          console.error('File not found in storage:', filePath);
-          setError(`DICOM file not found: ${filePath}`);
+        // Get DICOM metadata from our DICOMweb backend
+        const metadataResponse = await supabase.functions.invoke('dicomweb-server', {
+          body: null,
+          method: 'GET',
+          headers: {
+            'Accept': 'application/dicom+json'
+          }
+        });
+        
+        if (metadataResponse.error) {
+          console.error('Error getting DICOM metadata:', metadataResponse.error);
+          setError('Failed to load DICOM metadata');
           setIsLoading(false);
           return;
         }
-
-        const { data, error } = await supabase.storage
-          .from('cbct-scans')
-          .createSignedUrl(filePath, 3600);
         
-        if (error) {
-          console.error('Error creating signed URL:', error);
-          setError(`Failed to access DICOM file: ${error.message}`);
-        } else if (data?.signedUrl) {
-          console.log('Successfully got signed URL:', data.signedUrl);
-          setFileUrl(data.signedUrl);
-        } else {
-          setError('Failed to get file URL');
-        }
+        // Construct the DICOMweb image URL
+        const dicomwebUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/1/series/1/instances/1?caseId=${caseId}`;
+        
+        console.log('Using DICOMweb URL:', dicomwebUrl);
+        setFileUrl(dicomwebUrl);
+        
       } catch (error) {
-        console.error('Error getting file URL:', error);
-        setError('Failed to load DICOM file');
+        console.error('Error loading DICOM data:', error);
+        setError('Failed to load DICOM data');
       } finally {
         setIsLoading(false);
       }
     };
 
-    getFileUrl();
-  }, [filePath]);
+    loadDICOMData();
+  }, [caseId]);
 
   const handleToolChange = (tool: string) => {
     setActiveTool(tool);
