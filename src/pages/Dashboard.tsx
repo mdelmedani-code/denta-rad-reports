@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Settings } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Settings, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +69,34 @@ const Dashboard = () => {
     return status.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
+  };
+
+  const handleReupload = (caseId: string) => {
+    navigate(`/upload-case?reupload=${caseId}`);
+  };
+
+  const handleDeleteFile = async (caseId: string) => {
+    try {
+      const { error } = await supabase
+        .from('cases')
+        .delete()
+        .eq('id', caseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Case deleted successfully",
+      });
+
+      fetchCases(); // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete case: " + error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -183,11 +211,33 @@ const Dashboard = () => {
                           </Badge>
                         </td>
                         <td className="py-2">
-                          {case_.status === 'report_ready' && (
-                            <Button variant="outline" size="sm">
-                              Download Report
-                            </Button>
-                          )}
+                          <div className="flex gap-2">
+                            {case_.status === 'uploaded' && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleReupload(case_.id)}
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Reupload
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteFile(case_.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                            {case_.status === 'report_ready' && (
+                              <Button variant="outline" size="sm">
+                                Download Report
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
