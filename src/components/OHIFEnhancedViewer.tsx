@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import * as cornerstone from "@cornerstonejs/core";
 import * as cornerstoneTools from "@cornerstonejs/tools";
-import cornerstoneDICOMImageLoader from "@cornerstonejs/dicom-image-loader";
-import cornerstoneStreamingImageVolumeLoader from "@cornerstonejs/streaming-image-volume-loader";
+import * as cornerstoneDICOMImageLoader from "@cornerstonejs/dicom-image-loader";
+import * as cornerstoneStreamingImageVolumeLoader from "@cornerstonejs/streaming-image-volume-loader";
 import { DentalTools } from "./DentalTools";
 import { useAuth } from "@/hooks/useAuth";
 
