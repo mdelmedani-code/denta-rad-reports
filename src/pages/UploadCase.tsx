@@ -592,6 +592,13 @@ const UploadCase = () => {
               >
                 {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit Case"}
               </Button>
+              
+              {/* Debug info */}
+              <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                <div>Files selected: {selectedFile ? '✓ Single file' : selectedFiles ? `✓ ${selectedFiles.length} files` : '✗ No files'}</div>
+                <div>Patient name: {formData.patientName ? '✓' : '✗ Required'}</div>
+                <div>Clinical question: {formData.clinicalQuestion ? '✓' : '✗ Required'}</div>
+              </div>
             </form>
           </div>
 
