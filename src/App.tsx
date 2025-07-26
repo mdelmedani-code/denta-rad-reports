@@ -70,6 +70,14 @@ const App = () => (
               } 
              />
             <Route path="/viewer/:caseId" element={<DicomViewerPage />} />
+            <Route 
+              path="/admin/dicom-viewer/:caseId" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <DicomViewerPage />
+                </ProtectedRoute>
+              } 
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
