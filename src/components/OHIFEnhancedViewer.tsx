@@ -1800,6 +1800,7 @@ export const OHIFEnhancedViewer = ({
         <DentalTools 
           onToolActivate={handleToolChange}
           activeTool={activeTool}
+          isReportingMode={true}
         />
       </div>
     </div>

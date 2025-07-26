@@ -24,7 +24,7 @@ interface DentalToolsProps {
   activeTool: string;
 }
 
-export const DentalTools = ({ onToolActivate, activeTool }: DentalToolsProps) => {
+export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = false }: DentalToolsProps) => {
   const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
 
   const handleDentalTool = (toolName: string, description: string) => {
