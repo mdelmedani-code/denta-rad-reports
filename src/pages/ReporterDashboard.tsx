@@ -208,6 +208,26 @@ const ReporterDashboard = () => {
     }
   };
 
+  const handleCloseModal = async () => {
+    if (selectedCase && selectedCase.status === 'in_progress') {
+      // Reset case status back to uploaded if user exits without saving
+      try {
+        const { error } = await supabase
+          .from('cases')
+          .update({ status: 'uploaded' })
+          .eq('id', selectedCase.id);
+
+        if (error) throw error;
+        fetchCases(); // Refresh the cases list
+      } catch (error) {
+        console.error('Error resetting case status:', error);
+      }
+    }
+    
+    setSelectedCase(null);
+    setReportText("");
+  };
+
   const filteredCases = cases.filter(case_ => 
     case_.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     case_.clinics.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -367,7 +387,7 @@ const ReporterDashboard = () => {
       </div>
 
       {/* Reporting Modal */}
-      <Dialog open={selectedCase !== null} onOpenChange={() => setSelectedCase(null)}>
+      <Dialog open={selectedCase !== null} onOpenChange={handleCloseModal}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Report for {selectedCase?.patient_name}</DialogTitle>
@@ -427,7 +447,7 @@ const ReporterDashboard = () => {
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setSelectedCase(null)}>
+                <Button variant="outline" onClick={handleCloseModal}>
                   Cancel
                 </Button>
                 <Button 
