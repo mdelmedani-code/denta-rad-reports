@@ -589,6 +589,10 @@ const UploadCase = () => {
                 type="submit" 
                 disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
                 className="w-full"
+                onClick={(e) => {
+                  console.log('Button clicked directly');
+                  // Don't prevent default here, let the form handle it
+                }}
               >
                 {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit Case"}
               </Button>
