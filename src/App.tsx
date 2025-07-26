@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
+import ReporterDashboard from "./pages/ReporterDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="admin">
                   <Invoices />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/reporter" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <ReporterDashboard />
                 </ProtectedRoute>
               } 
             />
