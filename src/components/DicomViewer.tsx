@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, Maximize2, Minimize2, ExternalLink, Download, Eye, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnnotationViewer } from "./AnnotationViewer";
+import { OHIFEnhancedViewer } from "./OHIFEnhancedViewer";
 
 interface DicomViewerProps {
   caseId: string;
@@ -19,6 +20,7 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [showViewer, setShowViewer] = useState(false);
+  const [showOHIFViewer, setShowOHIFViewer] = useState(false);
 
   useEffect(() => {
     const initializeViewer = async () => {
@@ -187,6 +189,19 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
   const isZipFile = filePath?.toLowerCase().endsWith('.zip');
   const isImageFile = filePath?.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp|tiff|dcm)$/);
 
+  // If user wants to view in OHIF Enhanced Viewer
+  if (showOHIFViewer && fileUrl) {
+    return (
+      <div className={className}>
+        <OHIFEnhancedViewer
+          caseId={caseId}
+          filePath={filePath}
+          onClose={() => setShowOHIFViewer(false)}
+        />
+      </div>
+    );
+  }
+
   // If we have an image file and user wants to view it, show the annotation viewer
   if (showViewer && fileUrl && isImageFile) {
     return (
@@ -276,14 +291,21 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
               )}
 
               <div className="space-y-3">
-                <div className="flex gap-3 justify-center">
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <Button 
+                    onClick={() => setShowOHIFViewer(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Enhanced MPR Viewer
+                  </Button>
                   {isImageFile && (
                     <Button 
                       onClick={() => setShowViewer(true)}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      View & Annotate
+                      2D Annotate
                     </Button>
                   )}
                   <Button 
@@ -291,7 +313,7 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Open OHIF Viewer
+                    OHIF (New Tab)
                   </Button>
                   <Button 
                     onClick={handleDownload}
