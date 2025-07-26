@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Upload, FileText, Calculator, ArrowLeft, FolderOpen } from "lucide-react";
+import { Upload, Calculator, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -588,13 +588,6 @@ const UploadCase = () => {
                     <span>Base Analysis</span>
                     <span>£{pricing.basePrice.toFixed(2)}</span>
                   </div>
-                  
-                  {pricing.fovSurcharge > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Large FOV Surcharge</span>
-                      <span>+£{pricing.fovSurcharge.toFixed(2)}</span>
-                    </div>
-                  )}
                   
                   {pricing.urgencySurcharge > 0 && (
                     <div className="flex justify-between text-sm">
