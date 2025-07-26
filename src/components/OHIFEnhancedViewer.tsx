@@ -566,21 +566,44 @@ export const OHIFEnhancedViewer = ({
 
   const toggleFullscreen = () => {
     const container = document.getElementById('ohif-viewer-container');
-    if (!container) return;
+    if (!container) {
+      toast.error('Viewer container not found');
+      return;
+    }
 
     if (!document.fullscreenElement) {
       container.requestFullscreen().then(() => {
         setIsFullscreen(true);
+        toast.success('Entered fullscreen mode');
       }).catch(err => {
         console.error('Error entering fullscreen:', err);
-        toast.error('Failed to enter fullscreen mode');
+        toast.error('Failed to enter fullscreen mode. Please check browser permissions.');
       });
     } else {
       document.exitFullscreen().then(() => {
         setIsFullscreen(false);
+        toast.success('Exited fullscreen mode');
       }).catch(err => {
         console.error('Error exiting fullscreen:', err);
+        toast.error('Failed to exit fullscreen mode');
       });
+    }
+  };
+
+  const openInNewWindow = () => {
+    const currentUrl = window.location.href;
+    const viewerUrl = `${window.location.origin}/dicom-viewer?case=${caseId}&file=${encodeURIComponent(filePath || '')}`;
+    
+    const newWindow = window.open(
+      viewerUrl, 
+      'DicomViewer', 
+      'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
+    );
+    
+    if (!newWindow) {
+      toast.error('Failed to open new window. Please check browser popup settings.');
+    } else {
+      toast.success('Opened viewer in new window');
     }
   };
 
@@ -878,6 +901,10 @@ export const OHIFEnhancedViewer = ({
           <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
             <Maximize className="h-4 w-4 mr-2" />
             {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={openInNewWindow}>
+            <Monitor className="h-4 w-4 mr-2" />
+            New Window
           </Button>
           <Button variant="ghost" size="sm">
             <Settings className="h-4 w-4 mr-2" />
