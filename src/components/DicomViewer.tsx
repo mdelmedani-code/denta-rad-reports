@@ -88,24 +88,60 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
     }
   };
 
-  const openOHIFInNewWindow = () => {
-    // Create DICOMweb configuration for standard OHIF viewer
-    const dicomwebConfig = {
-      studyInstanceUIDs: [`${caseId}`],
-      seriesInstanceUIDs: [`${caseId}.1`],
-      sopInstanceUIDs: [`${caseId}.1.1`],
+  const openOHIFViewer = () => {
+    // Create proper OHIF configuration for DICOMweb backend
+    const studyInstanceUID = `study.${caseId}`;
+    const seriesInstanceUID = `series.${caseId}.1`;
+    const sopInstanceUID = `instance.${caseId}.1.1`;
+    
+    // OHIF v3 configuration format
+    const ohifConfig = {
+      routerBasename: '/ohif-viewer',
+      whiteLabeling: {
+        createLogoComponentFn: () => null,
+      },
+      // Configure the data source to use our DICOMweb server
+      dataSources: [
+        {
+          sourceName: 'dicomweb',
+          namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+          configuration: {
+            friendlyName: 'DentaRad CBCT Server',
+            name: 'dicomweb',
+            wadoUriRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado`,
+            qidoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/qido`,
+            wadoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado`,
+            qidoSupportsIncludeField: false,
+            supportsReject: false,
+            imageRendering: 'wadors',
+            thumbnailRendering: 'wadors',
+            enableStudyLazyLoad: true,
+            supportsFuzzyMatching: false,
+            supportsWildcard: false,
+            staticWado: true,
+            singlepart: 'bulkdata,video',
+            requestOptions: {
+              headers: {
+                'X-Case-ID': caseId,
+              },
+            },
+          },
+        },
+      ],
+      defaultDataSourceName: 'dicomweb',
+      // Pre-load the study
+      studyInstanceUIDs: [studyInstanceUID],
       caseId: caseId,
-      patientName: `Patient-${caseId}`,
-      studyDescription: 'CBCT Scan',
-      dicomwebEndpoint: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server'
     };
 
-    // Open standard OHIF in a new window connected to dicomweb backend
-    const ohifUrl = `/ohif-viewer?config=${encodeURIComponent(JSON.stringify(dicomwebConfig))}`;
+    // Open OHIF in a new window with proper configuration
+    const configParam = encodeURIComponent(JSON.stringify(ohifConfig));
+    const ohifUrl = `/ohif-viewer?config=${configParam}&studyInstanceUIDs=${studyInstanceUID}&caseId=${caseId}`;
+    
     window.open(ohifUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no');
   };
 
-  const openOHIFViewer = () => {
+  const openOHIFEnhancedViewer = () => {
     if (!fileUrl) return;
     
     // Create OHIF viewer URL with our case data
@@ -353,11 +389,12 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
               <div className="space-y-3">
                 <div className="flex gap-3 justify-center flex-wrap">
                   <Button 
-                    onClick={openOHIFInNewWindow}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={openOHIFViewer}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    size="lg"
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    Open OHIF Viewer
+                    View CBCT
                   </Button>
                   <Button 
                     onClick={() => setShowOHIFViewer(true)}

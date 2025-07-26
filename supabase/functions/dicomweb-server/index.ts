@@ -289,9 +289,45 @@ serve(async (req) => {
     // Handle different WADO-RS endpoints
     if (req.method === 'GET') {
       
+      // Handle study-level queries first
+      if (pathParts.includes('studies') && !pathParts.includes('instances')) {
+        const studyUID = pathParts[pathParts.indexOf('studies') + 1];
+        const caseId = studyUID.replace('study.', '');
+        
+        // Get case info from database
+        const { data: caseData, error: caseError } = await supabase
+          .from('cases')
+          .select('file_path, patient_name')
+          .eq('id', caseId)
+          .single();
+          
+        if (caseError || !caseData) {
+          return new Response(JSON.stringify({ error: 'Case not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Return study-level metadata
+        const studyMetadata = [{
+          "0020000D": { "vr": "UI", "Value": [studyUID] }, // Study Instance UID
+          "00100010": { "vr": "PN", "Value": [{ "Alphabetic": caseData.patient_name || "Unknown Patient" }] },
+          "00081030": { "vr": "LO", "Value": ["CBCT Study"] },
+          "00200010": { "vr": "SH", "Value": ["001"] }, // Study ID
+          "00080020": { "vr": "DA", "Value": [new Date().toISOString().split('T')[0].replace(/-/g, '')] },
+          "00080030": { "vr": "TM", "Value": [new Date().toTimeString().split(' ')[0].replace(/:/g, '')] }
+        }];
+
+        return new Response(JSON.stringify(studyMetadata), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/dicom+json' }
+        });
+      }
+
       // Metadata endpoint: /wado/studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}/metadata
       if (pathParts.includes('metadata')) {
-        const caseId = url.searchParams.get('caseId');
+        const studyUID = pathParts[pathParts.indexOf('studies') + 1];
+        const caseId = studyUID.replace('study.', '') || url.searchParams.get('caseId');
+        
         if (!caseId) {
           return new Response(JSON.stringify({ error: 'Case ID required' }), {
             status: 400,
@@ -359,7 +395,8 @@ serve(async (req) => {
       
       // Image endpoint: /wado/studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}
       if (pathParts.includes('instances')) {
-        const caseId = url.searchParams.get('caseId');
+        const studyUID = pathParts[pathParts.indexOf('studies') + 1];
+        const caseId = studyUID.replace('study.', '') || url.searchParams.get('caseId') || req.headers.get('X-Case-ID');
         const accept = req.headers.get('accept') || '';
         
         if (!caseId) {

@@ -13,13 +13,31 @@ export const OHIFViewer = () => {
   
   useEffect(() => {
     const config = searchParams.get('config');
-    if (!config) return;
+    const studyInstanceUIDs = searchParams.get('studyInstanceUIDs');
+    const caseId = searchParams.get('caseId');
+    
+    if (!config && !studyInstanceUIDs) return;
 
     try {
-      const parsedConfig = JSON.parse(decodeURIComponent(config));
+      let parsedConfig;
+      if (config) {
+        parsedConfig = JSON.parse(decodeURIComponent(config));
+      } else {
+        // Create minimal config for DICOMweb
+        parsedConfig = {
+          studyInstanceUIDs: [studyInstanceUIDs],
+          caseId: caseId,
+        };
+      }
       
       // Load OHIF scripts dynamically
       const loadOHIF = async () => {
+        // Check if OHIF is already loaded
+        if (window.OHIFViewer) {
+          initializeOHIF(parsedConfig);
+          return;
+        }
+
         // Load OHIF CSS
         const link = document.createElement('link');
         link.rel = 'stylesheet';
@@ -30,26 +48,62 @@ export const OHIFViewer = () => {
         const script = document.createElement('script');
         script.src = 'https://unpkg.com/@ohif/viewer@4.12.51/dist/index.umd.js';
         script.onload = () => {
-          if (window.OHIFViewer && viewerRef.current) {
-            // Initialize OHIF viewer
-            const viewer = new window.OHIFViewer({
-              container: viewerRef.current,
-              studies: [{
-                StudyInstanceUID: parsedConfig.studyInstanceUIDs[0],
-                StudyDescription: parsedConfig.studyDescription,
-                PatientName: parsedConfig.patientName,
-                series: [{
-                  SeriesInstanceUID: parsedConfig.seriesInstanceUIDs[0],
-                  instances: [{
-                    SOPInstanceUID: parsedConfig.sopInstanceUIDs[0],
-                    url: parsedConfig.url
-                  }]
-                }]
-              }]
-            });
-          }
+          initializeOHIF(parsedConfig);
         };
         document.head.appendChild(script);
+      };
+
+      const initializeOHIF = (config: any) => {
+        if (window.OHIFViewer && viewerRef.current) {
+          try {
+            // OHIF v3 configuration
+            const ohifConfig = {
+              routerBasename: '/ohif-viewer',
+              showStudyList: false,
+              useSharedArrayBuffer: 'AUTO',
+              dataSources: config.dataSources || [
+                {
+                  sourceName: 'dicomweb',
+                  namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+                  configuration: {
+                    friendlyName: 'DentaRad CBCT Server',
+                    name: 'dicomweb',
+                    wadoUriRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado`,
+                    qidoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/qido`,
+                    wadoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado`,
+                    qidoSupportsIncludeField: false,
+                    supportsReject: false,
+                    imageRendering: 'wadors',
+                    thumbnailRendering: 'wadors',
+                    enableStudyLazyLoad: true,
+                    supportsFuzzyMatching: false,
+                    supportsWildcard: false,
+                    staticWado: true,
+                    singlepart: 'bulkdata,video',
+                    requestOptions: {
+                      headers: {
+                        'X-Case-ID': config.caseId,
+                      },
+                    },
+                  },
+                },
+              ],
+              defaultDataSourceName: 'dicomweb',
+            };
+
+            // Initialize OHIF viewer
+            const viewer = new window.OHIFViewer(ohifConfig);
+            
+            if (config.studyInstanceUIDs && config.studyInstanceUIDs.length > 0) {
+              // Pre-load study
+              viewer.loadStudy(config.studyInstanceUIDs[0]);
+            }
+            
+            console.log('OHIF Viewer initialized successfully');
+          } catch (error) {
+            console.error('Error initializing OHIF viewer:', error);
+          }
+        }
       };
 
       loadOHIF();
