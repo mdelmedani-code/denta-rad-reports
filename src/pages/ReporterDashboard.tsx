@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   FileText, 
   Search, 
@@ -15,7 +16,8 @@ import {
   Users,
   Clock,
   Wand2,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,10 +56,56 @@ const ReporterDashboard = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [concurrentUsers, setConcurrentUsers] = useState<string[]>([]);
+  const [showConcurrentWarning, setShowConcurrentWarning] = useState(false);
 
   useEffect(() => {
     fetchCases();
   }, []);
+
+  // Real-time presence tracking for concurrent editing
+  useEffect(() => {
+    if (!selectedCase) return;
+
+    let currentUserId: string | null = null;
+
+    const initializeChannel = async () => {
+      const user = await supabase.auth.getUser();
+      currentUserId = user.data.user?.id || null;
+
+      const channel = supabase.channel(`case_${selectedCase.id}`)
+        .on('presence', { event: 'sync' }, () => {
+          const newState = channel.presenceState();
+          const users = Object.keys(newState).filter(key => key !== currentUserId);
+          setConcurrentUsers(users);
+          setShowConcurrentWarning(users.length > 0);
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          console.log('User joined case:', key);
+        })
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+          console.log('User left case:', key);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED' && currentUserId) {
+            await channel.track({
+              user_id: currentUserId,
+              case_id: selectedCase.id,
+              online_at: new Date().toISOString(),
+            });
+          }
+        });
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    const cleanup = initializeChannel();
+    return () => {
+      cleanup.then(fn => fn?.());
+    };
+  }, [selectedCase]);
 
   const fetchCases = async () => {
     try {
@@ -437,10 +485,10 @@ const ReporterDashboard = () => {
                     <Button
                       onClick={() => startReporting(case_)}
                       className="flex items-center gap-2"
-                      disabled={case_.status === 'in_progress'}
+                      variant={case_.status === 'in_progress' ? 'outline' : 'default'}
                     >
                       <FileText className="w-4 h-4" />
-                      {case_.status === 'in_progress' ? 'In Progress' : 'Start Reporting'}
+                      {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
                     </Button>
                   </div>
                 </div>
@@ -468,6 +516,16 @@ const ReporterDashboard = () => {
           
           {selectedCase && (
             <div className="space-y-6">
+              {/* Concurrent Editing Warning */}
+              {showConcurrentWarning && (
+                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    <strong>Warning:</strong> Another user is currently viewing this case. 
+                    If you save your report, it may overwrite their work if they haven't finalized it yet.
+                  </AlertDescription>
+                </Alert>
+              )}
               {/* Case Details */}
               <div className="bg-muted p-4 rounded-lg">
                 <h4 className="font-semibold mb-2">Case Information</h4>
