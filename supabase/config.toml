@@ -2,3 +2,9 @@ project_id = "swusayoygknritombbwg"
 
 [functions.send-notification]
 verify_jwt = false
+
+[functions.live-transcription]
+verify_jwt = false
+
+[functions.generate-diagnostic-report]
+verify_jwt = true

@@ -9,18 +9,19 @@ import {
   FileText, 
   Search, 
   Eye, 
-  Mic,
-  MicOff,
   Save,
   LogOut,
   ImageIcon,
   Users,
-  Clock
+  Clock,
+  Wand2,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 
 interface Case {
   id: string;
@@ -52,6 +53,7 @@ const ReporterDashboard = () => {
   const [reportText, setReportText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     fetchCases();
@@ -153,6 +155,52 @@ const ReporterDashboard = () => {
         title: "Recording Started",
         description: "Voice recording started. Radioscribe integration coming soon.",
       });
+    }
+  };
+
+  const generateReport = async () => {
+    if (!selectedCase || !reportText.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter some text before AI enhancement",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-diagnostic-report', {
+        body: {
+          transcribedText: reportText,
+          caseDetails: {
+            patient_name: selectedCase.patient_name,
+            field_of_view: selectedCase.field_of_view,
+            urgency: selectedCase.urgency,
+            clinical_question: selectedCase.clinical_question
+          },
+          reportStyle: 'detailed'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.generatedReport) {
+        setReportText(data.generatedReport);
+        toast({
+          title: "Report Enhanced",
+          description: "AI has enhanced your report with professional medical terminology",
+        });
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate AI report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -420,18 +468,25 @@ const ReporterDashboard = () => {
                 </div>
               </div>
 
-              {/* Radioscribe Integration Placeholder */}
-              <div className="border-2 border-dashed border-muted-foreground p-6 rounded-lg text-center">
-                <h4 className="font-semibold mb-2">Radioscribe Integration</h4>
-                <p className="text-muted-foreground mb-4">Voice dictation and AI assistance will be integrated here</p>
-                <Button
-                  onClick={toggleRecording}
-                  variant={isRecording ? "destructive" : "default"}
-                  className="flex items-center gap-2"
-                >
-                  {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  {isRecording ? 'Stop Recording' : 'Start Recording'}
-                </Button>
+              {/* Voice Dictation Integration */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">Voice Dictation & AI Report Generation</h4>
+                  <Button
+                    onClick={generateReport}
+                    disabled={!reportText.trim() || isGenerating}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                    {isGenerating ? 'Generating...' : 'AI Enhance Report'}
+                  </Button>
+                </div>
+                <VoiceRecorder
+                  onTranscription={(text) => setReportText(prev => prev ? `${prev} ${text}` : text)}
+                  disabled={isSaving}
+                />
               </div>
 
               {/* Report Text Area */}
