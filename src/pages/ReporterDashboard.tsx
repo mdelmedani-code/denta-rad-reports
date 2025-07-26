@@ -118,7 +118,7 @@ const ReporterDashboard = () => {
             contact_email
           )
         `)
-        .in('status', ['uploaded', 'in_progress'])
+        .in('status', ['uploaded', 'in_progress', 'report_ready'])
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
@@ -413,7 +413,7 @@ const ReporterDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Available Cases</CardTitle>
@@ -431,6 +431,16 @@ const ReporterDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{cases.filter(c => c.status === 'in_progress').length}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <FileText className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{cases.filter(c => c.status === 'report_ready').length}</div>
             </CardContent>
           </Card>
 
@@ -482,14 +492,26 @@ const ReporterDashboard = () => {
                       <ImageIcon className="w-4 h-4" />
                       View Images
                     </Button>
-                    <Button
-                      onClick={() => startReporting(case_)}
-                      className="flex items-center gap-2"
-                      variant={case_.status === 'in_progress' ? 'outline' : 'default'}
-                    >
-                      <FileText className="w-4 h-4" />
-                      {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
-                    </Button>
+                    {case_.status !== 'report_ready' ? (
+                      <Button
+                        onClick={() => startReporting(case_)}
+                        className="flex items-center gap-2"
+                        variant={case_.status === 'in_progress' ? 'outline' : 'default'}
+                      >
+                        <FileText className="w-4 h-4" />
+                        {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="flex items-center gap-2"
+                        disabled
+                      >
+                        <FileText className="w-4 h-4" />
+                        Report Complete
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
