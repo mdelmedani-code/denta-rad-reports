@@ -22,6 +22,7 @@ import {
 interface DentalToolsProps {
   onToolActivate: (tool: string) => void;
   activeTool: string;
+  isReportingMode?: boolean; // New prop to hide pricing in reporting context
 }
 
 export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = false }: DentalToolsProps) => {
@@ -128,7 +129,7 @@ export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = fals
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Stethoscope className="h-5 w-5" />
-          Dental-Specific Analysis Tools
+          {isReportingMode ? 'Dental Analysis Tools' : 'Dental-Specific Analysis Tools'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -150,9 +151,11 @@ export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = fals
                   <div className="flex items-center gap-2 w-full">
                     <Icon className={`h-4 w-4 ${tool.color}`} />
                     <span className="text-sm font-medium">{tool.name}</span>
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      {tool.price}
-                    </Badge>
+                    {!isReportingMode && (
+                      <Badge variant="secondary" className="ml-auto text-xs">
+                        {tool.price}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground text-left">
                     {tool.description}
@@ -203,7 +206,7 @@ export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = fals
                 <div className="text-sm">Pathology Screening</div>
                 <div className="text-xs text-muted-foreground">AI-powered anomaly detection</div>
               </div>
-              <Badge className="ml-auto">£60</Badge>
+              {!isReportingMode && <Badge className="ml-auto">£60</Badge>}
             </Button>
 
             <Button
@@ -216,7 +219,7 @@ export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = fals
                 <div className="text-sm">Bone Density Analysis</div>
                 <div className="text-xs text-muted-foreground">Hounsfield unit mapping</div>
               </div>
-              <Badge className="ml-auto">£70</Badge>
+              {!isReportingMode && <Badge className="ml-auto">£70</Badge>}
             </Button>
           </div>
         </div>
