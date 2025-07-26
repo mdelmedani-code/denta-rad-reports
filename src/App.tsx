@@ -15,6 +15,7 @@ import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
 import NotFound from "./pages/NotFound";
 import DicomViewerPage from "./pages/DicomViewerPage";
+import { OHIFViewer } from "./pages/OHIFViewer";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route path="/ohif-viewer" element={<OHIFViewer />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

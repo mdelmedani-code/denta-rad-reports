@@ -75,9 +75,9 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
       studyDescription: 'CBCT Scan'
     };
 
-    // Open OHIF in a new tab with our configuration
+    // Open OHIF in a new window that can be moved to different screens
     const ohifUrl = `/ohif-viewer?config=${encodeURIComponent(JSON.stringify(ohifConfig))}`;
-    window.open(ohifUrl, '_blank', 'noopener,noreferrer');
+    window.open(ohifUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no');
   };
 
   const handleDownload = () => {
@@ -252,8 +252,16 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
               <div className="space-y-3">
                 <div className="flex gap-3 justify-center">
                   <Button 
-                    onClick={handleDownload}
+                    onClick={openOHIFViewer}
                     className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open OHIF Viewer
+                  </Button>
+                  <Button 
+                    onClick={handleDownload}
+                    variant="outline"
+                    className="border-blue-500 text-blue-300 hover:bg-blue-600/20"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download File
@@ -264,7 +272,7 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
                     className="border-blue-500 text-blue-300 hover:bg-blue-600/20"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Viewer Options
+                    Other Viewers
                   </Button>
                 </div>
                 
