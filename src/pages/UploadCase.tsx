@@ -178,6 +178,7 @@ const UploadCase = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('handleSubmit called!');
     e.preventDefault();
     console.log('Submit button clicked');
     console.log('User:', user);
