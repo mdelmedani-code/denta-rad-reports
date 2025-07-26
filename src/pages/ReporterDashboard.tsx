@@ -27,7 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
-import { DicomViewer } from "@/components/DicomViewer";
+import { OHIFEnhancedViewer } from "@/components/OHIFEnhancedViewer";
 
 interface Case {
   id: string;
@@ -750,8 +750,8 @@ const ReporterDashboard = () => {
                   </Alert>
                 )}
                 
-                {/* DICOM Viewer */}
-                <DicomViewer 
+                {/* Enhanced OHIF Viewer */}
+                <OHIFEnhancedViewer 
                   caseId={selectedCase.id}
                   filePath={selectedCase.file_path}
                   className="h-full"
