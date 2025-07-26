@@ -208,7 +208,39 @@ export const OHIFEnhancedViewer = ({
         setIsLoading(true);
         setError(null);
 
-        // Get signed URL from Supabase
+        // Check if we have extracted DICOM files first
+        const extractedPath = `extracted/${caseId}/`;
+        
+        const { data: extractedFiles, error: listError } = await supabase.storage
+          .from('cbct-scans')
+          .list(extractedPath);
+
+        if (!listError && extractedFiles && extractedFiles.length > 0) {
+          console.log('Found extracted DICOM files:', extractedFiles.length);
+          
+          // Find and load the first DICOM file from extracted files
+          const firstDicomFile = extractedFiles.find(file => 
+            file.name.toLowerCase().endsWith('.dcm') || 
+            file.name.toLowerCase().endsWith('.dicom')
+          );
+          
+          if (firstDicomFile) {
+            const extractedFilePath = `${extractedPath}${firstDicomFile.name}`;
+            
+            const { data, error: urlError } = await supabase.storage
+              .from('cbct-scans')
+              .createSignedUrl(extractedFilePath, 3600);
+
+            if (!urlError && data) {
+              setDicomUrl(data.signedUrl);
+              await loadAndRenderDicom(data.signedUrl);
+              console.log('Loaded extracted DICOM file:', extractedFilePath);
+              return;
+            }
+          }
+        }
+
+        // Fallback to original file if no extracted files found
         const { data, error: urlError } = await supabase.storage
           .from('cbct-scans')
           .createSignedUrl(filePath, 3600);
@@ -219,11 +251,33 @@ export const OHIFEnhancedViewer = ({
 
         setDicomUrl(data.signedUrl);
         
-        // Check if file is a ZIP archive
+        // Check if file is a ZIP archive that needs extraction
         const isZipFile = filePath.toLowerCase().endsWith('.zip');
         
         if (isZipFile) {
-          // For ZIP files, we need to extract DICOM files first
+          setError("ZIP file detected. Extracting DICOM files...");
+          
+          // Trigger extraction
+          try {
+            const { data: extractResult } = await supabase.functions
+              .invoke('extract-dicom-zip', {
+                body: {
+                  caseId: caseId,
+                  zipFilePath: filePath
+                }
+              });
+            
+            if (extractResult?.success) {
+              setError("DICOM files extracted successfully. Reloading...");
+              // Reload after extraction
+              setTimeout(() => loadDicomFile(), 2000);
+              return;
+            }
+          } catch (extractError) {
+            console.error('Auto-extraction failed:', extractError);
+          }
+          
+          // Show ZIP placeholder if extraction fails
           await loadAndRenderZipFile(data.signedUrl);
         } else {
           // Load single DICOM file
@@ -239,7 +293,7 @@ export const OHIFEnhancedViewer = ({
     };
 
     loadDicomFile();
-  }, [filePath]);
+  }, [filePath, caseId]);
 
   const loadAndRenderZipFile = async (url: string) => {
     try {

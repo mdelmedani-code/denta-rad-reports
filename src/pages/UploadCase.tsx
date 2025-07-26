@@ -138,6 +138,36 @@ const UploadCase = () => {
 
       if (caseError) throw caseError;
 
+      // If uploaded file is a ZIP, extract DICOM files
+      if (selectedFile.name.toLowerCase().endsWith('.zip')) {
+        toast({
+          title: "Extracting DICOM files...",
+          description: "Processing ZIP file to extract DICOM images.",
+        });
+
+        try {
+          const { data: extractResult, error: extractError } = await supabase.functions
+            .invoke('extract-dicom-zip', {
+              body: {
+                caseId: caseData.id,
+                zipFilePath: uploadData.path
+              }
+            });
+
+          if (extractError) {
+            console.error('Extract error:', extractError);
+          } else if (extractResult?.success) {
+            toast({
+              title: "DICOM Files Extracted",
+              description: `Successfully extracted ${extractResult.extractedCount} DICOM files.`,
+            });
+          }
+        } catch (extractError) {
+          console.error('ZIP extraction failed:', extractError);
+          // Don't fail the upload, just log the error
+        }
+      }
+
       toast({
         title: "Case Uploaded Successfully",
         description: `Case submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
