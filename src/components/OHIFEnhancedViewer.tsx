@@ -339,31 +339,30 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
           </div>
         )}
 
-        {fileUrl ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <img 
-              src={fileUrl} 
-              alt="DICOM"
-              className="max-w-full max-h-full object-contain"
-              style={{ imageRendering: 'pixelated' }}
-              onError={(e) => {
-                console.error('Failed to load DICOM image:', e);
-                setError('Failed to display DICOM image');
-              }}
-              onLoad={() => {
-                console.log('DICOM image loaded successfully');
-                setIsLoading(false);
-              }}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-white">
-            <div className="text-center">
-              <FileImage className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <p>Loading DICOM file...</p>
+        <div 
+          ref={viewerContainerRef}
+          className="w-full h-full"
+          style={{ minHeight: '400px' }}
+        >
+          {fileUrl ? (
+            <div className="flex items-center justify-center h-full text-white">
+              <div className="text-center">
+                <div className="animate-pulse mb-4">
+                  <div className="h-32 w-32 bg-gray-700 rounded mx-auto mb-4"></div>
+                </div>
+                <p>Loading DICOM viewer...</p>
+                <p className="text-sm text-gray-400 mt-2">Initializing Cornerstone.js</p>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center justify-center h-full text-white">
+              <div className="text-center">
+                <FileImage className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <p>Loading DICOM file...</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Right-click Context Menu */}
         {showContextMenu && (
