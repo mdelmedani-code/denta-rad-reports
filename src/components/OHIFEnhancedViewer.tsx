@@ -9,7 +9,11 @@ import {
   MousePointer, PenTool, Eye, RotateCcw, ZoomIn, ZoomOut, Save, 
   Play, Pause, SkipBack, SkipForward, Monitor, Contrast, 
   Move, RotateCw, Home, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  Crosshair, Grid, Info, ScrollText
+  Crosshair, Grid, Info, ScrollText, Layers, RotateCcw as Flip, 
+  Search, Bookmark, FileImage, Palette, Target, Maximize2, Minimize2,
+  ScanLine, Volume2, Zap, Link, Gauge, Activity, Brain,
+  Binary, Calculator, MapPin, Copy, RefreshCw, Camera, Printer,
+  Layout, MoreHorizontal, Filter, Lightbulb, Focus, Slice
 } from "lucide-react";
 import * as cornerstone from "@cornerstonejs/core";
 import * as cornerstoneTools from "@cornerstonejs/tools";
@@ -25,7 +29,7 @@ interface OHIFEnhancedViewerProps {
   className?: string;
 }
 
-// Enterprise-level DICOM viewer state
+// Enterprise-level DICOM viewer state - matching professional viewers
 interface ViewerState {
   currentSlice: number;
   totalSlices: number;
@@ -33,13 +37,25 @@ interface ViewerState {
   windowCenter: number;
   zoom: number;
   pan: { x: number; y: number };
+  rotation: number;
   isPlaying: boolean;
   playbackSpeed: number;
   crosshairPosition: { x: number; y: number };
   showCrosshairs: boolean;
   showOverlays: boolean;
-  maximizedView: number | null; // -1 for none, 0-3 for specific view
-  scrollMode: boolean; // New scroll mode state
+  showReferenceLines: boolean;
+  maximizedView: number | null;
+  scrollMode: boolean;
+  syncronizedScrolling: boolean;
+  magnifyingGlass: boolean;
+  invertColors: boolean;
+  showGrid: boolean;
+  renderingMode: 'mpr' | 'mip' | 'volume' | '3d';
+  windowPreset: 'bone' | 'soft_tissue' | 'lung' | 'brain' | 'abdomen' | 'custom';
+  measurementUnits: 'mm' | 'cm' | 'inches';
+  annotations: any[];
+  bookmarks: any[];
+  hounsfield: { x: number; y: number; value: number } | null;
 }
 
 export const OHIFEnhancedViewer = ({ 
@@ -57,7 +73,7 @@ export const OHIFEnhancedViewer = ({
   const [isSaving, setIsSaving] = useState(false);
   const [annotations, setAnnotations] = useState<any[]>([]);
   
-  // Enterprise viewer state
+  // Professional viewer state - matching industry standards
   const [viewerState, setViewerState] = useState<ViewerState>({
     currentSlice: 1,
     totalSlices: 120,
@@ -65,13 +81,25 @@ export const OHIFEnhancedViewer = ({
     windowCenter: 40,
     zoom: 1.0,
     pan: { x: 0, y: 0 },
+    rotation: 0,
     isPlaying: false,
-    playbackSpeed: 10, // fps
+    playbackSpeed: 10,
     crosshairPosition: { x: 256, y: 256 },
     showCrosshairs: true,
     showOverlays: true,
+    showReferenceLines: true,
     maximizedView: null,
-    scrollMode: false
+    scrollMode: false,
+    syncronizedScrolling: true,
+    magnifyingGlass: false,
+    invertColors: false,
+    showGrid: false,
+    renderingMode: 'mpr',
+    windowPreset: 'bone',
+    measurementUnits: 'mm',
+    annotations: [],
+    bookmarks: [],
+    hounsfield: null
   });
   
   const { user } = useAuth();
@@ -802,6 +830,68 @@ export const OHIFEnhancedViewer = ({
     }));
     toast.success(`Scroll mode ${!viewerState.scrollMode ? 'enabled' : 'disabled'} - Use mouse wheel to navigate slices`);
   }, [viewerState.scrollMode]);
+
+  // Professional Window/Level Presets (like RadiAnt, OsiriX)
+  const windowPresets = {
+    bone: { width: 2000, center: 300, name: 'Bone' },
+    soft_tissue: { width: 400, center: 40, name: 'Soft Tissue' },
+    lung: { width: 1500, center: -600, name: 'Lung' },
+    brain: { width: 80, center: 40, name: 'Brain' },
+    abdomen: { width: 350, center: 50, name: 'Abdomen' },
+    custom: { width: viewerState.windowWidth, center: viewerState.windowCenter, name: 'Custom' }
+  };
+
+  const applyWindowPreset = useCallback((preset: keyof typeof windowPresets) => {
+    const presetValues = windowPresets[preset];
+    setViewerState(prev => ({
+      ...prev,
+      windowWidth: presetValues.width,
+      windowCenter: presetValues.center,
+      windowPreset: preset
+    }));
+    toast.success(`Applied ${presetValues.name} window preset`);
+  }, []);
+
+  const toggleFeature = useCallback((feature: keyof ViewerState) => {
+    setViewerState(prev => ({
+      ...prev,
+      [feature]: !prev[feature as keyof ViewerState]
+    }));
+  }, []);
+
+  const rotateImage = useCallback((degrees: number) => {
+    setViewerState(prev => ({
+      ...prev,
+      rotation: (prev.rotation + degrees) % 360
+    }));
+    toast.success(`Rotated ${degrees}°`);
+  }, []);
+
+  const flipImage = useCallback(() => {
+    setViewerState(prev => ({
+      ...prev,
+      rotation: prev.rotation + 180
+    }));
+    toast.success('Image flipped');
+  }, []);
+
+  const addBookmark = useCallback(() => {
+    const bookmark = {
+      id: Date.now(),
+      slice: viewerState.currentSlice,
+      timestamp: new Date().toLocaleString(),
+      zoom: viewerState.zoom,
+      pan: viewerState.pan,
+      windowWidth: viewerState.windowWidth,
+      windowCenter: viewerState.windowCenter
+    };
+    
+    setViewerState(prev => ({
+      ...prev,
+      bookmarks: [...prev.bookmarks, bookmark]
+    }));
+    toast.success(`Bookmark added for slice ${viewerState.currentSlice}`);
+  }, [viewerState]);
   // Keyboard shortcuts for enterprise workflow
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -867,6 +957,39 @@ export const OHIFEnhancedViewer = ({
           break;
         case '5':
           handleToolChange('rectangle');
+          break;
+        case 'z':
+          handleToolChange('zoom');
+          break;
+        case 'p':
+          handleToolChange('pan');
+          break;
+        case 'w':
+          handleToolChange('window');
+          break;
+        case 'm':
+          toggleFeature('magnifyingGlass');
+          break;
+        case 'c':
+          toggleFeature('showCrosshairs');
+          break;
+        case 'g':
+          toggleFeature('showGrid');
+          break;
+        case 'i':
+          toggleFeature('invertColors');
+          break;
+        case 'b':
+          addBookmark();
+          break;
+        case 'f':
+          flipImage();
+          break;
+        case 'q':
+          applyWindowPreset('bone');
+          break;
+        case 'e':
+          applyWindowPreset('soft_tissue');
           break;
       }
     };
@@ -997,24 +1120,63 @@ export const OHIFEnhancedViewer = ({
         </div>
       </div>
 
-      {/* Annotation Toolbar */}
-      <div className="bg-gray-800 border-b border-gray-700 p-3">
-        <div className="flex items-center gap-2 justify-center">
+      {/* Professional Toolbar - Main Tools */}
+      <div className="bg-gray-800 border-b border-gray-700 p-2">
+        <div className="flex items-center gap-1 justify-center flex-wrap">
+          {/* Navigation Tools */}
           <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
             <Button
               variant={activeTool === 'select' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => handleToolChange('select')}
               className="text-xs"
+              title="Select/Navigate (1)"
             >
               <MousePointer className="h-4 w-4 mr-1" />
               Select
             </Button>
             <Button
+              variant={activeTool === 'zoom' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleToolChange('zoom')}
+              className="text-xs"
+              title="Zoom Tool (Z)"
+            >
+              <ZoomIn className="h-4 w-4 mr-1" />
+              Zoom
+            </Button>
+            <Button
+              variant={activeTool === 'pan' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleToolChange('pan')}
+              className="text-xs"
+              title="Pan Tool (P)"
+            >
+              <Move className="h-4 w-4 mr-1" />
+              Pan
+            </Button>
+            <Button
+              variant={activeTool === 'window' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleToolChange('window')}
+              className="text-xs"
+              title="Window/Level (W)"
+            >
+              <Contrast className="h-4 w-4 mr-1" />
+              W/L
+            </Button>
+          </div>
+          
+          <div className="w-px h-6 bg-gray-600 mx-1" />
+          
+          {/* Measurement Tools */}
+          <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
+            <Button
               variant={activeTool === 'length' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => handleToolChange('length')}
               className="text-xs"
+              title="Linear Measurement (2)"
             >
               <Ruler className="h-4 w-4 mr-1" />
               Length
@@ -1024,6 +1186,7 @@ export const OHIFEnhancedViewer = ({
               size="sm"
               onClick={() => handleToolChange('angle')}
               className="text-xs"
+              title="Angle Measurement (3)"
             >
               <RotateCcw className="h-4 w-4 mr-1" />
               Angle
@@ -1033,80 +1196,208 @@ export const OHIFEnhancedViewer = ({
               size="sm"
               onClick={() => handleToolChange('circle')}
               className="text-xs"
+              title="Circle ROI (4)"
             >
               <CircleDot className="h-4 w-4 mr-1" />
-              Circle ROI
+              Circle
             </Button>
             <Button
               variant={activeTool === 'rectangle' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => handleToolChange('rectangle')}
               className="text-xs"
+              title="Rectangle ROI (5)"
             >
               <Square className="h-4 w-4 mr-1" />
-              Rect ROI
+              Rectangle
             </Button>
             <Button
-              variant={activeTool === 'freehand' ? 'default' : 'ghost'}
+              variant={activeTool === 'probe' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => handleToolChange('freehand')}
+              onClick={() => handleToolChange('probe')}
               className="text-xs"
+              title="Density Probe (HU Values)"
             >
-              <PenTool className="h-4 w-4 mr-1" />
-              Freehand
+              <Target className="h-4 w-4 mr-1" />
+              Probe
             </Button>
           </div>
           
-          <div className="w-px h-6 bg-gray-600 mx-2" />
+          <div className="w-px h-6 bg-gray-600 mx-1" />
           
+          {/* Advanced Tools */}
+          <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
+            <Button
+              variant={viewerState.magnifyingGlass ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFeature('magnifyingGlass')}
+              className="text-xs"
+              title="Magnifying Glass (M)"
+            >
+              <Search className="h-4 w-4 mr-1" />
+              Magnify
+            </Button>
+            <Button
+              variant={viewerState.showCrosshairs ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFeature('showCrosshairs')}
+              className="text-xs"
+              title="Crosshairs (C)"
+            >
+              <Crosshair className="h-4 w-4 mr-1" />
+              Crosshairs
+            </Button>
+            <Button
+              variant={viewerState.showGrid ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFeature('showGrid')}
+              className="text-xs"
+              title="Grid Overlay (G)"
+            >
+              <Grid className="h-4 w-4 mr-1" />
+              Grid
+            </Button>
+            <Button
+              variant={viewerState.showReferenceLines ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFeature('showReferenceLines')}
+              className="text-xs"
+              title="Reference Lines"
+            >
+              <ScanLine className="h-4 w-4 mr-1" />
+              Ref Lines
+            </Button>
+          </div>
+          
+          <div className="w-px h-6 bg-gray-600 mx-1" />
+          
+          {/* Image Processing */}
           <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleToolChange('zoom')}
+              onClick={() => rotateImage(90)}
               className="text-xs"
+              title="Rotate 90° CW (R)"
             >
-              <ZoomIn className="h-4 w-4 mr-1" />
-              Zoom
+              <RotateCw className="h-4 w-4 mr-1" />
+              Rotate
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleToolChange('pan')}
+              onClick={flipImage}
               className="text-xs"
+              title="Flip Image (F)"
             >
-              <Eye className="h-4 w-4 mr-1" />
-              Pan
+              <Flip className="h-4 w-4 mr-1" />
+              Flip
+            </Button>
+            <Button
+              variant={viewerState.invertColors ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleFeature('invertColors')}
+              className="text-xs"
+              title="Invert Colors (I)"
+            >
+              <Lightbulb className="h-4 w-4 mr-1" />
+              Invert
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleToolChange('window')}
+              onClick={resetView}
               className="text-xs"
+              title="Reset View (Ctrl+R)"
             >
-              <Settings className="h-4 w-4 mr-1" />
-              W/L
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Reset
             </Button>
           </div>
           
-          <div className="w-px h-6 bg-gray-600 mx-2" />
+          <div className="w-px h-6 bg-gray-600 mx-1" />
           
+          {/* Professional Actions */}
+          <div className="flex items-center gap-1 bg-gray-900 rounded-lg p-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={addBookmark}
+              className="text-xs"
+              title="Add Bookmark (B)"
+            >
+              <Bookmark className="h-4 w-4 mr-1" />
+              Bookmark
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs"
+              title="Capture Screenshot (S)"
+            >
+              <Camera className="h-4 w-4 mr-1" />
+              Capture
+            </Button>
+            <Button
+              variant={isSaving ? "secondary" : "default"}
+              size="sm"
+              onClick={saveAnnotations}
+              disabled={isSaving}
+              className="text-xs"
+              title="Save Annotations (Ctrl+S)"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Window/Level Presets Bar */}
+      <div className="bg-gray-850 border-b border-gray-700 p-2">
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-xs text-gray-400 mr-2">W/L Presets:</span>
+          {Object.entries(windowPresets).map(([key, preset]) => (
+            <Button
+              key={key}
+              variant={viewerState.windowPreset === key ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => applyWindowPreset(key as keyof typeof windowPresets)}
+              className="text-xs"
+              title={`${preset.name}: W:${preset.width} C:${preset.center}`}
+            >
+              {preset.name}
+            </Button>
+          ))}
+          <div className="w-px h-4 bg-gray-600 mx-2" />
+          <span className="text-xs text-gray-400">Rendering:</span>
           <Button
-            variant={isSaving ? "secondary" : "default"}
+            variant={viewerState.renderingMode === 'mpr' ? 'default' : 'ghost'}
             size="sm"
-            onClick={saveAnnotations}
-            disabled={isSaving}
+            onClick={() => setViewerState(prev => ({ ...prev, renderingMode: 'mpr' }))}
             className="text-xs"
           >
-            <Save className="h-4 w-4 mr-1" />
-            {isSaving ? 'Saving...' : 'Save Annotations'}
+            <Slice className="h-4 w-4 mr-1" />
+            MPR
           </Button>
-          
-          <div className="w-px h-6 bg-gray-600 mx-2" />
-          
-          <div className="text-xs text-gray-400">
-            🦷 Dental Tools: IAN Nerve Tracing | TMJ Analysis | Airway Assessment
-          </div>
+          <Button
+            variant={viewerState.renderingMode === 'mip' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewerState(prev => ({ ...prev, renderingMode: 'mip' }))}
+            className="text-xs"
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            MIP
+          </Button>
+          <Button
+            variant={viewerState.renderingMode === 'volume' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewerState(prev => ({ ...prev, renderingMode: 'volume' }))}
+            className="text-xs"
+          >
+            <Volume2 className="h-4 w-4 mr-1" />
+            Volume
+          </Button>
         </div>
       </div>
 
@@ -1310,109 +1601,210 @@ export const OHIFEnhancedViewer = ({
               className="flex-1"
             />
             <span className="text-xs text-gray-400 min-w-[40px]">{viewerState.windowCenter}</span>
+        </div>
+
+        {/* Professional Status Bar */}
+        <div className="bg-gray-900 border-t border-gray-700 p-2">
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center gap-4">
+              <span>Case: {caseId}</span>
+              <span>•</span>
+              <span>Tool: {activeTool.charAt(0).toUpperCase() + activeTool.slice(1)}</span>
+              <span>•</span>
+              <span>Mode: {viewerState.renderingMode.toUpperCase()}</span>
+              <span>•</span>
+              <span>Preset: {windowPresets[viewerState.windowPreset].name}</span>
+              {viewerState.bookmarks.length > 0 && (
+                <>
+                  <span>•</span>
+                  <span>Bookmarks: {viewerState.bookmarks.length}</span>
+                </>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <span>Units: {viewerState.measurementUnits}</span>
+              <span>•</span>
+              <span className={viewerState.scrollMode ? 'text-blue-400' : ''}>
+                Scroll: {viewerState.scrollMode ? 'ON' : 'OFF'}
+              </span>
+              <span>•</span>
+              <span className={viewerState.syncronizedScrolling ? 'text-green-400' : ''}>
+                Sync: {viewerState.syncronizedScrolling ? 'ON' : 'OFF'}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-6 px-2"
+                title="Show keyboard shortcuts"
+                onClick={() => toast.info('Keyboard Shortcuts: 1-5: Tools, Z: Zoom, P: Pan, W: W/L, C: Crosshairs, G: Grid, I: Invert, B: Bookmark, F: Flip, Space: Play/Pause, ←→: Navigate, Ctrl+R: Reset')}
+              >
+                <Info className="h-3 w-3 mr-1" />
+                Shortcuts
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Keyboard Shortcuts Help */}
-        <div className="mt-2 text-xs text-gray-500">
-          <span className="font-semibold">Shortcuts:</span> ↑↓ Navigate • Ctrl+Wheel Zoom • Space Play/Pause • 1-5 Tools • Ctrl+R Reset • PgUp/PgDn Fast Nav
-        </div>
+        {/* Bookmark Panel (if bookmarks exist) */}
+        {viewerState.bookmarks.length > 0 && (
+          <div className="bg-gray-850 border-t border-gray-700 p-2">
+            <div className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4 text-yellow-400" />
+              <span className="text-xs text-gray-400">Bookmarks:</span>
+              <div className="flex gap-1 overflow-x-auto">
+                {viewerState.bookmarks.map((bookmark) => (
+                  <Button
+                    key={bookmark.id}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-6 px-2 whitespace-nowrap"
+                    onClick={() => {
+                      handleSliceChange(bookmark.slice);
+                      handleZoom(bookmark.zoom);
+                      setViewerState(prev => ({ 
+                        ...prev, 
+                        pan: bookmark.pan,
+                        windowWidth: bookmark.windowWidth,
+                        windowCenter: bookmark.windowCenter 
+                      }));
+                      toast.success(`Jumped to bookmark: Slice ${bookmark.slice}`);
+                    }}
+                    title={`Slice ${bookmark.slice} - ${bookmark.timestamp}`}
+                  >
+                    <MapPin className="h-3 w-3 mr-1" />
+                    Slice {bookmark.slice}
+                  </Button>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-6 px-2 text-red-400"
+                  onClick={() => {
+                    setViewerState(prev => ({ ...prev, bookmarks: [] }));
+                    toast.success('All bookmarks cleared');
+                  }}
+                  title="Clear all bookmarks"
+                >
+                  Clear All
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* MPR Views Grid */}
-      <div className={`grid gap-2 p-4 ${
-        viewerState.maximizedView !== null 
-          ? 'grid-cols-1' 
-          : 'grid-cols-2 grid-rows-2'
-      } h-full`}>
-        
-        {/* Axial View */}
-        <div className={`relative border border-green-500/30 bg-black rounded-lg overflow-hidden ${
-          viewerState.maximizedView === 0 ? 'col-span-1 row-span-1' : 
-          viewerState.maximizedView !== null && viewerState.maximizedView !== 0 ? 'hidden' : ''
-        }`}>
-          <div className="absolute top-2 left-2 text-green-400 text-sm font-semibold z-10">
-            Axial
+      {/* MPR Viewport Grid - Professional Layout */}
+      <div className="flex-1 relative">
+        {viewerState.maximizedView !== null ? (
+          // Single maximized view
+          <div className="w-full h-full relative">
+            <div className="absolute top-2 left-2 z-10">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewerState(prev => ({ ...prev, maximizedView: null }))}
+                className="bg-black/50 text-white hover:bg-black/70"
+              >
+                <Minimize2 className="h-4 w-4 mr-1" />
+                Restore
+              </Button>
+            </div>
+            <div 
+              className="w-full h-full"
+              ref={viewerState.maximizedView === 0 ? axialViewRef : 
+                   viewerState.maximizedView === 1 ? sagittalViewRef : 
+                   viewerState.maximizedView === 2 ? coronalViewRef : threeDViewRef}
+            />
           </div>
-          <button 
-            onClick={() => toggleViewMaximize(0)}
-            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
-          >
-            {viewerState.maximizedView === 0 ? '⤡' : '⤢'}
-          </button>
-          <div ref={axialViewRef} className="w-full h-full relative"></div>
-        </div>
+        ) : (
+          // Standard 2x2 MPR layout
+          <div className="grid grid-cols-2 gap-1 h-full">
+            {/* Axial View */}
+            <div className="relative bg-black border border-gray-600">
+              <div className="absolute top-2 left-2 z-10 bg-blue-600/90 text-white text-xs px-2 py-1 rounded">
+                Axial (A)
+              </div>
+              <div className="absolute top-2 right-2 z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleViewMaximize(0)}
+                  className="bg-black/50 text-white hover:bg-black/70 h-6 w-6 p-0"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <div ref={axialViewRef} className="w-full h-full" />
+            </div>
 
-        {/* Sagittal View */}
-        <div className={`relative border border-orange-500/30 bg-black rounded-lg overflow-hidden ${
-          viewerState.maximizedView === 1 ? 'col-span-1 row-span-1' : 
-          viewerState.maximizedView !== null && viewerState.maximizedView !== 1 ? 'hidden' : ''
-        }`}>
-          <div className="absolute top-2 left-2 text-orange-400 text-sm font-semibold z-10">
-            Sagittal
-          </div>
-          <button 
-            onClick={() => toggleViewMaximize(1)}
-            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
-          >
-            {viewerState.maximizedView === 1 ? '⤡' : '⤢'}
-          </button>
-          <div ref={sagittalViewRef} className="w-full h-full relative"></div>
-        </div>
+            {/* Sagittal View */}
+            <div className="relative bg-black border border-gray-600">
+              <div className="absolute top-2 left-2 z-10 bg-green-600/90 text-white text-xs px-2 py-1 rounded">
+                Sagittal (S)
+              </div>
+              <div className="absolute top-2 right-2 z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleViewMaximize(1)}
+                  className="bg-black/50 text-white hover:bg-black/70 h-6 w-6 p-0"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <div ref={sagittalViewRef} className="w-full h-full" />
+            </div>
 
-        {/* Coronal View */}
-        <div className={`relative border border-blue-500/30 bg-black rounded-lg overflow-hidden ${
-          viewerState.maximizedView === 2 ? 'col-span-1 row-span-1' : 
-          viewerState.maximizedView !== null && viewerState.maximizedView !== 2 ? 'hidden' : ''
-        }`}>
-          <div className="absolute top-2 left-2 text-blue-400 text-sm font-semibold z-10">
-            Coronal
-          </div>
-          <button 
-            onClick={() => toggleViewMaximize(2)}
-            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
-          >
-            {viewerState.maximizedView === 2 ? '⤡' : '⤢'}
-          </button>
-          <div ref={coronalViewRef} className="w-full h-full relative"></div>
-        </div>
+            {/* Coronal View */}
+            <div className="relative bg-black border border-gray-600">
+              <div className="absolute top-2 left-2 z-10 bg-orange-600/90 text-white text-xs px-2 py-1 rounded">
+                Coronal (C)
+              </div>
+              <div className="absolute top-2 right-2 z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleViewMaximize(2)}
+                  className="bg-black/50 text-white hover:bg-black/70 h-6 w-6 p-0"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <div ref={coronalViewRef} className="w-full h-full" />
+            </div>
 
-        {/* 3D Volume View */}
-        <div className={`relative border border-purple-500/30 bg-black rounded-lg overflow-hidden ${
-          viewerState.maximizedView === 3 ? 'col-span-1 row-span-1' : 
-          viewerState.maximizedView !== null && viewerState.maximizedView !== 3 ? 'hidden' : ''
-        }`}>
-          <div className="absolute top-2 left-2 text-purple-400 text-sm font-semibold z-10">
-            3D Volume
+            {/* 3D Volume Rendering */}
+            <div className="relative bg-black border border-gray-600">
+              <div className="absolute top-2 left-2 z-10 bg-red-600/90 text-white text-xs px-2 py-1 rounded">
+                3D Volume (V)
+              </div>
+              <div className="absolute top-2 right-2 z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleViewMaximize(3)}
+                  className="bg-black/50 text-white hover:bg-black/70 h-6 w-6 p-0"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                </Button>
+              </div>
+              <div ref={threeDViewRef} className="w-full h-full" />
+            </div>
           </div>
-          <button 
-            onClick={() => toggleViewMaximize(3)}
-            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
-          >
-            {viewerState.maximizedView === 3 ? '⤡' : '⤢'}
-          </button>
-          <div ref={threeDViewRef} className="w-full h-full relative"></div>
-        </div>
+        )}
       </div>
 
-      {/* Status Bar */}
-      <div className="bg-gray-900 border-t border-gray-700 p-2 text-sm text-gray-400">
-        <div className="flex justify-between items-center">
-          <span>Ready - OHIF Enhanced Viewer with MPR</span>
-          <span>Case ID: {caseId}</span>
-        </div>
+      {/* Dental Analysis Panel */}
+      <div className="border-t border-gray-700">
+        <DentalTools 
+          onToolActivate={handleToolChange}
+          activeTool={activeTool}
+        />
       </div>
+    </div>
+  );
       </div>
-
-      {/* Dental Analysis Tools Panel */}
-      {!isFullscreen && (
-        <div className="mt-4">
-          <DentalTools 
-            onToolActivate={handleToolChange}
-            activeTool={activeTool}
-          />
-        </div>
-      )}
     </div>
   );
 };
