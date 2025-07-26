@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { DicomViewer } from "@/components/DicomViewer";
 
 interface Case {
   id: string;
@@ -236,9 +237,6 @@ const ReporterDashboard = () => {
         return;
       }
     }
-    
-    // Open DICOM viewer
-    openDicomViewer(caseData);
   };
 
   const toggleRecording = () => {
@@ -708,127 +706,143 @@ const ReporterDashboard = () => {
 
       {/* Reporting Modal */}
       <Dialog open={selectedCase !== null} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Report for {selectedCase?.patient_name}</DialogTitle>
             <DialogDescription>
-              Create a diagnostic report for this case. The DICOM images should be open in another tab.
+              Review the DICOM images and create a diagnostic report for this case.
             </DialogDescription>
           </DialogHeader>
           
           {selectedCase && (
-            <div className="space-y-6">
-              {/* Concurrent Editing Warning */}
-              {showConcurrentWarning && (
-                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  <AlertDescription className="text-amber-800 dark:text-amber-200">
-                    <strong>Warning:</strong> Another user is currently viewing this case. 
-                    If you save your report, it may overwrite their work if they haven't finalized it yet.
-                  </AlertDescription>
-                </Alert>
-              )}
-              {/* Case Details */}
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">Case Information</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <strong>Patient:</strong> {selectedCase.patient_name}
-                  </div>
-                  <div>
-                    <strong>Clinic:</strong> {selectedCase.clinics.name}
-                  </div>
-                  <div>
-                    <strong>DOB:</strong> {selectedCase.patient_dob ? new Date(selectedCase.patient_dob).toLocaleDateString() : 'N/A'}
-                  </div>
-                  <div>
-                    <strong>Internal ID:</strong> {selectedCase.patient_internal_id || 'N/A'}
-                  </div>
-                  <div className="col-span-2">
-                    <strong>Clinical Question:</strong> {selectedCase.clinical_question}
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - DICOM Viewer */}
+              <div className="space-y-4">
+                {/* Concurrent Editing Warning */}
+                {showConcurrentWarning && (
+                  <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-200">
+                      <strong>Warning:</strong> Another user is currently viewing this case. 
+                      If you save your report, it may overwrite their work if they haven't finalized it yet.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {/* DICOM Viewer */}
+                <DicomViewer 
+                  caseId={selectedCase.id}
+                  filePath={selectedCase.file_path}
+                  className="h-full"
+                />
               </div>
 
-              {/* Voice Dictation Integration */}
+              {/* Right Column - Reporting Interface */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold">Voice Dictation & AI Report Generation</h4>
-                  <Button
-                    onClick={generateReport}
-                    disabled={!reportText.trim() || isGenerating}
+                {/* Case Details */}
+                <div className="bg-muted p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Case Information</h4>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div>
+                      <strong>Patient:</strong> {selectedCase.patient_name}
+                    </div>
+                    <div>
+                      <strong>Clinic:</strong> {selectedCase.clinics.name}
+                    </div>
+                    <div>
+                      <strong>DOB:</strong> {selectedCase.patient_dob ? new Date(selectedCase.patient_dob).toLocaleDateString() : 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Internal ID:</strong> {selectedCase.patient_internal_id || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Clinical Question:</strong> {selectedCase.clinical_question}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Voice Dictation Integration */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">Voice Dictation & AI</h4>
+                    <Button
+                      onClick={generateReport}
+                      disabled={!reportText.trim() || isGenerating}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                      {isGenerating ? 'Generating...' : 'AI Enhance'}
+                    </Button>
+                  </div>
+                  <VoiceRecorder
+                    onTranscription={(text) => setReportText(prev => prev ? `${prev} ${text}` : text)}
+                    disabled={isSaving}
+                  />
+                </div>
+
+                {/* Report Text Area */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Diagnostic Report</label>
+                  <Textarea
+                    value={reportText}
+                    onChange={(e) => setReportText(e.target.value)}
+                    placeholder="Enter your diagnostic report here..."
+                    className="min-h-[400px]"
+                  />
+                </div>
+
+                {/* PDF Preview Section */}
+                {selectedCase?.reports?.[0]?.pdf_url && (
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Generated PDF Report</h4>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => window.open(selectedCase.reports[0].pdf_url, '_blank')}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <FileType className="w-4 h-4" />
+                        View PDF
+                      </Button>
+                      <Button
+                        onClick={() => createSecureShareLink(selectedCase.reports[0].id)}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={handleCancelReport} size="sm">
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={saveDraft}
+                    disabled={isSaving || isGeneratingPDF || !reportText.trim()}
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-2"
                   >
-                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                    {isGenerating ? 'Generating...' : 'AI Enhance Report'}
+                    <Save className="w-4 h-4" />
+                    {isSaving ? 'Saving...' : 'Save Draft'}
+                  </Button>
+                  <Button 
+                    onClick={saveReport}
+                    disabled={isSaving || isGeneratingPDF || !reportText.trim()}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSaving || isGeneratingPDF ? 'Processing...' : selectedCase?.status === 'report_ready' ? 'Update Report' : 'Finalize Report'}
                   </Button>
                 </div>
-                <VoiceRecorder
-                  onTranscription={(text) => setReportText(prev => prev ? `${prev} ${text}` : text)}
-                  disabled={isSaving}
-                />
-              </div>
-
-              {/* Report Text Area */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Diagnostic Report</label>
-                <Textarea
-                  value={reportText}
-                  onChange={(e) => setReportText(e.target.value)}
-                  placeholder="Enter your diagnostic report here..."
-                  className="min-h-[300px]"
-                />
-              </div>
-
-              {/* PDF Preview Section */}
-              {selectedCase?.reports?.[0]?.pdf_url && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Generated PDF Report</h4>
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={() => window.open(selectedCase.reports[0].pdf_url, '_blank')}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <FileType className="w-4 h-4" />
-                      View PDF Report
-                    </Button>
-                    <Button
-                      onClick={() => createSecureShareLink(selectedCase.reports[0].id)}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Create Share Link
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={handleCancelReport}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={saveDraft}
-                  disabled={isSaving || isGeneratingPDF || !reportText.trim()}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSaving ? 'Saving...' : 'Save Draft'}
-                </Button>
-                <Button 
-                  onClick={saveReport}
-                  disabled={isSaving || isGeneratingPDF || !reportText.trim()}
-                  className="flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSaving || isGeneratingPDF ? 'Processing...' : selectedCase?.status === 'report_ready' ? 'Update Report & PDF' : 'Finalize Report & Generate PDF'}
-                </Button>
               </div>
             </div>
           )}
