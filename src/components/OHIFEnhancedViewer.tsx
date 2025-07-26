@@ -9,7 +9,7 @@ import {
   MousePointer, PenTool, Eye, RotateCcw, ZoomIn, ZoomOut, Save, 
   Play, Pause, SkipBack, SkipForward, Monitor, Contrast, 
   Move, RotateCw, Home, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  Crosshair, Grid, Info
+  Crosshair, Grid, Info, ScrollText
 } from "lucide-react";
 import * as cornerstone from "@cornerstonejs/core";
 import * as cornerstoneTools from "@cornerstonejs/tools";
@@ -39,6 +39,7 @@ interface ViewerState {
   showCrosshairs: boolean;
   showOverlays: boolean;
   maximizedView: number | null; // -1 for none, 0-3 for specific view
+  scrollMode: boolean; // New scroll mode state
 }
 
 export const OHIFEnhancedViewer = ({ 
@@ -69,7 +70,8 @@ export const OHIFEnhancedViewer = ({
     crosshairPosition: { x: 256, y: 256 },
     showCrosshairs: true,
     showOverlays: true,
-    maximizedView: null
+    maximizedView: null,
+    scrollMode: false
   });
   
   const { user } = useAuth();
@@ -793,6 +795,13 @@ export const OHIFEnhancedViewer = ({
     }));
   }, []);
 
+  const toggleScrollMode = useCallback(() => {
+    setViewerState(prev => ({
+      ...prev,
+      scrollMode: !prev.scrollMode
+    }));
+    toast.success(`Scroll mode ${!viewerState.scrollMode ? 'enabled' : 'disabled'} - Use mouse wheel to navigate slices`);
+  }, [viewerState.scrollMode]);
   // Keyboard shortcuts for enterprise workflow
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -863,27 +872,34 @@ export const OHIFEnhancedViewer = ({
     };
 
     const handleWheel = (event: WheelEvent) => {
-      if (event.ctrlKey) {
-        // Zoom with Ctrl+Wheel
-        event.preventDefault();
-        const zoomDirection = event.deltaY > 0 ? 0.9 : 1.1;
-        handleZoom(viewerState.zoom * zoomDirection);
-      } else {
-        // Scroll through slices with wheel
+      if (viewerState.scrollMode) {
+        // In scroll mode, use mouse wheel to navigate slices
         event.preventDefault();
         const direction = event.deltaY > 0 ? 'next' : 'prev';
         handleSliceChange(direction);
+      } else if (event.ctrlKey) {
+        // Zoom with Ctrl+Wheel (default behavior)
+        event.preventDefault();
+        const zoomDirection = event.deltaY > 0 ? 0.9 : 1.1;
+        handleZoom(viewerState.zoom * zoomDirection);
       }
+      // When scroll mode is off and no Ctrl key, allow normal page scrolling
     };
 
     window.addEventListener('keydown', handleKeyPress);
-    window.addEventListener('wheel', handleWheel, { passive: false });
+    
+    // Only prevent wheel events when scroll mode is active or Ctrl is held
+    if (viewerState.scrollMode) {
+      window.addEventListener('wheel', handleWheel, { passive: false });
+    } else {
+      window.addEventListener('wheel', handleWheel, { passive: true });
+    }
 
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [handleSliceChange, handleZoom, togglePlayback, resetView, viewerState.currentSlice, viewerState.totalSlices, viewerState.zoom]);
+  }, [handleSliceChange, handleZoom, togglePlayback, resetView, viewerState.currentSlice, viewerState.totalSlices, viewerState.zoom, viewerState.scrollMode]);
 
   // Cine loop playback
   useEffect(() => {
@@ -1159,6 +1175,20 @@ export const OHIFEnhancedViewer = ({
                 <span className="text-xs text-gray-400">Speed:</span>
                 <span className="text-xs font-mono text-white">{viewerState.playbackSpeed} fps</span>
               </div>
+            </div>
+
+            {/* Scroll Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewerState.scrollMode ? "default" : "ghost"}
+                size="sm"
+                onClick={toggleScrollMode}
+                className="text-xs"
+                title="Toggle scroll mode - Use mouse wheel to navigate slices"
+              >
+                <ScrollText className="h-4 w-4 mr-1" />
+                Scroll Mode
+              </Button>
             </div>
           </div>
 
