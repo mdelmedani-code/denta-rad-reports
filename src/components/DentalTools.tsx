@@ -16,7 +16,10 @@ import {
   Heart,
   Stethoscope,
   Microscope,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
+  Minimize2
 } from "lucide-react";
 
 interface DentalToolsProps {
@@ -27,6 +30,7 @@ interface DentalToolsProps {
 
 export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = false }: DentalToolsProps) => {
   const [analysisResults, setAnalysisResults] = useState<Record<string, any>>({});
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const handleDentalTool = (toolName: string, description: string) => {
     onToolActivate(toolName);
@@ -126,13 +130,29 @@ export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = fals
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Stethoscope className="h-5 w-5" />
-          {isReportingMode ? 'Dental Analysis Tools' : 'Dental-Specific Analysis Tools'}
-        </CardTitle>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Stethoscope className="h-5 w-5" />
+            {isReportingMode ? 'Dental Analysis Tools' : 'Dental-Specific Analysis Tools'}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="h-6 w-6 p-0"
+            title={isMinimized ? 'Expand dental tools' : 'Minimize dental tools'}
+          >
+            {isMinimized ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      {!isMinimized && (
+        <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {dentalTools.map((tool) => {
             const Icon = tool.icon;
@@ -237,8 +257,9 @@ export const DentalTools = ({ onToolActivate, activeTool, isReportingMode = fals
               </p>
             </div>
           </div>
-        </div>
-      </CardContent>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 };
