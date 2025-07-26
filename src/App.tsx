@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
 import NotFound from "./pages/NotFound";
+import DicomViewerPage from "./pages/DicomViewerPage";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +64,8 @@ const App = () => (
                   <ReporterDashboard />
                 </ProtectedRoute>
               } 
-            />
+             />
+            <Route path="/viewer/:caseId" element={<DicomViewerPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -646,6 +646,15 @@ const ReporterDashboard = () => {
                       <ImageIcon className="w-4 h-4" />
                       View Images
                     </Button>
+                    <Button
+                      onClick={() => window.open(`/viewer/${case_.id}`, '_blank')}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Open in New Tab
+                    </Button>
                      {case_.status !== 'report_ready' ? (
                       <Button
                         onClick={() => startReporting(case_)}
@@ -718,6 +727,19 @@ const ReporterDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - DICOM Viewer */}
               <div className="space-y-4">
+                {/* DICOM Viewer Options */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    onClick={() => window.open(`/viewer/${selectedCase.id}`, '_blank')}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    Open in New Tab
+                  </Button>
+                </div>
+                
                 {/* Concurrent Editing Warning */}
                 {showConcurrentWarning && (
                   <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
