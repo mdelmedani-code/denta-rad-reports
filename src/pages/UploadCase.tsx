@@ -45,7 +45,6 @@ const UploadCase = () => {
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
-  const [uploadMode, setUploadMode] = useState<'file' | 'folder'>('file');
   const [uploading, setUploading] = useState(false);
   const [isReupload, setIsReupload] = useState(false);
   const [caseId, setCaseId] = useState<string | null>(null);
@@ -132,12 +131,15 @@ const UploadCase = () => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (uploadMode === 'file' && e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      setSelectedFiles(null);
-    } else if (uploadMode === 'folder' && e.target.files) {
-      setSelectedFiles(e.target.files);
-      setSelectedFile(null);
+    if (e.target.files && e.target.files.length > 0) {
+      // If multiple files (folder) or single file
+      if (e.target.files.length === 1) {
+        setSelectedFile(e.target.files[0]);
+        setSelectedFiles(null);
+      } else {
+        setSelectedFiles(e.target.files);
+        setSelectedFile(null);
+      }
     }
   };
 
@@ -160,16 +162,18 @@ const UploadCase = () => {
 
     const droppedFiles = Array.from(e.dataTransfer.files);
     
-    if (uploadMode === 'file' && droppedFiles.length > 0) {
-      // For file mode, take the first file
-      setSelectedFile(droppedFiles[0]);
-      setSelectedFiles(null);
-    } else if (uploadMode === 'folder' && droppedFiles.length > 0) {
-      // For folder mode, check if files have consistent folder structure
-      const fileList = new DataTransfer();
-      droppedFiles.forEach(file => fileList.items.add(file));
-      setSelectedFiles(fileList.files);
-      setSelectedFile(null);
+    if (droppedFiles.length > 0) {
+      if (droppedFiles.length === 1) {
+        // Single file dropped
+        setSelectedFile(droppedFiles[0]);
+        setSelectedFiles(null);
+      } else {
+        // Multiple files dropped
+        const fileList = new DataTransfer();
+        droppedFiles.forEach(file => fileList.items.add(file));
+        setSelectedFiles(fileList.files);
+        setSelectedFile(null);
+      }
     }
   };
 
@@ -192,7 +196,7 @@ const UploadCase = () => {
       let uploadPath: string;
       let uploadedFiles: string[] = [];
 
-      if (uploadMode === 'folder' && selectedFiles) {
+      if (selectedFiles && selectedFiles.length > 1) {
         // Upload multiple DICOM files from folder
         const folderName = `${user.id}/${Date.now()}`;
         
@@ -278,7 +282,7 @@ const UploadCase = () => {
         if (caseError) throw caseError;
 
         // Handle ZIP extraction for single file uploads
-        if (uploadMode === 'file' && selectedFile && selectedFile.name.toLowerCase().endsWith('.zip')) {
+        if (selectedFile && selectedFile.name.toLowerCase().endsWith('.zip')) {
           toast({
             title: "Extracting DICOM files...",
             description: "Processing ZIP file to extract DICOM images.",
@@ -307,8 +311,8 @@ const UploadCase = () => {
           }
         }
 
-        const fileCount = uploadMode === 'folder' ? selectedFiles?.length || 0 : 1;
-        const fileText = uploadMode === 'folder' ? `${fileCount} DICOM files` : 'case';
+        const fileCount = selectedFiles ? selectedFiles.length : 1;
+        const fileText = selectedFiles && selectedFiles.length > 1 ? `${fileCount} DICOM files` : 'case';
         
         toast({
           title: "Case Uploaded Successfully", 
@@ -495,39 +499,6 @@ const UploadCase = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {/* Upload Mode Selection */}
-                  <div className="mb-6">
-                    <Label className="text-base font-medium mb-3 block">Upload Method</Label>
-                    <div className="flex gap-4">
-                      <Button
-                        type="button"
-                        variant={uploadMode === 'file' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setUploadMode('file');
-                          setSelectedFile(null);
-                          setSelectedFiles(null);
-                        }}
-                        className="flex-1"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload File
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={uploadMode === 'folder' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setUploadMode('folder');
-                          setSelectedFile(null);
-                          setSelectedFiles(null);
-                        }}
-                        className="flex-1"
-                      >
-                        <FolderOpen className="w-4 h-4 mr-2" />
-                        Upload Folder
-                      </Button>
-                    </div>
-                  </div>
-
                   <div 
                     className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                       isDragOver 
@@ -538,15 +509,11 @@ const UploadCase = () => {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                   >
-                    {uploadMode === 'file' ? (
-                      <Upload className={`w-8 h-8 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-                    ) : (
-                      <FolderOpen className={`w-8 h-8 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-                    )}
+                    <Upload className={`w-8 h-8 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
                     <div className="space-y-2">
                       <Label htmlFor="file-upload" className="cursor-pointer">
                         <span className="text-primary font-medium">
-                          {uploadMode === 'file' ? 'Choose files to upload' : 'Choose folder to upload'}
+                          Choose files or folder to upload
                         </span>
                         <span className="text-muted-foreground"> or drag and drop</span>
                       </Label>
@@ -554,30 +521,27 @@ const UploadCase = () => {
                         id="file-upload"
                         type="file"
                         onChange={handleFileChange}
-                        accept={uploadMode === 'file' ? '.dcm,.zip,.rar,.7z' : '.dcm'}
-                        {...(uploadMode === 'folder' ? { webkitdirectory: true, directory: true } : {})}
+                        accept=".dcm,.zip,.rar,.7z"
+                        multiple
                         className="hidden"
                         required
                       />
                       <p className="text-sm text-muted-foreground">
-                        {uploadMode === 'file' 
-                          ? 'Supported formats: DICOM (.dcm), ZIP, RAR, 7Z'
-                          : 'Select a folder containing DICOM (.dcm) files'
-                        }
+                        Supported: DICOM files (.dcm), ZIP archives, or drag multiple DICOM files
                       </p>
                       {isDragOver && (
                         <p className="text-sm text-primary font-medium">
-                          Drop your {uploadMode === 'file' ? 'file' : 'files'} here
+                          Drop your files here
                         </p>
                       )}
-                      {!isDragOver && uploadMode === 'file' && selectedFile && (
+                      {!isDragOver && selectedFile && (
                         <p className="text-sm text-foreground font-medium">
                           Selected: {selectedFile.name}
                         </p>
                       )}
-                      {!isDragOver && uploadMode === 'folder' && selectedFiles && (
+                      {!isDragOver && selectedFiles && (
                         <p className="text-sm text-foreground font-medium">
-                          Selected: {selectedFiles.length} files from folder
+                          Selected: {selectedFiles.length} files
                         </p>
                       )}
                     </div>
