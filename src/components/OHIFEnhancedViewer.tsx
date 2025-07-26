@@ -165,20 +165,67 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
         
         console.log('Initializing DICOM viewer with URL:', fileUrl);
         
-        // For now, let's just display that we have the URL and the viewer is ready
-        // The actual DICOM rendering will be implemented once we resolve the API compatibility
-        element.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; text-align: center;">
-            <div>
-              <div style="margin-bottom: 16px; font-size: 18px;">DICOM Viewer Ready</div>
-              <div style="color: #9CA3AF; font-size: 14px;">File URL: ${fileUrl}</div>
-              <div style="color: #9CA3AF; font-size: 12px; margin-top: 8px;">Cornerstone.js integration in progress...</div>
-            </div>
-          </div>
-        `;
+        // Clear the element first
+        element.innerHTML = '';
         
-        console.log('DICOM viewer initialized - ready for image display');
-        setIsLoading(false);
+        // Create a unique rendering engine ID
+        const renderingEngineId = `myRenderingEngine_${Date.now()}`;
+        const viewportId = 'CT_AXIAL';
+        
+        try {
+          // Create rendering engine
+          const renderingEngine = new cornerstone.RenderingEngine(renderingEngineId);
+          
+          // Create viewport specification
+          const viewportInput = [
+            {
+              viewportId,
+              type: cornerstone.Enums.ViewportType.STACK,
+              element: element,
+              defaultOptions: {
+                background: [0, 0, 0] as [number, number, number],
+              },
+            },
+          ];
+          
+          // Enable the element with the viewport
+          renderingEngine.setViewports(viewportInput);
+          
+          // Get the viewport
+          const viewport = renderingEngine.getViewport(viewportId) as cornerstone.Types.IStackViewport;
+          
+          if (viewport && 'setStack' in viewport) {
+            // Create image IDs array - use the direct URL for now
+            const imageIds = [fileUrl];
+            
+            // Set the stack on the viewport
+            await viewport.setStack(imageIds, 0);
+            
+            // Render the viewport
+            viewport.render();
+            
+            console.log('DICOM image displayed successfully');
+            setIsLoading(false);
+          } else {
+            throw new Error('Failed to get viewport or viewport does not support stack operations');
+          }
+          
+        } catch (cornerstoneError) {
+          console.error('Cornerstone rendering error:', cornerstoneError);
+          
+          // Fallback: Display a simple canvas with the image URL for debugging
+          element.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; text-align: center; padding: 20px;">
+              <div style="margin-bottom: 16px; font-size: 18px;">DICOM File Available</div>
+              <div style="color: #9CA3AF; font-size: 14px; margin-bottom: 16px;">Backend URL: ${fileUrl}</div>
+              <div style="color: #FEF3C7; font-size: 12px; background: rgba(245, 158, 11, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                Cornerstone.js integration in progress...<br/>
+                Error: ${cornerstoneError.message}
+              </div>
+            </div>
+          `;
+          setIsLoading(false);
+        }
         
       } catch (error) {
         console.error('Failed to initialize Cornerstone viewer:', error);
@@ -382,24 +429,7 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
           className="w-full h-full"
           style={{ minHeight: '400px' }}
         >
-          {fileUrl ? (
-            <div className="flex items-center justify-center h-full text-white">
-              <div className="text-center">
-                <div className="animate-pulse mb-4">
-                  <div className="h-32 w-32 bg-gray-700 rounded mx-auto mb-4"></div>
-                </div>
-                <p>Loading DICOM viewer...</p>
-                <p className="text-sm text-gray-400 mt-2">Initializing Cornerstone.js</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-white">
-              <div className="text-center">
-                <FileImage className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                <p>Loading DICOM file...</p>
-              </div>
-            </div>
-          )}
+          {/* The Cornerstone.js initialization will populate this div */}
         </div>
 
         {/* Right-click Context Menu */}
