@@ -88,7 +88,7 @@ const DicomViewerPage = () => {
   }, [caseId, navigate, toast]);
 
   const openReportingInterface = () => {
-    window.open(`/admin/dashboard?case=${caseId}`, '_blank');
+    navigate(`/admin/reporter?case=${caseId}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -137,7 +137,7 @@ const DicomViewerPage = () => {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-4">
               <Button
-                onClick={() => window.close()}
+                onClick={() => navigate(-1)}
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-2"
