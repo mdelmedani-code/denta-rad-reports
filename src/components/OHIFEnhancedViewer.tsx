@@ -108,20 +108,51 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
 
   // Get file URL
   useEffect(() => {
-    if (!filePath) return;
+    if (!filePath) {
+      console.log('No file path provided');
+      setError('No DICOM file path available');
+      return;
+    }
 
     const getFileUrl = async () => {
       try {
-        const { data } = await supabase.storage
-          .from('cases')
+        console.log('Attempting to get signed URL for path:', filePath);
+        
+        // First check if file exists
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from('cbct-scans')
+          .list(filePath.substring(0, filePath.lastIndexOf('/')), {
+            limit: 100,
+            search: filePath.substring(filePath.lastIndexOf('/') + 1)
+          });
+
+        console.log('File list result:', fileData, fileError);
+
+        if (fileError || !fileData || fileData.length === 0) {
+          console.error('File not found in storage:', filePath);
+          setError(`DICOM file not found: ${filePath}`);
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.storage
+          .from('cbct-scans')
           .createSignedUrl(filePath, 3600);
         
-        if (data?.signedUrl) {
+        if (error) {
+          console.error('Error creating signed URL:', error);
+          setError(`Failed to access DICOM file: ${error.message}`);
+        } else if (data?.signedUrl) {
+          console.log('Successfully got signed URL:', data.signedUrl);
           setFileUrl(data.signedUrl);
+        } else {
+          setError('Failed to get file URL');
         }
       } catch (error) {
         console.error('Error getting file URL:', error);
         setError('Failed to load DICOM file');
+      } finally {
+        setIsLoading(false);
       }
     };
 
