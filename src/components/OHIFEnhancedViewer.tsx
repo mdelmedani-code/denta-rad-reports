@@ -38,6 +38,7 @@ interface ViewerState {
   crosshairPosition: { x: number; y: number };
   showCrosshairs: boolean;
   showOverlays: boolean;
+  maximizedView: number | null; // -1 for none, 0-3 for specific view
 }
 
 export const OHIFEnhancedViewer = ({ 
@@ -67,7 +68,8 @@ export const OHIFEnhancedViewer = ({
     playbackSpeed: 10, // fps
     crosshairPosition: { x: 256, y: 256 },
     showCrosshairs: true,
-    showOverlays: true
+    showOverlays: true,
+    maximizedView: null
   });
   
   const { user } = useAuth();
@@ -605,6 +607,18 @@ export const OHIFEnhancedViewer = ({
     } else {
       toast.success('Opened viewer in new window');
     }
+  };
+
+  const toggleViewMaximize = (viewIndex: number) => {
+    const viewNames = ['Axial', 'Sagittal', 'Coronal', '3D'];
+    const isCurrentlyMaximized = viewerState.maximizedView === viewIndex;
+    
+    setViewerState(prev => ({
+      ...prev,
+      maximizedView: prev.maximizedView === viewIndex ? null : viewIndex
+    }));
+    
+    toast.success(`${viewNames[viewIndex]} view ${isCurrentlyMaximized ? 'restored' : 'maximized'}`);
   };
 
   const handleDownload = () => {
@@ -1221,54 +1235,79 @@ export const OHIFEnhancedViewer = ({
         </div>
       </div>
 
-      {/* MPR Grid Layout */}
-      <div className="grid grid-cols-2 gap-1 h-full bg-black p-1">
+      {/* MPR Views Grid */}
+      <div className={`grid gap-2 p-4 ${
+        viewerState.maximizedView !== null 
+          ? 'grid-cols-1' 
+          : 'grid-cols-2 grid-rows-2'
+      } h-full`}>
+        
         {/* Axial View */}
-        <div className="bg-gray-900 border border-gray-700 relative">
-          <div className="absolute top-2 left-2 z-10 text-sm font-semibold text-blue-400">
+        <div className={`relative border border-green-500/30 bg-black rounded-lg overflow-hidden ${
+          viewerState.maximizedView === 0 ? 'col-span-1 row-span-1' : 
+          viewerState.maximizedView !== null && viewerState.maximizedView !== 0 ? 'hidden' : ''
+        }`}>
+          <div className="absolute top-2 left-2 text-green-400 text-sm font-semibold z-10">
             Axial
           </div>
-          <div 
-            ref={axialViewRef}
-            className="w-full h-full"
-            style={{ minHeight: '300px' }}
-          />
+          <button 
+            onClick={() => toggleViewMaximize(0)}
+            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
+          >
+            {viewerState.maximizedView === 0 ? '⤡' : '⤢'}
+          </button>
+          <div ref={axialViewRef} className="w-full h-full relative"></div>
         </div>
 
         {/* Sagittal View */}
-        <div className="bg-gray-900 border border-gray-700 relative">
-          <div className="absolute top-2 left-2 z-10 text-sm font-semibold text-green-400">
+        <div className={`relative border border-orange-500/30 bg-black rounded-lg overflow-hidden ${
+          viewerState.maximizedView === 1 ? 'col-span-1 row-span-1' : 
+          viewerState.maximizedView !== null && viewerState.maximizedView !== 1 ? 'hidden' : ''
+        }`}>
+          <div className="absolute top-2 left-2 text-orange-400 text-sm font-semibold z-10">
             Sagittal
           </div>
-          <div 
-            ref={sagittalViewRef}
-            className="w-full h-full"
-            style={{ minHeight: '300px' }}
-          />
+          <button 
+            onClick={() => toggleViewMaximize(1)}
+            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
+          >
+            {viewerState.maximizedView === 1 ? '⤡' : '⤢'}
+          </button>
+          <div ref={sagittalViewRef} className="w-full h-full relative"></div>
         </div>
 
         {/* Coronal View */}
-        <div className="bg-gray-900 border border-gray-700 relative">
-          <div className="absolute top-2 left-2 z-10 text-sm font-semibold text-yellow-400">
+        <div className={`relative border border-blue-500/30 bg-black rounded-lg overflow-hidden ${
+          viewerState.maximizedView === 2 ? 'col-span-1 row-span-1' : 
+          viewerState.maximizedView !== null && viewerState.maximizedView !== 2 ? 'hidden' : ''
+        }`}>
+          <div className="absolute top-2 left-2 text-blue-400 text-sm font-semibold z-10">
             Coronal
           </div>
-          <div 
-            ref={coronalViewRef}
-            className="w-full h-full"
-            style={{ minHeight: '300px' }}
-          />
+          <button 
+            onClick={() => toggleViewMaximize(2)}
+            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
+          >
+            {viewerState.maximizedView === 2 ? '⤡' : '⤢'}
+          </button>
+          <div ref={coronalViewRef} className="w-full h-full relative"></div>
         </div>
 
-        {/* 3D View */}
-        <div className="bg-gray-900 border border-gray-700 relative">
-          <div className="absolute top-2 left-2 z-10 text-sm font-semibold text-red-400">
+        {/* 3D Volume View */}
+        <div className={`relative border border-purple-500/30 bg-black rounded-lg overflow-hidden ${
+          viewerState.maximizedView === 3 ? 'col-span-1 row-span-1' : 
+          viewerState.maximizedView !== null && viewerState.maximizedView !== 3 ? 'hidden' : ''
+        }`}>
+          <div className="absolute top-2 left-2 text-purple-400 text-sm font-semibold z-10">
             3D Volume
           </div>
-          <div 
-            ref={threeDViewRef}
-            className="w-full h-full"
-            style={{ minHeight: '300px' }}
-          />
+          <button 
+            onClick={() => toggleViewMaximize(3)}
+            className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs z-10"
+          >
+            {viewerState.maximizedView === 3 ? '⤡' : '⤢'}
+          </button>
+          <div ref={threeDViewRef} className="w-full h-full relative"></div>
         </div>
       </div>
 
