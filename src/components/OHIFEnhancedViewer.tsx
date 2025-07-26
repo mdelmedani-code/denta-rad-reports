@@ -13,7 +13,8 @@ import {
   Search, Bookmark, FileImage, Palette, Target, Maximize2, Minimize2,
   ScanLine, Volume2, Zap, Link, Gauge, Activity, Brain,
   Binary, Calculator, MapPin, Copy, RefreshCw, Camera, Printer,
-  Layout, MoreHorizontal, Filter, Lightbulb, Focus, Slice
+  Layout, MoreHorizontal, Filter, Lightbulb, Focus, Slice,
+  Menu, X
 } from "lucide-react";
 import * as cornerstone from "@cornerstonejs/core";
 import * as cornerstoneTools from "@cornerstonejs/tools";
@@ -72,6 +73,8 @@ export const OHIFEnhancedViewer = ({
   const [cornerstoneInitialized, setCornerstoneInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [annotations, setAnnotations] = useState<any[]>([]);
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; show: boolean }>({ x: 0, y: 0, show: false });
   
   // Professional viewer state - matching industry standards
   const [viewerState, setViewerState] = useState<ViewerState>({
@@ -892,6 +895,49 @@ export const OHIFEnhancedViewer = ({
     }));
     toast.success(`Bookmark added for slice ${viewerState.currentSlice}`);
   }, [viewerState]);
+
+  // Context menu handler
+  const handleRightClick = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      show: true
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(prev => ({ ...prev, show: false }));
+  }, []);
+
+  // Context menu tools
+  const contextMenuTools = [
+    { id: 'select', name: 'Select/Navigate', icon: MousePointer },
+    { id: 'zoom', name: 'Zoom', icon: ZoomIn },
+    { id: 'pan', name: 'Pan', icon: Move },
+    { id: 'window', name: 'Window/Level', icon: Contrast },
+    { id: 'length', name: 'Measure Length', icon: Ruler },
+    { id: 'angle', name: 'Measure Angle', icon: RotateCcw },
+    { id: 'circle', name: 'Circle ROI', icon: CircleDot },
+    { id: 'probe', name: 'Density Probe', icon: Target }
+  ];
+
+  // Close context menu when clicking elsewhere or using tools
+  useEffect(() => {
+    const handleClick = () => closeContextMenu();
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu();
+    };
+
+    if (contextMenu.show) {
+      document.addEventListener('click', handleClick);
+      document.addEventListener('keydown', handleKeyPress);
+      return () => {
+        document.removeEventListener('click', handleClick);
+        document.removeEventListener('keydown', handleKeyPress);
+      };
+    }
+  }, [contextMenu.show, closeContextMenu]);
   // Keyboard shortcuts for enterprise workflow
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -1101,6 +1147,16 @@ export const OHIFEnhancedViewer = ({
         </div>
         
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
+            className="text-xs"
+            title={isToolbarCollapsed ? 'Show toolbar' : 'Hide toolbar'}
+          >
+            {isToolbarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            {isToolbarCollapsed ? 'Show Tools' : 'Hide Tools'}
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download
@@ -1120,7 +1176,10 @@ export const OHIFEnhancedViewer = ({
         </div>
       </div>
 
-      {/* Professional Toolbar - Main Tools */}
+      {/* Collapsible Toolbar Sections */}
+      {!isToolbarCollapsed && (
+        <>
+          {/* Professional Toolbar - Main Tools */}
       <div className="bg-gray-800 border-b border-gray-700 p-2">
         <div className="flex items-center gap-1 justify-center flex-wrap">
           {/* Navigation Tools */}
@@ -1692,10 +1751,12 @@ export const OHIFEnhancedViewer = ({
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </>
+      )}
 
       {/* MPR Viewport Grid - Professional Layout */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative" onContextMenu={handleRightClick}>
         {viewerState.maximizedView !== null ? (
           // Single maximized view
           <div className="w-full h-full relative">
@@ -1795,6 +1856,52 @@ export const OHIFEnhancedViewer = ({
         )}
       </div>
 
+      {/* Right-Click Context Menu */}
+      {contextMenu.show && (
+        <div
+          className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl py-2 z-50"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-1 text-xs text-gray-400 border-b border-gray-600 mb-1">
+            Quick Tools
+          </div>
+          {contextMenuTools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <button
+                key={tool.id}
+                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-700 flex items-center gap-2 ${
+                  activeTool === tool.id ? 'bg-gray-700 text-white' : 'text-gray-300'
+                }`}
+                onClick={() => {
+                  handleToolChange(tool.id);
+                  closeContextMenu();
+                }}
+              >
+                <Icon className="h-4 w-4" />
+                {tool.name}
+              </button>
+            );
+          })}
+          <div className="border-t border-gray-600 mt-1 pt-1">
+            <button
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 flex items-center gap-2 text-gray-300"
+              onClick={() => {
+                setIsToolbarCollapsed(false);
+                closeContextMenu();
+              }}
+            >
+              <Menu className="h-4 w-4" />
+              Show Full Toolbar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dental Analysis Panel */}
       <div className="border-t border-gray-700">
         <DentalTools 
@@ -1802,9 +1909,6 @@ export const OHIFEnhancedViewer = ({
           activeTool={activeTool}
           isReportingMode={true}
         />
-      </div>
-    </div>
-  );
       </div>
     </div>
   );
