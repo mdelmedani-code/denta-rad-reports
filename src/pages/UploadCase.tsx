@@ -49,6 +49,7 @@ const UploadCase = () => {
   const [uploading, setUploading] = useState(false);
   const [isReupload, setIsReupload] = useState(false);
   const [caseId, setCaseId] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Load existing case data if in reupload mode
   useEffect(() => {
@@ -136,6 +137,38 @@ const UploadCase = () => {
       setSelectedFiles(null);
     } else if (uploadMode === 'folder' && e.target.files) {
       setSelectedFiles(e.target.files);
+      setSelectedFile(null);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    
+    if (uploadMode === 'file' && droppedFiles.length > 0) {
+      // For file mode, take the first file
+      setSelectedFile(droppedFiles[0]);
+      setSelectedFiles(null);
+    } else if (uploadMode === 'folder' && droppedFiles.length > 0) {
+      // For folder mode, check if files have consistent folder structure
+      const fileList = new DataTransfer();
+      droppedFiles.forEach(file => fileList.items.add(file));
+      setSelectedFiles(fileList.files);
       setSelectedFile(null);
     }
   };
@@ -486,11 +519,20 @@ const UploadCase = () => {
                     </div>
                   </div>
 
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <div 
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      isDragOver 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     {uploadMode === 'file' ? (
-                      <Upload className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
+                      <Upload className={`w-8 h-8 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
                     ) : (
-                      <FolderOpen className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
+                      <FolderOpen className={`w-8 h-8 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
                     )}
                     <div className="space-y-2">
                       <Label htmlFor="file-upload" className="cursor-pointer">
@@ -514,12 +556,17 @@ const UploadCase = () => {
                           : 'Select a folder containing DICOM (.dcm) files'
                         }
                       </p>
-                      {uploadMode === 'file' && selectedFile && (
+                      {isDragOver && (
+                        <p className="text-sm text-primary font-medium">
+                          Drop your {uploadMode === 'file' ? 'file' : 'files'} here
+                        </p>
+                      )}
+                      {!isDragOver && uploadMode === 'file' && selectedFile && (
                         <p className="text-sm text-foreground font-medium">
                           Selected: {selectedFile.name}
                         </p>
                       )}
-                      {uploadMode === 'folder' && selectedFiles && (
+                      {!isDragOver && uploadMode === 'folder' && selectedFiles && (
                         <p className="text-sm text-foreground font-medium">
                           Selected: {selectedFiles.length} files from folder
                         </p>
