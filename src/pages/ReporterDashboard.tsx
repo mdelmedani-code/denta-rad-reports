@@ -165,13 +165,12 @@ const ReporterDashboard = () => {
       return;
     }
 
-    // Open DICOM viewer in new tab - placeholder URL for now
-    const dicomViewerUrl = `https://your-dicom-viewer.com/view?case=${caseData.id}&file=${encodeURIComponent(caseData.file_path)}`;
-    window.open(dicomViewerUrl, '_blank', 'noopener,noreferrer');
+    // Navigate to the DICOM viewer page
+    navigate(`/admin/dicom-viewer/${caseData.id}`);
     
     toast({
       title: "DICOM Viewer Opened",
-      description: "Images opened in new tab for case: " + caseData.patient_name,
+      description: "Opening images for case: " + caseData.patient_name,
     });
   };
 
