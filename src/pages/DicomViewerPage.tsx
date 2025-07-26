@@ -41,7 +41,7 @@ const DicomViewerPage = () => {
           description: "No case ID provided",
           variant: "destructive",
         });
-        navigate('/admin/dashboard');
+        navigate('/admin/reporter');
         return;
       }
 
@@ -56,9 +56,20 @@ const DicomViewerPage = () => {
             )
           `)
           .eq('id', caseId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
+        
+        if (!data) {
+          toast({
+            title: "Error",
+            description: "Case not found",
+            variant: "destructive",
+          });
+          navigate('/admin/reporter');
+          return;
+        }
+        
         setCaseData(data);
       } catch (error) {
         console.error('Error fetching case:', error);
@@ -67,6 +78,7 @@ const DicomViewerPage = () => {
           description: "Failed to load case data",
           variant: "destructive",
         });
+        navigate('/admin/reporter');
       } finally {
         setLoading(false);
       }
