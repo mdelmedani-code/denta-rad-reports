@@ -203,21 +203,31 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
               const url = imageId.replace('custom:', '');
               
               return {
-                promise: new Promise(async (resolve) => {
+                promise: new Promise(async (resolve, reject) => {
                   try {
+                    console.log('Loading DICOM image from:', url);
                     const response = await fetch(url);
-                    const arrayBuffer = await response.arrayBuffer();
                     
-                    // Create a basic image object compatible with Cornerstone.js
+                    if (!response.ok) {
+                      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    console.log('Received DICOM data, size:', arrayBuffer.byteLength);
+                    
+                    // Convert ArrayBuffer to Uint8Array for pixel data
+                    const pixelData = new Uint8Array(arrayBuffer);
+                    
+                    // Create a basic grayscale image object
                     const imageObject = {
                       imageId,
                       minPixelValue: 0,
-                      maxPixelValue: 255,
+                      maxPixelValue: 65535,
                       slope: 1,
                       intercept: 0,
-                      windowCenter: 128,
-                      windowWidth: 256,
-                      getPixelData: () => new Uint8Array(arrayBuffer),
+                      windowCenter: 32768,
+                      windowWidth: 65536,
+                      getPixelData: () => pixelData,
                       rows: 512,
                       columns: 512,
                       height: 512,
@@ -227,13 +237,17 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
                       columnPixelSpacing: 1,
                       rowPixelSpacing: 1,
                       invert: false,
-                      sizeInBytes: arrayBuffer.byteLength
+                      sizeInBytes: arrayBuffer.byteLength,
+                      spacing: [1, 1],
+                      origin: [0, 0, 0],
+                      direction: [1, 0, 0, 0, 1, 0, 0, 0, 1]
                     };
                     
+                    console.log('Created image object for Cornerstone.js');
                     resolve(imageObject as any);
                   } catch (error) {
-                    console.error('Failed to load image:', error);
-                    throw error;
+                    console.error('Failed to load DICOM image:', error);
+                    reject(error);
                   }
                 })
               };
@@ -244,6 +258,29 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
             
             // Set the stack on the viewport
             await viewport.setStack(imageIds, 0);
+            
+            // Add basic mouse interaction for now
+            element.addEventListener('wheel', (event) => {
+              event.preventDefault();
+              // Zoom functionality can be added here later
+              console.log('Mouse wheel scroll detected');
+            });
+            
+            // Add keyboard navigation placeholder
+            element.addEventListener('keydown', (event) => {
+              switch (event.key) {
+                case 'ArrowUp':
+                case 'ArrowLeft':
+                case 'ArrowDown':
+                case 'ArrowRight':
+                  event.preventDefault();
+                  console.log('Arrow key navigation detected:', event.key);
+                  break;
+              }
+            });
+            
+            // Make element focusable for keyboard events
+            element.tabIndex = 0;
             
             // Render the viewport
             viewport.render();
