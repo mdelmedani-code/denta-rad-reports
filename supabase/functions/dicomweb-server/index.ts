@@ -315,7 +315,7 @@ serve(async (req) => {
         
         // Get DICOM file from storage
         const { data: fileData, error: fileError } = await supabase.storage
-          .from('cases')
+          .from('cbct-scans')
           .download(caseData.file_path);
           
         if (fileError || !fileData) {
@@ -385,7 +385,7 @@ serve(async (req) => {
         
         // Get DICOM file from storage
         const { data: fileData, error: fileError } = await supabase.storage
-          .from('cases')
+          .from('cbct-scans')
           .download(caseData.file_path);
           
         if (fileError || !fileData) {
