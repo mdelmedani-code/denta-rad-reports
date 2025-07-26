@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Upload, FileText, Calculator, ArrowLeft } from "lucide-react";
+import { Upload, FileText, Calculator, ArrowLeft, FolderOpen } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -44,6 +44,8 @@ const UploadCase = () => {
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [uploadMode, setUploadMode] = useState<'file' | 'folder'>('file');
   const [uploading, setUploading] = useState(false);
   const [isReupload, setIsReupload] = useState(false);
   const [caseId, setCaseId] = useState<string | null>(null);
@@ -129,27 +131,57 @@ const UploadCase = () => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (uploadMode === 'file' && e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      setSelectedFiles(null);
+    } else if (uploadMode === 'folder' && e.target.files) {
+      setSelectedFiles(e.target.files);
+      setSelectedFile(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedFile) return;
+    if (!user || (!selectedFile && !selectedFiles)) return;
 
     setUploading(true);
 
     try {
-      // Upload file to storage
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('cbct-scans')
-        .upload(fileName, selectedFile);
+      let uploadPath: string;
+      let uploadedFiles: string[] = [];
 
-      if (uploadError) throw uploadError;
+      if (uploadMode === 'folder' && selectedFiles) {
+        // Upload multiple DICOM files from folder
+        const folderName = `${user.id}/${Date.now()}`;
+        
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${folderName}/${file.name}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('cbct-scans')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+          uploadedFiles.push(uploadData.path);
+        }
+        
+        uploadPath = folderName; // Store folder path as reference
+      } else if (selectedFile) {
+        // Upload single file
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('cbct-scans')
+          .upload(fileName, selectedFile);
+
+        if (uploadError) throw uploadError;
+        uploadPath = uploadData.path;
+      } else {
+        throw new Error('No file selected');
+      }
 
       // Get user's clinic ID
       const { data: profile, error: profileError } = await supabase
@@ -173,7 +205,7 @@ const UploadCase = () => {
             clinical_question: formData.clinicalQuestion,
             field_of_view: formData.fieldOfView,
             urgency: formData.urgency,
-            file_path: uploadData.path,
+            file_path: uploadPath,
             status: 'uploaded', // Reset status back to uploaded
           })
           .eq('id', caseId);
@@ -196,15 +228,15 @@ const UploadCase = () => {
             field_of_view: formData.fieldOfView,
             urgency: formData.urgency,
             clinic_id: profile.clinic_id,
-            file_path: uploadData.path,
+            file_path: uploadPath,
           })
           .select()
           .single();
 
         if (caseError) throw caseError;
 
-        // If uploaded file is a ZIP, extract DICOM files
-        if (selectedFile.name.toLowerCase().endsWith('.zip')) {
+        // Handle ZIP extraction for single file uploads
+        if (uploadMode === 'file' && selectedFile && selectedFile.name.toLowerCase().endsWith('.zip')) {
           toast({
             title: "Extracting DICOM files...",
             description: "Processing ZIP file to extract DICOM images.",
@@ -215,7 +247,7 @@ const UploadCase = () => {
               .invoke('extract-dicom-zip', {
                 body: {
                   caseId: caseData.id,
-                  zipFilePath: uploadData.path
+                  zipFilePath: uploadPath
                 }
               });
 
@@ -233,9 +265,12 @@ const UploadCase = () => {
           }
         }
 
+        const fileCount = uploadMode === 'folder' ? selectedFiles?.length || 0 : 1;
+        const fileText = uploadMode === 'folder' ? `${fileCount} DICOM files` : 'case';
+        
         toast({
-          title: "Case Uploaded Successfully",
-          description: `Case submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
+          title: "Case Uploaded Successfully", 
+          description: `${fileText} submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
         });
       }
 
@@ -418,27 +453,75 @@ const UploadCase = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Upload Mode Selection */}
+                  <div className="mb-6">
+                    <Label className="text-base font-medium mb-3 block">Upload Method</Label>
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant={uploadMode === 'file' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setUploadMode('file');
+                          setSelectedFile(null);
+                          setSelectedFiles(null);
+                        }}
+                        className="flex-1"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload File
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={uploadMode === 'folder' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setUploadMode('folder');
+                          setSelectedFile(null);
+                          setSelectedFiles(null);
+                        }}
+                        className="flex-1"
+                      >
+                        <FolderOpen className="w-4 h-4 mr-2" />
+                        Upload Folder
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                    <Upload className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
+                    {uploadMode === 'file' ? (
+                      <Upload className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
+                    ) : (
+                      <FolderOpen className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="file-upload" className="cursor-pointer">
-                        <span className="text-primary font-medium">Choose files to upload</span>
+                        <span className="text-primary font-medium">
+                          {uploadMode === 'file' ? 'Choose files to upload' : 'Choose folder to upload'}
+                        </span>
                         <span className="text-muted-foreground"> or drag and drop</span>
                       </Label>
                       <Input
                         id="file-upload"
                         type="file"
                         onChange={handleFileChange}
-                        accept=".dcm,.zip,.rar,.7z"
+                        accept={uploadMode === 'file' ? '.dcm,.zip,.rar,.7z' : '.dcm'}
+                        {...(uploadMode === 'folder' ? { webkitdirectory: true, directory: true } : {})}
                         className="hidden"
                         required
                       />
                       <p className="text-sm text-muted-foreground">
-                        Supported formats: DICOM (.dcm), ZIP, RAR, 7Z
+                        {uploadMode === 'file' 
+                          ? 'Supported formats: DICOM (.dcm), ZIP, RAR, 7Z'
+                          : 'Select a folder containing DICOM (.dcm) files'
+                        }
                       </p>
-                      {selectedFile && (
+                      {uploadMode === 'file' && selectedFile && (
                         <p className="text-sm text-foreground font-medium">
                           Selected: {selectedFile.name}
+                        </p>
+                      )}
+                      {uploadMode === 'folder' && selectedFiles && (
+                        <p className="text-sm text-foreground font-medium">
+                          Selected: {selectedFiles.length} files from folder
                         </p>
                       )}
                     </div>
@@ -448,7 +531,7 @@ const UploadCase = () => {
 
               <Button 
                 type="submit" 
-                disabled={uploading || !selectedFile || !formData.patientName || !formData.clinicalQuestion}
+                disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
                 className="w-full"
               >
                 {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit Case"}
