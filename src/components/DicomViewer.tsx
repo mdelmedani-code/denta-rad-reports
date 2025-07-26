@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, Maximize2, Minimize2, ExternalLink, Download } from "lucide-react";
+import { Loader2, AlertTriangle, Maximize2, Minimize2, ExternalLink, Download, Eye, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { AnnotationViewer } from "./AnnotationViewer";
 
 interface DicomViewerProps {
   caseId: string;
@@ -17,6 +18,7 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [showViewer, setShowViewer] = useState(false);
 
   useEffect(() => {
     const initializeViewer = async () => {
@@ -183,6 +185,30 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
   }
 
   const isZipFile = filePath?.toLowerCase().endsWith('.zip');
+  const isImageFile = filePath?.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp|tiff|dcm)$/);
+
+  // If we have an image file and user wants to view it, show the annotation viewer
+  if (showViewer && fileUrl && isImageFile) {
+    return (
+      <div className={className}>
+        <div className="flex justify-between items-center mb-4">
+          <Button
+            onClick={() => setShowViewer(false)}
+            variant="outline"
+            size="sm"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to File Info
+          </Button>
+        </div>
+        <AnnotationViewer
+          caseId={caseId}
+          imageUrl={fileUrl}
+          className="w-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <Card className={className}>
@@ -251,6 +277,15 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
 
               <div className="space-y-3">
                 <div className="flex gap-3 justify-center">
+                  {isImageFile && (
+                    <Button 
+                      onClick={() => setShowViewer(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View & Annotate
+                    </Button>
+                  )}
                   <Button 
                     onClick={openOHIFViewer}
                     className="bg-blue-600 hover:bg-blue-700"

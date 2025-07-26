@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      case_annotations: {
+        Row: {
+          annotation_data: Json
+          annotation_type: string
+          case_id: string
+          created_at: string
+          created_by: string
+          id: string
+          image_index: number | null
+          updated_at: string
+        }
+        Insert: {
+          annotation_data: Json
+          annotation_type?: string
+          case_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          image_index?: number | null
+          updated_at?: string
+        }
+        Update: {
+          annotation_data?: Json
+          annotation_type?: string
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          image_index?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_annotations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           clinic_id: string
