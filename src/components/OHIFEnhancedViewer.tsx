@@ -97,7 +97,7 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
       try {
         await cornerstone.init();
         setIsInitialized(true);
-        console.log('Cornerstone initialized for DICOMweb support');
+        console.log('Cornerstone initialized - image loaders will be configured dynamically');
       } catch (error) {
         console.error('Failed to initialize Cornerstone:', error);
         setError('Failed to initialize DICOM viewer');
@@ -195,8 +195,52 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
           const viewport = renderingEngine.getViewport(viewportId) as cornerstone.Types.IStackViewport;
           
           if (viewport && 'setStack' in viewport) {
-            // Create image IDs array - use the direct URL for now
-            const imageIds = [fileUrl];
+            // Create a custom image loader for our DICOMweb endpoint
+            const imageId = `custom:${fileUrl}`;
+            
+            // Register a simple image loader for our custom protocol
+            cornerstone.registerImageLoader('custom', (imageId: string) => {
+              const url = imageId.replace('custom:', '');
+              
+              return {
+                promise: new Promise(async (resolve) => {
+                  try {
+                    const response = await fetch(url);
+                    const arrayBuffer = await response.arrayBuffer();
+                    
+                    // Create a basic image object compatible with Cornerstone.js
+                    const imageObject = {
+                      imageId,
+                      minPixelValue: 0,
+                      maxPixelValue: 255,
+                      slope: 1,
+                      intercept: 0,
+                      windowCenter: 128,
+                      windowWidth: 256,
+                      getPixelData: () => new Uint8Array(arrayBuffer),
+                      rows: 512,
+                      columns: 512,
+                      height: 512,
+                      width: 512,
+                      color: false,
+                      rgba: false,
+                      columnPixelSpacing: 1,
+                      rowPixelSpacing: 1,
+                      invert: false,
+                      sizeInBytes: arrayBuffer.byteLength
+                    };
+                    
+                    resolve(imageObject as any);
+                  } catch (error) {
+                    console.error('Failed to load image:', error);
+                    throw error;
+                  }
+                })
+              };
+            });
+            
+            // Create image IDs array
+            const imageIds = [imageId];
             
             // Set the stack on the viewport
             await viewport.setStack(imageIds, 0);
