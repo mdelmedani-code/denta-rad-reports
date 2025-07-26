@@ -175,7 +175,16 @@ const UploadCase = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || (!selectedFile && !selectedFiles)) return;
+    console.log('Submit button clicked');
+    console.log('User:', user);
+    console.log('Selected file:', selectedFile);
+    console.log('Selected files:', selectedFiles);
+    console.log('Form data:', formData);
+    
+    if (!user || (!selectedFile && !selectedFiles)) {
+      console.log('Validation failed - missing user or files');
+      return;
+    }
 
     setUploading(true);
 
