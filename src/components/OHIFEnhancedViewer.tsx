@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Download, Maximize, Settings, Ruler, CircleDot, Square, MousePointer, PenTool, Eye, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft, Download, Maximize, Settings, Ruler, CircleDot, Square, MousePointer, PenTool, Eye, RotateCcw, ZoomIn, ZoomOut, Save } from "lucide-react";
 import * as cornerstone from "@cornerstonejs/core";
 import * as cornerstoneTools from "@cornerstonejs/tools";
 import cornerstoneDICOMImageLoader from "@cornerstonejs/dicom-image-loader";
 import cornerstoneStreamingImageVolumeLoader from "@cornerstonejs/streaming-image-volume-loader";
 import { DentalTools } from "./DentalTools";
+import { useAuth } from "@/hooks/useAuth";
 
 interface OHIFEnhancedViewerProps {
   caseId: string;
@@ -29,6 +30,9 @@ export const OHIFEnhancedViewer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTool, setActiveTool] = useState('select');
   const [cornerstoneInitialized, setCornerstoneInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [annotations, setAnnotations] = useState<any[]>([]);
+  const { user } = useAuth();
   
   const axialViewRef = useRef<HTMLDivElement>(null);
   const sagittalViewRef = useRef<HTMLDivElement>(null);
@@ -368,6 +372,49 @@ export const OHIFEnhancedViewer = ({
     toast.success('Download started');
   };
 
+  const saveAnnotations = async () => {
+    if (!user) {
+      toast.error('You must be logged in to save annotations');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Collect annotations from all viewports
+      const annotationData = {
+        viewports: {
+          axial: activeTool,
+          sagittal: activeTool,
+          coronal: activeTool,
+          volume3d: activeTool
+        },
+        timestamp: Date.now(),
+        tool: activeTool,
+        measurements: [], // This would contain actual measurement data from Cornerstone
+        dentalAnalysis: annotations
+      };
+
+      const { error } = await supabase
+        .from('case_annotations')
+        .insert({
+          case_id: caseId,
+          annotation_type: 'ohif_enhanced',
+          annotation_data: annotationData,
+          created_by: user.id,
+          image_index: 0
+        });
+
+      if (error) throw error;
+
+      toast.success('Annotations saved successfully');
+    } catch (error) {
+      console.error('Error saving annotations:', error);
+      toast.error('Failed to save annotations');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="w-full h-[800px] flex items-center justify-center">
@@ -519,6 +566,19 @@ export const OHIFEnhancedViewer = ({
               W/L
             </Button>
           </div>
+          
+          <div className="w-px h-6 bg-gray-600 mx-2" />
+          
+          <Button
+            variant={isSaving ? "secondary" : "default"}
+            size="sm"
+            onClick={saveAnnotations}
+            disabled={isSaving}
+            className="text-xs"
+          >
+            <Save className="h-4 w-4 mr-1" />
+            {isSaving ? 'Saving...' : 'Save Annotations'}
+          </Button>
           
           <div className="w-px h-6 bg-gray-600 mx-2" />
           

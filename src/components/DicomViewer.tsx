@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, Maximize2, Minimize2, ExternalLink, Download, Eye, ArrowLeft } from "lucide-react";
+import { Loader2, AlertTriangle, Maximize2, Minimize2, ExternalLink, Download, Eye, ArrowLeft, Clock, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AnnotationViewer } from "./AnnotationViewer";
 import { OHIFEnhancedViewer } from "./OHIFEnhancedViewer";
@@ -21,6 +21,7 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [showViewer, setShowViewer] = useState(false);
   const [showOHIFViewer, setShowOHIFViewer] = useState(false);
+  const [savedAnnotations, setSavedAnnotations] = useState<any[]>([]);
 
   useEffect(() => {
     const initializeViewer = async () => {
@@ -49,6 +50,29 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
 
     initializeViewer();
   }, [filePath]);
+
+  // Load saved annotations from enhanced viewer
+  useEffect(() => {
+    const loadAnnotations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('case_annotations')
+          .select('*')
+          .eq('case_id', caseId)
+          .eq('annotation_type', 'ohif_enhanced')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setSavedAnnotations(data || []);
+      } catch (error) {
+        console.error('Error loading annotations:', error);
+      }
+    };
+
+    if (caseId) {
+      loadAnnotations();
+    }
+  }, [caseId]);
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
@@ -286,6 +310,25 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
                   <AlertTriangle className="h-4 w-4 text-blue-400" />
                   <AlertDescription className="text-blue-100">
                     <strong>ZIP Archive Detected:</strong> This file contains DICOM data that requires specialized medical imaging software to view properly.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Show saved annotations from enhanced viewer */}
+              {savedAnnotations.length > 0 && (
+                <Alert className="bg-green-900/30 border-green-500/50 text-left">
+                  <Users className="h-4 w-4 text-green-400" />
+                  <AlertDescription className="text-green-100">
+                    <strong>Reporter Annotations Available:</strong> {savedAnnotations.length} annotation{savedAnnotations.length > 1 ? 's' : ''} saved by reporting radiologist
+                    <div className="mt-2 space-y-1">
+                      {savedAnnotations.slice(0, 3).map((annotation, index) => (
+                        <div key={annotation.id} className="text-xs text-green-200 flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          {new Date(annotation.created_at).toLocaleString()} - 
+                          Tool: {annotation.annotation_data?.tool || 'Unknown'}
+                        </div>
+                      ))}
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
