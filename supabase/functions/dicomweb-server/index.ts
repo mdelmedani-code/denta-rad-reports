@@ -292,7 +292,16 @@ serve(async (req) => {
       // Handle study-level queries first
       if (pathParts.includes('studies') && !pathParts.includes('instances')) {
         const studyUID = pathParts[pathParts.indexOf('studies') + 1];
-        const caseId = studyUID.replace('study.', '');
+        const caseId = studyUID.replace('study.', '') || url.searchParams.get('caseId');
+        
+        console.log('Study query for:', studyUID, 'Case ID:', caseId);
+        
+        if (!caseId) {
+          return new Response(JSON.stringify({ error: 'Case ID required for study query' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
         
         // Get case info from database
         const { data: caseData, error: caseError } = await supabase
@@ -302,6 +311,7 @@ serve(async (req) => {
           .single();
           
         if (caseError || !caseData) {
+          console.error('Case not found:', caseError);
           return new Response(JSON.stringify({ error: 'Case not found' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -326,7 +336,9 @@ serve(async (req) => {
       // Metadata endpoint: /wado/studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}/metadata
       if (pathParts.includes('metadata')) {
         const studyUID = pathParts[pathParts.indexOf('studies') + 1];
-        const caseId = studyUID.replace('study.', '') || url.searchParams.get('caseId');
+        const caseId = studyUID.replace('study.', '') || url.searchParams.get('caseId') || req.headers.get('X-Case-ID');
+        
+        console.log('Metadata query for study:', studyUID, 'Case ID:', caseId);
         
         if (!caseId) {
           return new Response(JSON.stringify({ error: 'Case ID required' }), {

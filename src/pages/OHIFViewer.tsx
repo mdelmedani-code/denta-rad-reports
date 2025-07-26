@@ -56,12 +56,15 @@ export const OHIFViewer = () => {
       const initializeOHIF = (config: any) => {
         if (window.OHIFViewer && viewerRef.current) {
           try {
+            console.log('Initializing OHIF with config:', config);
+            
             // OHIF v3 configuration
             const ohifConfig = {
               routerBasename: '/ohif-viewer',
               showStudyList: false,
               useSharedArrayBuffer: 'AUTO',
-              dataSources: config.dataSources || [
+              // Configure the data source to use our DICOMweb server
+              dataSources: [
                 {
                   sourceName: 'dicomweb',
                   namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
@@ -89,19 +92,39 @@ export const OHIFViewer = () => {
                 },
               ],
               defaultDataSourceName: 'dicomweb',
+              // Use a simpler approach - directly pass the study data
+              preLoadedStudy: config.studyInstanceUIDs ? {
+                StudyInstanceUID: config.studyInstanceUIDs[0],
+                StudyDescription: 'CBCT Scan',
+                PatientName: `Patient-${config.caseId}`,
+                series: [{
+                  SeriesInstanceUID: `series.${config.caseId}.1`,
+                  instances: [{
+                    SOPInstanceUID: `instance.${config.caseId}.1.1`,
+                    url: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/${config.studyInstanceUIDs[0]}/series/series.${config.caseId}.1/instances/instance.${config.caseId}.1.1?caseId=${config.caseId}`
+                  }]
+                }]
+              } : null,
             };
 
             // Initialize OHIF viewer
             const viewer = new window.OHIFViewer(ohifConfig);
             
-            if (config.studyInstanceUIDs && config.studyInstanceUIDs.length > 0) {
-              // Pre-load study
-              viewer.loadStudy(config.studyInstanceUIDs[0]);
-            }
-            
             console.log('OHIF Viewer initialized successfully');
           } catch (error) {
             console.error('Error initializing OHIF viewer:', error);
+            // Fallback: show error message
+            if (viewerRef.current) {
+              viewerRef.current.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; text-align: center;">
+                  <div>
+                    <h2>Error Loading DICOM Viewer</h2>
+                    <p>There was an issue loading the DICOM data. Please try refreshing the page.</p>
+                    <p style="font-size: 12px; opacity: 0.8;">Error: ${error.message}</p>
+                  </div>
+                </div>
+              `;
+            }
           }
         }
       };
