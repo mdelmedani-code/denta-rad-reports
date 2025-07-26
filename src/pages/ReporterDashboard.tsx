@@ -163,29 +163,41 @@ const ReporterDashboard = () => {
   const startReporting = async (caseData: Case) => {
     setSelectedCase(caseData);
     
-    // Update case status to in_progress
-    try {
-      const { error } = await supabase
-        .from('cases')
-        .update({ status: 'in_progress' })
-        .eq('id', caseData.id);
+    // Load existing report if available
+    const { data: existingReport } = await supabase
+      .from('reports')
+      .select('report_text')
+      .eq('case_id', caseData.id)
+      .single();
+    
+    setReportText(existingReport?.report_text || '');
+    
+    // Update case status to in_progress only if not already completed
+    if (caseData.status !== 'report_ready') {
+      try {
+        const { error } = await supabase
+          .from('cases')
+          .update({ status: 'in_progress' })
+          .eq('id', caseData.id);
 
-      if (error) throw error;
-      
-      // Refresh cases list
-      fetchCases();
-      
-      // Open DICOM viewer
-      openDicomViewer(caseData);
-      
-    } catch (error) {
-      console.error('Error updating case status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to start reporting session",
-        variant: "destructive",
-      });
+        if (error) throw error;
+        
+        // Refresh cases list
+        fetchCases();
+        
+      } catch (error) {
+        console.error('Error updating case status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to start reporting session",
+          variant: "destructive",
+        });
+        return;
+      }
     }
+    
+    // Open DICOM viewer
+    openDicomViewer(caseData);
   };
 
   const toggleRecording = () => {
@@ -252,6 +264,53 @@ const ReporterDashboard = () => {
     }
   };
 
+  const saveDraft = async () => {
+    if (!selectedCase || !reportText.trim()) return;
+
+    setIsSaving(true);
+    try {
+      // Create or update the report as draft
+      const { error: reportError } = await supabase
+        .from('reports')
+        .upsert({
+          case_id: selectedCase.id,
+          report_text: reportText,
+          author_id: (await supabase.auth.getUser()).data.user?.id,
+        });
+
+      if (reportError) throw reportError;
+
+      // Update case status to in_progress if not already
+      if (selectedCase.status !== 'in_progress') {
+        const { error: caseError } = await supabase
+          .from('cases')
+          .update({ status: 'in_progress' })
+          .eq('id', selectedCase.id);
+
+        if (caseError) throw caseError;
+      }
+
+      toast({
+        title: "Draft saved successfully",
+        description: "Your work has been saved as a draft. You can continue editing later.",
+      });
+
+      // Refresh the data and close dialog
+      fetchCases();
+      setSelectedCase(null);
+      setReportText('');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: "Error saving draft",
+        description: "Please try again or contact support if the problem persists.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const saveReport = async () => {
     if (!selectedCase || !reportText.trim()) {
       toast({
@@ -265,7 +324,7 @@ const ReporterDashboard = () => {
     setIsSaving(true);
     try {
       // Create or update report
-      const { error } = await supabase
+      const { error: reportError } = await supabase
         .from('reports')
         .upsert({
           case_id: selectedCase.id,
@@ -273,7 +332,7 @@ const ReporterDashboard = () => {
           author_id: (await supabase.auth.getUser()).data.user?.id,
         });
 
-      if (error) throw error;
+      if (reportError) throw reportError;
 
       // Update case status to report_ready
       const { error: caseError } = await supabase
@@ -284,10 +343,13 @@ const ReporterDashboard = () => {
       if (caseError) throw caseError;
 
       toast({
-        title: "Report Saved",
-        description: "Report has been saved successfully",
+        title: selectedCase.status === 'report_ready' ? "Report updated successfully" : "Report finalized successfully",
+        description: selectedCase.status === 'report_ready' 
+          ? "The diagnostic report has been updated." 
+          : "The diagnostic report has been finalized and the case marked as complete.",
       });
 
+      // Refresh the data and close dialog
       setSelectedCase(null);
       setReportText("");
       fetchCases();
@@ -503,13 +565,13 @@ const ReporterDashboard = () => {
                       </Button>
                     ) : (
                       <Button
+                        onClick={() => startReporting(case_)}
                         variant="secondary"
                         size="sm"
                         className="flex items-center gap-2"
-                        disabled
                       >
                         <FileText className="w-4 h-4" />
-                        Report Complete
+                        View & Amend Report
                       </Button>
                     )}
                   </div>
@@ -608,12 +670,21 @@ const ReporterDashboard = () => {
                   Cancel
                 </Button>
                 <Button 
+                  onClick={saveDraft}
+                  disabled={isSaving || !reportText.trim()}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? 'Saving...' : 'Save Draft'}
+                </Button>
+                <Button 
                   onClick={saveReport}
                   disabled={isSaving || !reportText.trim()}
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  {isSaving ? 'Saving...' : 'Save Report'}
+                  {isSaving ? 'Finalizing...' : selectedCase?.status === 'report_ready' ? 'Update Report' : 'Finalize Report'}
                 </Button>
               </div>
             </div>
