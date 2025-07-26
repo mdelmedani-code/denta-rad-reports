@@ -34,6 +34,13 @@ export const DicomViewer = ({ caseId, filePath, className = "" }: DicomViewerPro
 
         if (urlError) throw urlError;
 
+        // Check if this is a ZIP file (most CBCT scans are uploaded as ZIP)
+        if (filePath.toLowerCase().endsWith('.zip')) {
+          setError("ZIP files contain DICOM data that requires specialized processing. This is a placeholder viewer - please integrate a proper DICOM viewer like OHIF or Cornerstone.js to extract and display the DICOM images from the ZIP archive.");
+          setIsLoading(false);
+          return;
+        }
+
         setImageUrl(signedUrlData.signedUrl);
         setIsLoading(false);
       } catch (error) {
