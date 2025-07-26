@@ -40,7 +40,7 @@ const App = () => (
             <Route 
               path="/upload-case" 
               element={
-                <ProtectedRoute requiredRole="clinic">
+                <ProtectedRoute>
                   <UploadCase />
                 </ProtectedRoute>
               }
