@@ -17,7 +17,10 @@ import {
   Clock,
   Wand2,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Share2,
+  FileType
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +44,11 @@ interface Case {
     name: string;
     contact_email: string;
   };
+  reports?: {
+    id: string;
+    pdf_url: string | null;
+    report_text: string | null;
+  }[];
 }
 
 const ReporterDashboard = () => {
@@ -56,6 +64,7 @@ const ReporterDashboard = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [concurrentUsers, setConcurrentUsers] = useState<string[]>([]);
   const [showConcurrentWarning, setShowConcurrentWarning] = useState(false);
 
@@ -116,6 +125,11 @@ const ReporterDashboard = () => {
           clinics (
             name,
             contact_email
+          ),
+          reports (
+            id,
+            pdf_url,
+            report_text
           )
         `)
         .in('status', ['uploaded', 'in_progress', 'report_ready'])
@@ -158,6 +172,33 @@ const ReporterDashboard = () => {
       title: "DICOM Viewer Opened",
       description: "Images opened in new tab for case: " + caseData.patient_name,
     });
+  };
+
+  const createSecureShareLink = async (reportId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_report_share', {
+        p_report_id: reportId
+      });
+
+      if (error) throw error;
+
+      const shareUrl = `${window.location.origin}/shared-report/${data}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      
+      toast({
+        title: "Share link created",
+        description: "Secure share link has been copied to clipboard. Link expires in 7 days.",
+      });
+    } catch (error) {
+      console.error('Error creating share link:', error);
+      toast({
+        title: "Error creating share link",
+        description: "Please try again or contact support.",
+        variant: "destructive",
+      });
+    }
   };
 
   const startReporting = async (caseData: Case) => {
@@ -264,19 +305,66 @@ const ReporterDashboard = () => {
     }
   };
 
+  const generatePDF = async (reportId: string) => {
+    if (!selectedCase) return;
+
+    setIsGeneratingPDF(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-pdf-report', {
+        body: {
+          reportId,
+          caseData: {
+            patient_name: selectedCase.patient_name,
+            patient_dob: selectedCase.patient_dob,
+            patient_internal_id: selectedCase.patient_internal_id,
+            clinical_question: selectedCase.clinical_question,
+            field_of_view: selectedCase.field_of_view,
+            urgency: selectedCase.urgency,
+            upload_date: selectedCase.upload_date,
+            clinic_name: selectedCase.clinics.name,
+            clinic_contact_email: selectedCase.clinics.contact_email,
+          },
+          reportText,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "PDF generated successfully",
+        description: "The PDF report has been generated and is ready for download.",
+      });
+
+      // Refresh the data to get the updated PDF URL
+      fetchCases();
+      
+      return data.pdfUrl;
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error generating PDF",
+        description: "Please try again or contact support if the problem persists.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   const saveDraft = async () => {
     if (!selectedCase || !reportText.trim()) return;
 
     setIsSaving(true);
     try {
       // Create or update the report as draft
-      const { error: reportError } = await supabase
+      const { data: reportData, error: reportError } = await supabase
         .from('reports')
         .upsert({
           case_id: selectedCase.id,
           report_text: reportText,
           author_id: (await supabase.auth.getUser()).data.user?.id,
-        });
+        }, { onConflict: 'case_id' })
+        .select();
 
       if (reportError) throw reportError;
 
@@ -324,13 +412,14 @@ const ReporterDashboard = () => {
     setIsSaving(true);
     try {
       // Create or update report
-      const { error: reportError } = await supabase
+      const { data: reportData, error: reportError } = await supabase
         .from('reports')
         .upsert({
           case_id: selectedCase.id,
           report_text: reportText,
           author_id: (await supabase.auth.getUser()).data.user?.id,
-        });
+        }, { onConflict: 'case_id' })
+        .select();
 
       if (reportError) throw reportError;
 
@@ -342,11 +431,16 @@ const ReporterDashboard = () => {
 
       if (caseError) throw caseError;
 
+      // Generate PDF after saving the report
+      if (reportData && reportData[0]) {
+        await generatePDF(reportData[0].id);
+      }
+
       toast({
         title: selectedCase.status === 'report_ready' ? "Report updated successfully" : "Report finalized successfully",
         description: selectedCase.status === 'report_ready' 
-          ? "The diagnostic report has been updated." 
-          : "The diagnostic report has been finalized and the case marked as complete.",
+          ? "The diagnostic report has been updated and PDF regenerated." 
+          : "The diagnostic report has been finalized, PDF generated, and the case marked as complete.",
       });
 
       // Refresh the data and close dialog
@@ -554,7 +648,7 @@ const ReporterDashboard = () => {
                       <ImageIcon className="w-4 h-4" />
                       View Images
                     </Button>
-                    {case_.status !== 'report_ready' ? (
+                     {case_.status !== 'report_ready' ? (
                       <Button
                         onClick={() => startReporting(case_)}
                         className="flex items-center gap-2"
@@ -564,15 +658,39 @@ const ReporterDashboard = () => {
                         {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
                       </Button>
                     ) : (
-                      <Button
-                        onClick={() => startReporting(case_)}
-                        variant="secondary"
-                        size="sm"
-                        className="flex items-center gap-2"
-                      >
-                        <FileText className="w-4 h-4" />
-                        View & Amend Report
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => startReporting(case_)}
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          View & Amend Report
+                        </Button>
+                        {case_.reports?.[0]?.pdf_url && (
+                          <>
+                            <Button
+                              onClick={() => window.open(case_.reports[0].pdf_url, '_blank')}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Download className="w-4 h-4" />
+                              Download PDF
+                            </Button>
+                            <Button
+                              onClick={() => createSecureShareLink(case_.reports[0].id)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Share2 className="w-4 h-4" />
+                              Share Report
+                            </Button>
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -664,6 +782,31 @@ const ReporterDashboard = () => {
                 />
               </div>
 
+              {/* PDF Preview Section */}
+              {selectedCase?.reports?.[0]?.pdf_url && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Generated PDF Report</h4>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => window.open(selectedCase.reports[0].pdf_url, '_blank')}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <FileType className="w-4 h-4" />
+                      View PDF Report
+                    </Button>
+                    <Button
+                      onClick={() => createSecureShareLink(selectedCase.reports[0].id)}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Create Share Link
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={handleCancelReport}>
@@ -671,7 +814,7 @@ const ReporterDashboard = () => {
                 </Button>
                 <Button 
                   onClick={saveDraft}
-                  disabled={isSaving || !reportText.trim()}
+                  disabled={isSaving || isGeneratingPDF || !reportText.trim()}
                   variant="outline"
                   className="flex items-center gap-2"
                 >
@@ -680,11 +823,11 @@ const ReporterDashboard = () => {
                 </Button>
                 <Button 
                   onClick={saveReport}
-                  disabled={isSaving || !reportText.trim()}
+                  disabled={isSaving || isGeneratingPDF || !reportText.trim()}
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  {isSaving ? 'Finalizing...' : selectedCase?.status === 'report_ready' ? 'Update Report' : 'Finalize Report'}
+                  {isSaving || isGeneratingPDF ? 'Processing...' : selectedCase?.status === 'report_ready' ? 'Update Report & PDF' : 'Finalize Report & Generate PDF'}
                 </Button>
               </div>
             </div>

@@ -273,6 +273,39 @@ export type Database = {
           },
         ]
       }
+      report_shares: {
+        Row: {
+          access_count: number | null
+          accessed_at: string | null
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          report_id: string
+          share_token: string
+        }
+        Insert: {
+          access_count?: number | null
+          accessed_at?: string | null
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          report_id: string
+          share_token: string
+        }
+        Update: {
+          access_count?: number | null
+          accessed_at?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          report_id?: string
+          share_token?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           author_id: string | null
@@ -326,6 +359,10 @@ export type Database = {
           p_addons?: string[]
         }
         Returns: number
+      }
+      create_report_share: {
+        Args: { p_report_id: string }
+        Returns: string
       }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
