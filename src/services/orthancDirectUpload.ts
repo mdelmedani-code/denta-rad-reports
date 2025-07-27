@@ -26,7 +26,7 @@ export const uploadToOrthancPACS = async (
       console.log(`Uploading ${file.name} to Orthanc PACS...`);
       
       // Upload using Orthanc's REST API /instances endpoint
-      const orthancUrl = `http://116.203.35.168:8042/instances`;
+      const orthancUrl = `https://116.203.35.168:443/instances`;
       
       const formData = new FormData();
       formData.append('file', file);
