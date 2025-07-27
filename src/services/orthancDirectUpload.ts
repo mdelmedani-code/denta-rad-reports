@@ -1,4 +1,5 @@
 import { getCurrentPACSConfig } from "@/config/pacs";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface OrthancUploadResult {
   success: boolean;
@@ -30,23 +31,21 @@ export const uploadToOrthancPACS = async (
       formData.append('file', file);
       
       // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
-      const response = await fetch(`https://swusayoygknritombbwg.supabase.co/functions/v1/orthanc-proxy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dXNheW95Z2tucml0b21iYndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTkzMjEsImV4cCI6MjA2OTAzNTMyMX0.sOAz9isiZUp8BmFVDQRV-G16iWc0Rk8mM9obUKko2dY`,
-        },
+      const { data, error: functionError } = await supabase.functions.invoke('orthanc-proxy', {
         body: formData
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed for ${file.name}: ${response.status} ${errorText}`);
+      if (functionError) {
+        throw new Error(`Upload failed for ${file.name}: ${functionError.message}`);
       }
       
-      const result = await response.json();
-      uploadResults.push(result);
+      if (!data) {
+        throw new Error(`Upload failed for ${file.name}: No data returned`);
+      }
       
-      console.log(`Successfully uploaded ${file.name}:`, result);
+      uploadResults.push(data);
+      
+      console.log(`Successfully uploaded ${file.name}:`, data);
     }
     
     // Return info from first uploaded file
