@@ -33,25 +33,63 @@ export const uploadDICOMFiles = async (
   const fileArray = Array.isArray(files) ? files : [files];
   
   try {
-    const uploadResults = [];
+    console.log(`Starting parallel upload of ${fileArray.length} files`);
     
-    for (let i = 0; i < fileArray.length; i++) {
-      const file = fileArray[i];
-      console.log(`Processing file ${i + 1}/${fileArray.length}: ${file.name}, size: ${file.size} bytes`);
+    if (onProgress) {
+      onProgress({
+        bytesUploaded: 0,
+        bytesTotal: fileArray.reduce((sum, f) => sum + f.size, 0),
+        percentage: 0,
+        stage: 'uploading'
+      });
+    }
+    
+    // Upload all files in parallel with concurrency limit
+    const BATCH_SIZE = 5; // Process 5 files at a time to avoid overwhelming the server
+    const uploadResults = [];
+    const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
+    let completedSize = 0;
+    
+    for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+      const batch = fileArray.slice(i, i + BATCH_SIZE);
+      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(fileArray.length/BATCH_SIZE)}: ${batch.length} files`);
       
-      // Validate file type
-      if (!file.name.toLowerCase().endsWith('.dcm') && file.type !== 'application/dicom') {
-        console.warn(`File ${file.name} may not be a DICOM file`);
+      const batchPromises = batch.map(async (file, batchIndex) => {
+        const globalIndex = i + batchIndex;
+        console.log(`Uploading file ${globalIndex + 1}/${fileArray.length}: ${file.name}`);
+        
+        const result = await uploadDirectToOrthanc(file, (fileProgress) => {
+          // Update overall progress
+          const fileCompletionRatio = fileProgress.percentage / 100;
+          const thisFileContribution = (file.size / totalSize) * fileCompletionRatio;
+          const currentProgress = (completedSize / totalSize) + thisFileContribution;
+          
+          if (onProgress) {
+            onProgress({
+              bytesUploaded: completedSize + (file.size * fileCompletionRatio),
+              bytesTotal: totalSize,
+              percentage: Math.round(currentProgress * 100),
+              stage: fileProgress.stage
+            });
+          }
+        });
+        
+        if (result.success) {
+          completedSize += file.size;
+        }
+        
+        return result;
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Check for any failures in this batch
+      const failed = batchResults.find(r => !r.success);
+      if (failed) {
+        throw new Error(failed.error || 'Batch upload failed');
       }
       
-      // Upload directly to Orthanc via edge function
-      const result = await uploadDirectToOrthanc(file, onProgress);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Upload failed');
-      }
-      
-      uploadResults.push(result);
+      uploadResults.push(...batchResults);
     }
     
     // Return info from first uploaded file
@@ -59,12 +97,14 @@ export const uploadDICOMFiles = async (
     
     if (onProgress) {
       onProgress({
-        bytesUploaded: fileArray.reduce((sum, f) => sum + f.size, 0),
-        bytesTotal: fileArray.reduce((sum, f) => sum + f.size, 0),
+        bytesUploaded: totalSize,
+        bytesTotal: totalSize,
         percentage: 100,
         stage: 'complete'
       });
     }
+    
+    console.log(`Successfully uploaded ${uploadResults.length} files to Orthanc`);
     
     return {
       success: true,

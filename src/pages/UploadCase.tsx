@@ -41,6 +41,21 @@ const UploadCase = () => {
     }
   };
 
+  const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Folder selected:', e.target.files);
+    if (e.target.files && e.target.files.length > 0) {
+      // Filter for DICOM files
+      const allFiles = Array.from(e.target.files);
+      const dicomFiles = allFiles.filter(file => 
+        file.name.toLowerCase().endsWith('.dcm') || 
+        file.type === 'application/dicom' ||
+        file.name.toLowerCase().includes('dicom')
+      );
+      console.log('DICOM files found:', dicomFiles.length, 'out of', allFiles.length);
+      setSelectedFiles(dicomFiles);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('=== STARTING UPLOAD ===');
@@ -319,35 +334,59 @@ const UploadCase = () => {
               <CardDescription>Select DICOM files to upload</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="fileInput" className="cursor-pointer">
-                      <Button type="button" variant="outline" asChild>
-                        <span>Choose Files</span>
-                      </Button>
-                    </Label>
-                    <Input
-                      id="fileInput"
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="file-upload" className="block text-sm font-medium text-foreground mb-2">
+                    Select DICOM Files or Folder
+                  </label>
+                  <div className="flex flex-col space-y-2">
+                    <input
+                      id="file-upload"
                       type="file"
-                      onChange={handleFileChange}
-                      accept=".dcm"
                       multiple
-                      className="hidden"
+                      accept=".dcm,application/dicom"
+                      onChange={handleFileChange}
+                      className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Select individual DICOM files (Ctrl/Cmd+click for multiple)
+                    </p>
+                    
+                    <div className="relative">
+                      <input
+                        id="folder-upload"
+                        type="file"
+                        {...({ webkitdirectory: "", directory: "" } as any)}
+                        multiple
+                        onChange={handleFolderChange}
+                        className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Or select an entire folder containing DICOM files
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Supported: DICOM files (.dcm) - Maximum 50MB per file
-                  </p>
+                  
                   {selectedFiles.length > 0 && (
-                    <div className="text-sm text-foreground">
-                      <p className="font-medium">Selected: {selectedFiles.length} file(s)</p>
-                      <div className="max-h-32 overflow-y-auto mt-2 text-xs text-muted-foreground">
-                        {selectedFiles.map((file, index) => (
-                          <div key={index}>{file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</div>
+                    <div className="mt-4 p-4 bg-muted rounded-lg">
+                      <h4 className="font-medium text-foreground mb-2">
+                        Selected Files ({selectedFiles.length})
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto">
+                        {selectedFiles.slice(0, 10).map((file, index) => (
+                          <p key={index} className="text-sm text-muted-foreground">
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </p>
                         ))}
+                        {selectedFiles.length > 10 && (
+                          <p className="text-sm text-muted-foreground font-medium">
+                            ...and {selectedFiles.length - 10} more files
+                          </p>
+                        )}
                       </div>
+                      <p className="text-sm font-medium text-foreground mt-2">
+                        Total size: {(selectedFiles.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
+                      </p>
                     </div>
                   )}
                 </div>
