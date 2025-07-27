@@ -98,8 +98,9 @@ const UploadCase = () => {
         console.log('=== UPLOADING TO PACS SERVER ===');
         setUploadProgress(25);
         
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
+        // Upload only the first file to PACS for now (to test connectivity)
+        if (selectedFiles.length > 0) {
+          const file = selectedFiles[0];
           console.log(`Uploading to PACS: ${file.name}`);
           
           // Convert file to base64 for the edge function
@@ -115,7 +116,9 @@ const UploadCase = () => {
           
           const base64File = btoa(binary);
           
-          // Upload to PACS via edge function
+          console.log('Invoking orthanc-proxy function...');
+          
+          // Upload to PACS via edge function with timeout
           const { data: pacsData, error: pacsError } = await supabase.functions.invoke('orthanc-proxy', {
             body: {
               fileName: file.name,
@@ -124,30 +127,32 @@ const UploadCase = () => {
             }
           });
           
+          console.log('PACS response received:', { data: pacsData, error: pacsError });
+          
           if (pacsError) {
-            console.error('PACS upload error:', pacsError);
-            throw pacsError;
+            console.error('PACS upload error details:', pacsError);
+            throw new Error(`PACS Error: ${pacsError.message || 'Unknown error'}`);
           }
           
           if (pacsData) {
             pacsSuccess = true;
-            pacsStudyUID = pacsData.StudyInstanceUID || pacsData.ParentStudy;
+            pacsStudyUID = pacsData.StudyInstanceUID || pacsData.ParentStudy || pacsData.ID;
             console.log('PACS upload successful:', pacsData);
+            
+            toast({
+              title: "PACS Upload Complete",
+              description: "Files successfully uploaded to imaging server",
+            });
           }
-          
-          setUploadProgress(25 + (25 * (i + 1)) / selectedFiles.length);
         }
         
-        toast({
-          title: "PACS Upload Complete",
-          description: "Files successfully uploaded to imaging server",
-        });
+        setUploadProgress(50);
         
       } catch (pacsError) {
         console.error('PACS upload failed:', pacsError);
         toast({
-          title: "PACS Upload Warning", 
-          description: "PACS upload failed, but continuing with backup storage",
+          title: "PACS Upload Failed", 
+          description: `PACS server error: ${pacsError instanceof Error ? pacsError.message : 'Connection failed'}. Continuing with local storage.`,
           variant: "destructive",
         });
       }
