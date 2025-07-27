@@ -28,9 +28,10 @@ export const uploadToOrthancPACS = async (
       
       console.log(`Processing file: ${file.name}, size: ${file.size} bytes`);
       
-      // Check file size limit (100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        throw new Error(`File ${file.name} is too large. Maximum size is 100MB.`);
+      // Check file size limit (5MB) - Conservative limit for Supabase Edge Functions
+      const MAX_EDGE_PAYLOAD = 5 * 1024 * 1024; // 5MB
+      if (file.size > MAX_EDGE_PAYLOAD) {
+        throw new Error(`File ${file.name} exceeds maximum allowed size of 5MB. Large files are not supported due to platform limitations.`);
       }
       
       try {
@@ -50,16 +51,9 @@ export const uploadToOrthancPACS = async (
         const fileBuffer = await file.arrayBuffer();
         console.log(`File buffer created, size: ${fileBuffer.byteLength} bytes`);
         
-        // Convert to base64 more safely - avoid chunking which can cause corruption
+        // Efficient base64 conversion using built-in methods
         const bytes = new Uint8Array(fileBuffer);
-        let binary = '';
-        
-        // Convert bytes to string safely without chunking
-        for (let i = 0; i < bytes.length; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        
-        const base64File = btoa(binary);
+        const base64File = btoa(String.fromCharCode(...bytes));
         console.log(`Base64 conversion complete, original: ${fileBuffer.byteLength}, base64: ${base64File.length}`);
         
         // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues

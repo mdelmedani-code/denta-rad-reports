@@ -17,7 +17,18 @@ Deno.serve(async (req) => {
       
       console.log('Processing file upload:', fileName, 'Base64 size:', base64Data.length)
       
-      // Convert base64 back to binary - handle padding issues
+      // Check payload size limits
+      const MAX_BASE64_LENGTH = 7 * 1024 * 1024; // ~5MB file becomes ~7MB base64
+      if (base64Data.length > MAX_BASE64_LENGTH) {
+        return new Response(JSON.stringify({ 
+          error: 'File too large for upload. Please reduce file size to under 5MB.' 
+        }), {
+          status: 413,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Efficient base64 conversion with proper error handling
       let bytes
       try {
         // Clean base64 string and add proper padding if needed
@@ -27,15 +38,19 @@ Deno.serve(async (req) => {
           cleanBase64 += '='.repeat(4 - padding)
         }
         
+        // More efficient base64 decode
         const binaryString = atob(cleanBase64)
-        bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
+        bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0))
         console.log('Successfully converted base64 to binary, size:', bytes.length)
       } catch (conversionError) {
         console.error('Base64 conversion failed:', conversionError)
-        throw new Error(`File conversion failed: ${conversionError.message}`)
+        return new Response(JSON.stringify({ 
+          error: 'Invalid file format or corrupted data',
+          details: conversionError.message
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
       
       // Validate file appears to be DICOM (check for DICOM header)
@@ -71,7 +86,16 @@ Deno.serve(async (req) => {
       console.log('Orthanc response body:', responseText.substring(0, 500)) // First 500 chars
       
       if (!response.ok) {
-        throw new Error(`Orthanc upload failed: ${response.status} ${responseText}`)
+        // Return specific error based on Orthanc response
+        const status = response.status === 413 ? 413 : 
+                      response.status >= 500 ? 502 : 400;
+        return new Response(JSON.stringify({ 
+          error: `PACS server error: ${response.status} ${response.statusText}`,
+          details: responseText
+        }), {
+          status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
       // Check if we got a proper response
@@ -129,8 +153,14 @@ Deno.serve(async (req) => {
       // Handle JSON requests (for studies, etc.)
       const { method, url } = requestBody
       
-      if (!url.includes('/studies') && !url.includes('/instances')) {
-        throw new Error('Invalid endpoint')
+      // Add null checks and better validation
+      if (!url || (!url.includes('/studies') && !url.includes('/instances') && !url.includes('/system'))) {
+        return new Response(JSON.stringify({ 
+          error: 'Invalid endpoint. Only studies, instances, and system endpoints are allowed.' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
       const orthancUrl = `http://116.203.35.168:8042${url}`
@@ -164,15 +194,31 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     console.error('Orthanc proxy error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 400,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
+    
+    // Return appropriate error status based on error type
+    let status = 500;
+    let errorMessage = 'Internal server error';
+    
+    if (error.message && error.message.includes('too large') || error.message.includes('413')) {
+      status = 413;
+      errorMessage = 'File too large';
+    } else if (error.message && (error.message.includes('Invalid') || error.message.includes('400'))) {
+      status = 400;
+      errorMessage = error.message;
+    } else if (error.message && (error.message.includes('PACS') || error.message.includes('Orthanc'))) {
+      status = 502;
+      errorMessage = 'PACS server error';
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error.message
+    }), {
+      status,
+      headers: { 
+        ...corsHeaders,
+        'Content-Type': 'application/json'
       },
-    )
+    })
   }
 })
