@@ -65,6 +65,9 @@ export type Database = {
           id: string
           monthly_billed: boolean | null
           monthly_invoice_id: string | null
+          orthanc_instance_ids: string[] | null
+          orthanc_series_id: string | null
+          orthanc_study_id: string | null
           patient_dob: string | null
           patient_internal_id: string | null
           patient_name: string
@@ -83,6 +86,9 @@ export type Database = {
           id?: string
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
+          orthanc_instance_ids?: string[] | null
+          orthanc_series_id?: string | null
+          orthanc_study_id?: string | null
           patient_dob?: string | null
           patient_internal_id?: string | null
           patient_name: string
@@ -101,6 +107,9 @@ export type Database = {
           id?: string
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
+          orthanc_instance_ids?: string[] | null
+          orthanc_series_id?: string | null
+          orthanc_study_id?: string | null
           patient_dob?: string | null
           patient_internal_id?: string | null
           patient_name?: string

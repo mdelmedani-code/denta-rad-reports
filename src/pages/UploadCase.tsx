@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { uploadToOrthancPACS } from "@/services/orthancDirectUpload";
 
 const UploadCase = () => {
   const { user } = useAuth();
@@ -88,103 +89,26 @@ const UploadCase = () => {
         throw new Error('Unable to determine clinic association');
       }
 
-      setUploadProgress(20);
+      setUploadProgress(30);
 
-      // Step 1: Upload to PACS server first
-      let pacsSuccess = false;
-      let pacsStudyUID = null;
+      // Step 1: Upload to Orthanc PACS
+      console.log('=== UPLOADING TO ORTHANC PACS ===');
+      const orthancResult = await uploadToOrthancPACS(selectedFiles, 'temp-case-id');
       
-      try {
-        console.log('=== UPLOADING TO PACS SERVER ===');
-        setUploadProgress(25);
-        
-        // Upload only the first file to PACS for now (to test connectivity)
-        if (selectedFiles.length > 0) {
-          const file = selectedFiles[0];
-          console.log(`Uploading to PACS: ${file.name}`);
-          
-          // Convert file to base64 for the edge function
-          const fileBuffer = await file.arrayBuffer();
-          const bytes = new Uint8Array(fileBuffer);
-          let binary = '';
-          const chunkSize = 8192;
-          
-          for (let j = 0; j < bytes.length; j += chunkSize) {
-            const chunk = bytes.slice(j, j + chunkSize);
-            binary += String.fromCharCode.apply(null, Array.from(chunk));
-          }
-          
-          const base64File = btoa(binary);
-          
-          console.log('Invoking orthanc-proxy function...');
-          
-          // Upload to PACS via edge function with timeout
-          const { data: pacsData, error: pacsError } = await supabase.functions.invoke('orthanc-proxy', {
-            body: {
-              fileName: file.name,
-              fileData: base64File,
-              contentType: file.type || 'application/dicom'
-            }
-          });
-          
-          console.log('PACS response received:', { data: pacsData, error: pacsError });
-          
-          if (pacsError) {
-            console.error('PACS upload error details:', pacsError);
-            throw new Error(`PACS Error: ${pacsError.message || 'Unknown error'}`);
-          }
-          
-          if (pacsData) {
-            pacsSuccess = true;
-            pacsStudyUID = pacsData.StudyInstanceUID || pacsData.ParentStudy || pacsData.ID;
-            console.log('PACS upload successful:', pacsData);
-            
-            toast({
-              title: "PACS Upload Complete",
-              description: "Files successfully uploaded to imaging server",
-            });
-          }
-        }
-        
-        setUploadProgress(50);
-        
-      } catch (pacsError) {
-        console.error('PACS upload failed:', pacsError);
-        toast({
-          title: "PACS Upload Failed", 
-          description: `PACS server error: ${pacsError instanceof Error ? pacsError.message : 'Connection failed'}. Continuing with local storage.`,
-          variant: "destructive",
-        });
+      if (!orthancResult.success) {
+        throw new Error(`PACS upload failed: ${orthancResult.error}`);
       }
 
-      // Step 2: Upload to Supabase storage (backup)
-      console.log('=== UPLOADING TO SUPABASE STORAGE ===');
-      const uploadedFiles: string[] = [];
-      const folderName = `${user.id}/${Date.now()}`;
+      console.log('Orthanc upload successful:', orthancResult);
+      
+      setUploadProgress(70);
 
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        console.log(`Uploading to storage: ${file.name}`);
-        
-        const fileName = `${folderName}/${file.name}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('cbct-scans')
-          .upload(fileName, file);
+      toast({
+        title: "PACS Upload Complete",
+        description: "Files successfully uploaded to Orthanc PACS",
+      });
 
-        if (uploadError) {
-          console.error('Storage upload error:', uploadError);
-          throw uploadError;
-        }
-
-        uploadedFiles.push(uploadData.path);
-        setUploadProgress(50 + (35 * (i + 1)) / selectedFiles.length);
-      }
-
-      console.log('Supabase storage upload complete');
-      setUploadProgress(85);
-
-      // Create case in database
+      // Step 2: Create case in database with Orthanc IDs
       const { data: caseData, error: caseError } = await supabase
         .from('cases')
         .insert({
@@ -195,7 +119,9 @@ const UploadCase = () => {
           field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
           clinic_id: profile.clinic_id,
-          file_path: folderName,
+          orthanc_study_id: orthancResult.studyInstanceUID,
+          orthanc_series_id: orthancResult.seriesInstanceUID,
+          orthanc_instance_ids: orthancResult.sopInstanceUID ? [orthancResult.sopInstanceUID] : [],
           status: 'uploaded'
         })
         .select()
