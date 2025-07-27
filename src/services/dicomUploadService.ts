@@ -23,7 +23,7 @@ const SUPABASE_PROJECT_ID = 'swusayoygknritombbwg';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dXNheW95Z2tucml0b21iYndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTkzMjEsImV4cCI6MjA2OTAzNTMyMX0.sOAz9isiZUp8BmFVDQRV-G16iWc0Rk8mM9obUKko2dY';
 
 /**
- * Upload DICOM files using the most appropriate method based on file size
+ * Upload DICOM files directly to Orthanc via edge function
  */
 export const uploadDICOMFiles = async (
   files: File | File[],
@@ -44,15 +44,8 @@ export const uploadDICOMFiles = async (
         console.warn(`File ${file.name} may not be a DICOM file`);
       }
       
-      let result: UploadResult;
-      
-      if (file.size <= SMALL_FILE_THRESHOLD) {
-        // Use direct upload for smaller files
-        result = await uploadSmallFile(file, caseId, onProgress);
-      } else {
-        // Use resumable upload for larger files
-        result = await uploadLargeFile(file, caseId, onProgress);
-      }
+      // Upload directly to Orthanc via edge function
+      const result = await uploadDirectToOrthanc(file, onProgress);
       
       if (!result.success) {
         throw new Error(result.error || 'Upload failed');
@@ -101,11 +94,10 @@ export const uploadDICOMFiles = async (
 };
 
 /**
- * Upload small files directly using Supabase Storage
+ * Upload file directly to Orthanc via edge function
  */
-const uploadSmallFile = async (
+const uploadDirectToOrthanc = async (
   file: File,
-  caseId: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadResult> => {
   try {
@@ -118,146 +110,45 @@ const uploadSmallFile = async (
       });
     }
     
-    // Upload to Supabase Storage
-    const fileName = `${caseId}/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('cbct-scans')
-      .upload(fileName, file, {
-        contentType: 'application/dicom',
-        upsert: false
-      });
+    // Create FormData with the file
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('fileName', file.name);
     
-    if (uploadError) {
-      throw new Error(`Storage upload failed: ${uploadError.message}`);
-    }
+    // Call edge function with binary data
+    const response = await fetch(`https://swusayoygknritombbwg.supabase.co/functions/v1/direct-dicom-upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: formData
+    });
     
     if (onProgress) {
       onProgress({
-        bytesUploaded: file.size * 0.7,
+        bytesUploaded: file.size * 0.8,
         bytesTotal: file.size,
-        percentage: 70,
+        percentage: 80,
         stage: 'processing'
       });
     }
     
-    // Process the uploaded file
-    const result = await processUploadedFile(uploadData.path, file.name, onProgress);
-    
-    return result;
-    
-  } catch (error) {
-    console.error('Small file upload error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Small file upload failed'
-    };
-  }
-};
-
-/**
- * Upload large files using TUS resumable upload
- */
-const uploadLargeFile = async (
-  file: File,
-  caseId: string,
-  onProgress?: (progress: UploadProgress) => void
-): Promise<UploadResult> => {
-  return new Promise((resolve) => {
-    const fileName = `${caseId}/${Date.now()}-${file.name}`;
-    
-    const upload = new tus.Upload(file, {
-      endpoint: `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/upload/resumable`,
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      metadata: {
-        filename: file.name,
-        contentType: 'application/dicom',
-        bucketName: 'cbct-scans',
-        objectName: fileName,
-      },
-      headers: {
-        authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        apikey: SUPABASE_ANON_KEY,
-      },
-      onError: (error) => {
-        console.error('TUS upload failed:', error);
-        resolve({
-          success: false,
-          error: `Resumable upload failed: ${error.message}`
-        });
-      },
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const percentage = Math.round((bytesUploaded / bytesTotal) * 70); // Reserve 30% for processing
-        
-        if (onProgress) {
-          onProgress({
-            bytesUploaded,
-            bytesTotal,
-            percentage,
-            stage: 'uploading'
-          });
-        }
-      },
-      onSuccess: async () => {
-        try {
-          console.log('TUS upload completed, processing file...');
-          
-          if (onProgress) {
-            onProgress({
-              bytesUploaded: file.size,
-              bytesTotal: file.size,
-              percentage: 70,
-              stage: 'processing'
-            });
-          }
-          
-          // Process the uploaded file
-          const result = await processUploadedFile(fileName, file.name, onProgress);
-          resolve(result);
-          
-        } catch (error) {
-          console.error('Post-upload processing failed:', error);
-          resolve({
-            success: false,
-            error: error instanceof Error ? error.message : 'Post-upload processing failed'
-          });
-        }
-      }
-    });
-    
-    upload.start();
-  });
-};
-
-/**
- * Process uploaded file and forward to Orthanc
- */
-const processUploadedFile = async (
-  storagePath: string,
-  fileName: string,
-  onProgress?: (progress: UploadProgress) => void
-): Promise<UploadResult> => {
-  try {
-    // Call edge function to process the file
-    const { data, error } = await supabase.functions.invoke('process-dicom-upload', {
-      body: {
-        storagePath,
-        fileName,
-        bucketName: 'cbct-scans'
-      }
-    });
-    
-    if (error) {
-      throw new Error(`Processing failed: ${error.message}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload failed: ${response.status} ${errorText}`);
     }
     
-    if (!data || !data.success) {
-      throw new Error(data?.error || 'Processing failed');
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Upload failed');
     }
     
     if (onProgress) {
       onProgress({
-        bytesUploaded: 0, // Will be set by caller
-        bytesTotal: 0,    // Will be set by caller
+        bytesUploaded: file.size,
+        bytesTotal: file.size,
         percentage: 100,
         stage: 'complete'
       });
@@ -272,10 +163,10 @@ const processUploadedFile = async (
     };
     
   } catch (error) {
-    console.error('File processing error:', error);
+    console.error('Direct upload error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'File processing failed'
+      error: error instanceof Error ? error.message : 'Direct upload failed'
     };
   }
 };
