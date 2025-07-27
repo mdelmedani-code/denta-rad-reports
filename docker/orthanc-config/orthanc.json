@@ -24,8 +24,7 @@
   "Plugins": [
     "/usr/share/orthanc/plugins",
     "/usr/share/orthanc/plugins/libOrthancDicomWeb.so",
-    "/usr/share/orthanc/plugins/libOrthancPostgreSQL.so",
-    "/usr/share/orthanc/plugins/libOrthancOHIF.so"
+    "/usr/share/orthanc/plugins/libOrthancPostgreSQL.so"
   ],
   
   "DicomWeb": {
@@ -91,12 +90,5 @@
   
   "WebDav": {
     "Enable": false
-  },
-  
-  "OHIF": {
-    "DataSource": "dicom-web",
-    "Router": "hash",
-    "StudyListFunctionsEnabled": true,
-    "EnableOpenInOhifViewer3": true
   }
 }
