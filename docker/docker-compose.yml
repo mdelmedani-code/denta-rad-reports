@@ -23,7 +23,7 @@ services:
 
   # Orthanc DICOM Server with DICOMweb
   orthanc:
-    image: orthancteam/orthanc:latest
+    image: osimis/orthanc:latest
     container_name: orthanc-server
     depends_on:
       postgres:
