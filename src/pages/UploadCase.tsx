@@ -144,14 +144,28 @@ const UploadCase = () => {
       // Convert FileList to Array for easier debugging
       const filesArray = Array.from(e.target.files);
       console.log('Files selected:', filesArray.length);
-      console.log('First file:', filesArray[0]);
+      console.log('First file details:', {
+        name: filesArray[0]?.name,
+        size: filesArray[0]?.size,
+        type: filesArray[0]?.type,
+        constructor: filesArray[0]?.constructor?.name
+      });
       
-      // Filter out any invalid files (empty objects)
-      const validFiles = filesArray.filter(file => file instanceof File && file.size > 0);
+      // More robust filtering - check if it's actually a File object with content
+      const validFiles = filesArray.filter(file => {
+        const isValidFile = file instanceof File && 
+                           file.name && 
+                           file.size !== undefined && 
+                           file.size >= 0 &&
+                           file.name !== '';
+        console.log('File validation:', file.name, 'valid:', isValidFile);
+        return isValidFile;
+      });
+      
       console.log('Valid files after filtering:', validFiles.length);
       
       if (validFiles.length === 0) {
-        console.warn('No valid files selected');
+        console.warn('No valid files selected - all files failed validation');
         setSelectedFile(null);
         setSelectedFiles(null);
         return;
@@ -160,14 +174,14 @@ const UploadCase = () => {
       if (validFiles.length === 1) {
         setSelectedFile(validFiles[0]);
         setSelectedFiles(null);
-        console.log('Set single file:', validFiles[0].name);
+        console.log('Set single file:', validFiles[0].name, 'size:', validFiles[0].size);
       } else {
         // Create new FileList with valid files
         const dt = new DataTransfer();
         validFiles.forEach(file => dt.items.add(file));
         setSelectedFiles(dt.files);
         setSelectedFile(null);
-        console.log('Set multiple files:', validFiles.length);
+        console.log('Set multiple files:', validFiles.length, 'first file:', validFiles[0].name);
       }
     } else {
       console.log('No files selected or files.length is 0');
@@ -211,16 +225,21 @@ const UploadCase = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('handleSubmit called!');
+    console.log('=== SUBMIT HANDLER CALLED ===');
     e.preventDefault();
-    console.log('Submit button clicked');
+    console.log('Submit event prevented');
     console.log('User:', user);
-    console.log('Selected file:', selectedFile);
-    console.log('Selected files:', selectedFiles);
+    console.log('Selected file:', selectedFile?.name, selectedFile?.size);
+    console.log('Selected files count:', selectedFiles?.length);
     console.log('Form data:', formData);
     
     if (!user || (!selectedFile && !selectedFiles)) {
       console.log('Validation failed - missing user or files');
+      toast({
+        title: "Error",
+        description: "Please select files to upload",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -656,13 +675,8 @@ const UploadCase = () => {
                             <span>Choose Files</span>
                           </Button>
                         </Label>
-                        <Label htmlFor="folder-upload" className="cursor-pointer">
-                          <Button type="button" variant="outline" asChild>
-                            <span>Choose Folder</span>
-                          </Button>
-                        </Label>
                       </div>
-                      <p className="text-muted-foreground">or drag and drop files/folders here</p>
+                      <p className="text-muted-foreground">or drag and drop files here</p>
                       
                       <Input
                         id="file-upload"
@@ -672,15 +686,6 @@ const UploadCase = () => {
                         multiple
                         className="hidden"
                         required
-                      />
-                      <input
-                        id="folder-upload"
-                        type="file"
-                        onChange={handleFileChange}
-                        accept=".dcm"
-                        multiple
-                        {...({ webkitdirectory: "" } as any)}
-                        className="hidden"
                       />
                       <p className="text-sm text-muted-foreground">
                         Supported: DICOM files (.dcm), ZIP archives, or DICOM folders
