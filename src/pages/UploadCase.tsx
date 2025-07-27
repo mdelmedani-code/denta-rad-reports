@@ -136,15 +136,43 @@ const UploadCase = () => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File change event triggered:', e.target.files);
+    console.log('Target input type:', e.target.type);
+    console.log('Has webkitdirectory?', (e.target as any).webkitdirectory);
+    
     if (e.target.files && e.target.files.length > 0) {
-      // If multiple files (folder) or single file
-      if (e.target.files.length === 1) {
-        setSelectedFile(e.target.files[0]);
-        setSelectedFiles(null);
-      } else {
-        setSelectedFiles(e.target.files);
+      // Convert FileList to Array for easier debugging
+      const filesArray = Array.from(e.target.files);
+      console.log('Files selected:', filesArray.length);
+      console.log('First file:', filesArray[0]);
+      
+      // Filter out any invalid files (empty objects)
+      const validFiles = filesArray.filter(file => file instanceof File && file.size > 0);
+      console.log('Valid files after filtering:', validFiles.length);
+      
+      if (validFiles.length === 0) {
+        console.warn('No valid files selected');
         setSelectedFile(null);
+        setSelectedFiles(null);
+        return;
       }
+      
+      if (validFiles.length === 1) {
+        setSelectedFile(validFiles[0]);
+        setSelectedFiles(null);
+        console.log('Set single file:', validFiles[0].name);
+      } else {
+        // Create new FileList with valid files
+        const dt = new DataTransfer();
+        validFiles.forEach(file => dt.items.add(file));
+        setSelectedFiles(dt.files);
+        setSelectedFile(null);
+        console.log('Set multiple files:', validFiles.length);
+      }
+    } else {
+      console.log('No files selected or files.length is 0');
+      setSelectedFile(null);
+      setSelectedFiles(null);
     }
   };
 
