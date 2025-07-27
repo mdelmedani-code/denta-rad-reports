@@ -30,9 +30,9 @@ export const getOHIFConfig = (caseId: string, studyInstanceUID?: string) => {
         configuration: {
           friendlyName: 'DentaRad DICOMweb Server',
           name: 'dentarad',
-          wadoUriRoot: dicomWebRoot,
-          qidoRoot: dicomWebRoot,
-          wadoRoot: dicomWebRoot,
+          wadoUriRoot: `${dicomWebRoot}?caseId=${caseId}`,
+          qidoRoot: `${dicomWebRoot}?caseId=${caseId}`,
+          wadoRoot: `${dicomWebRoot}?caseId=${caseId}`,
           qidoSupportsIncludeField: false,
           supportsReject: false,
           imageRendering: 'wadors',
@@ -47,6 +47,7 @@ export const getOHIFConfig = (caseId: string, studyInstanceUID?: string) => {
             mode: 'cors',
             headers: {
               'Accept': 'application/dicom+json',
+              'Content-Type': 'application/dicom+json',
             },
           },
           // Custom URL builder to include caseId

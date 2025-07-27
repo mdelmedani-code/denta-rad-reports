@@ -48,11 +48,47 @@ Deno.serve(async (req) => {
     )
 
     const url = new URL(req.url)
-    const path = url.pathname.replace('/dicomweb-server', '')
-    const caseId = url.searchParams.get('caseId')
+    let path = url.pathname.replace('/dicomweb-server', '')
+    
+    // Handle both URL params and path-embedded caseId
+    let caseId = url.searchParams.get('caseId')
+    
+    // If no caseId in params, try to extract from path
+    if (!caseId && path.includes('caseId=')) {
+      const match = path.match(/[?&]caseId=([^&]+)/)
+      if (match) {
+        caseId = match[1]
+        // Clean the path of caseId parameter
+        path = path.replace(/[?&]caseId=[^&]+/, '').replace(/\?&/, '?').replace(/\?$/, '')
+      }
+    }
     
     console.log(`DICOMweb request: ${req.method} ${path}`)
     console.log(`Case ID: ${caseId}`)
+    console.log(`Full URL: ${req.url}`)
+
+    // Return early for invalid paths
+    if (!path || path === '/') {
+      return new Response(JSON.stringify({
+        message: 'DentaRad DICOMweb Server',
+        version: '2.0',
+        endpoints: {
+          qido: [
+            'GET /studies?caseId={caseId}',
+            'GET /studies/{studyUID}/series?caseId={caseId}',
+            'GET /studies/{studyUID}/series/{seriesUID}/instances?caseId={caseId}'
+          ],
+          wado: [
+            'GET /studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}?caseId={caseId}',
+            'GET /studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}/metadata?caseId={caseId}',
+            'GET /studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}/frames/{frameNumber}?caseId={caseId}'
+          ]
+        }
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
     // QIDO-RS endpoints (Query)
     if (path === '/studies' && req.method === 'GET') {

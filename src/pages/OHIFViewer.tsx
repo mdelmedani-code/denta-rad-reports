@@ -37,7 +37,15 @@ export const OHIFViewer = () => {
       return;
     }
 
+    // Auto-launch the viewer after a short delay
+    const timer = setTimeout(() => {
+      setShowViewer(true);
+      setIsLoading(false);
+    }, 1000);
+
     loadStudyData();
+
+    return () => clearTimeout(timer);
   }, [studyInstanceUIDs, caseId]);
 
   const loadStudyData = async () => {
