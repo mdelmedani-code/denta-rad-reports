@@ -724,19 +724,6 @@ const UploadCase = () => {
                   type="submit" 
                   disabled={uploading || (!selectedFile && !selectedFiles) || (selectedFile && Object.keys(selectedFile).length === 0) || !formData.patientName || !formData.clinicalQuestion}
                   className="w-full"
-                  onClick={(e) => {
-                    console.log('Button clicked directly');
-                    const isDisabled = uploading || (!selectedFile && !selectedFiles) || (selectedFile && Object.keys(selectedFile).length === 0) || !formData.patientName || !formData.clinicalQuestion;
-                    console.log('Button disabled?', isDisabled);
-                    console.log('Upload state:', { uploading });
-                    console.log('Files state:', { 
-                      selectedFile, 
-                      selectedFiles, 
-                      hasSelectedFile: !!selectedFile,
-                      isSelectedFileEmpty: selectedFile && Object.keys(selectedFile).length === 0
-                    });
-                    console.log('Form data:', { patientName: formData.patientName, clinicalQuestion: formData.clinicalQuestion });
-                  }}
                 >
                   <Cloud className="w-4 h-4 mr-2" />
                   {uploading ? `Uploading... ${uploadProgress}%` : isReupload ? "Update Case" : "Upload Case"}
