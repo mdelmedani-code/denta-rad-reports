@@ -413,13 +413,50 @@ async function getAllDICOMFiles(supabase: any, caseId: string): Promise<Array<{ 
   const allFiles: Array<{ name: string; fullPath: string }> = []
   
   try {
-    // List all items in the case folder
+    // First, get the case to find the actual file path
+    const { data: caseData, error: caseError } = await supabase
+      .from('cases')
+      .select('file_path')
+      .eq('id', caseId)
+      .single()
+
+    if (caseError || !caseData?.file_path) {
+      console.error('Case or file_path not found:', caseError)
+      return allFiles
+    }
+
+    const filePath = caseData.file_path
+    console.log('Using file path from database:', filePath)
+
+    // Extract the directory path from the file_path
+    const pathParts = filePath.split('/')
+    let basePath = ''
+    
+    if (pathParts.length > 1) {
+      // If it's a full path like "userId/timestamp/file.ext", use the directory
+      basePath = pathParts.slice(0, -1).join('/')
+    } else {
+      // If it's just a filename, use the caseId as fallback
+      basePath = caseId
+    }
+
+    console.log('Searching in base path:', basePath)
+
+    // List all items in the determined path
     const { data: items, error: listError } = await supabase.storage
       .from('cbct-scans')
-      .list(caseId, { limit: 100, sortBy: { column: 'name', order: 'asc' } })
+      .list(basePath, { limit: 100, sortBy: { column: 'name', order: 'asc' } })
 
     if (listError || !items) {
       console.error('Error listing files:', listError)
+      // Fallback: try direct file access if the file_path is complete
+      if (filePath && (filePath.toLowerCase().endsWith('.dcm') || filePath.toLowerCase().endsWith('.dicom'))) {
+        const fileName = pathParts[pathParts.length - 1]
+        allFiles.push({
+          name: fileName,
+          fullPath: filePath
+        })
+      }
       return allFiles
     }
 
@@ -429,20 +466,20 @@ async function getAllDICOMFiles(supabase: any, caseId: string): Promise<Array<{ 
         // Direct DICOM file
         allFiles.push({
           name: item.name,
-          fullPath: `${caseId}/${item.name}`
+          fullPath: `${basePath}/${item.name}`
         })
       } else if (!item.name.includes('.')) {
         // Assume it's a directory, list its contents
         const { data: subItems, error: subListError } = await supabase.storage
           .from('cbct-scans')
-          .list(`${caseId}/${item.name}`, { limit: 200, sortBy: { column: 'name', order: 'asc' } })
+          .list(`${basePath}/${item.name}`, { limit: 200, sortBy: { column: 'name', order: 'asc' } })
 
         if (!subListError && subItems) {
           for (const subItem of subItems) {
             if (subItem.name.toLowerCase().endsWith('.dcm') || subItem.name.toLowerCase().endsWith('.dicom')) {
               allFiles.push({
                 name: subItem.name,
-                fullPath: `${caseId}/${item.name}/${subItem.name}`
+                fullPath: `${basePath}/${item.name}/${subItem.name}`
               })
             }
           }
@@ -456,11 +493,21 @@ async function getAllDICOMFiles(supabase: any, caseId: string): Promise<Array<{ 
       if (zipFiles.length > 0) {
         allFiles.push({
           name: zipFiles[0].name,
-          fullPath: `${caseId}/${zipFiles[0].name}`
+          fullPath: `${basePath}/${zipFiles[0].name}`
         })
       }
     }
 
+    // If still no files and we have a direct file path, use it
+    if (allFiles.length === 0 && filePath) {
+      const fileName = pathParts[pathParts.length - 1]
+      allFiles.push({
+        name: fileName,
+        fullPath: filePath
+      })
+    }
+
+    console.log('Found files:', allFiles)
     return allFiles.sort((a, b) => a.name.localeCompare(b.name))
   } catch (error) {
     console.error('Error getting all DICOM files:', error)
