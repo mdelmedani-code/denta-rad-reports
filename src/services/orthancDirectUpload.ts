@@ -51,9 +51,17 @@ export const uploadToOrthancPACS = async (
         const fileBuffer = await file.arrayBuffer();
         console.log(`File buffer created, size: ${fileBuffer.byteLength} bytes`);
         
-        // Efficient base64 conversion using built-in methods
+        // Efficient base64 conversion using chunked approach to avoid stack overflow
         const bytes = new Uint8Array(fileBuffer);
-        const base64File = btoa(String.fromCharCode(...bytes));
+        const chunkSize = 8192; // Process in 8KB chunks
+        let binary = '';
+        
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.slice(i, i + chunkSize);
+          binary += String.fromCharCode(...chunk);
+        }
+        
+        const base64File = btoa(binary);
         console.log(`Base64 conversion complete, original: ${fileBuffer.byteLength}, base64: ${base64File.length}`);
         
         // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
