@@ -90,13 +90,76 @@ const UploadCase = () => {
 
       setUploadProgress(20);
 
-      // Upload files to Supabase storage
+      // Step 1: Upload to PACS server first
+      let pacsSuccess = false;
+      let pacsStudyUID = null;
+      
+      try {
+        console.log('=== UPLOADING TO PACS SERVER ===');
+        setUploadProgress(25);
+        
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          console.log(`Uploading to PACS: ${file.name}`);
+          
+          // Convert file to base64 for the edge function
+          const fileBuffer = await file.arrayBuffer();
+          const bytes = new Uint8Array(fileBuffer);
+          let binary = '';
+          const chunkSize = 8192;
+          
+          for (let j = 0; j < bytes.length; j += chunkSize) {
+            const chunk = bytes.slice(j, j + chunkSize);
+            binary += String.fromCharCode.apply(null, Array.from(chunk));
+          }
+          
+          const base64File = btoa(binary);
+          
+          // Upload to PACS via edge function
+          const { data: pacsData, error: pacsError } = await supabase.functions.invoke('orthanc-proxy', {
+            body: {
+              fileName: file.name,
+              fileData: base64File,
+              contentType: file.type || 'application/dicom'
+            }
+          });
+          
+          if (pacsError) {
+            console.error('PACS upload error:', pacsError);
+            throw pacsError;
+          }
+          
+          if (pacsData) {
+            pacsSuccess = true;
+            pacsStudyUID = pacsData.StudyInstanceUID || pacsData.ParentStudy;
+            console.log('PACS upload successful:', pacsData);
+          }
+          
+          setUploadProgress(25 + (25 * (i + 1)) / selectedFiles.length);
+        }
+        
+        toast({
+          title: "PACS Upload Complete",
+          description: "Files successfully uploaded to imaging server",
+        });
+        
+      } catch (pacsError) {
+        console.error('PACS upload failed:', pacsError);
+        toast({
+          title: "PACS Upload Warning", 
+          description: "PACS upload failed, but continuing with backup storage",
+          variant: "destructive",
+        });
+      }
+
+      // Step 2: Upload to Supabase storage (backup)
+      console.log('=== UPLOADING TO SUPABASE STORAGE ===');
       const uploadedFiles: string[] = [];
       const folderName = `${user.id}/${Date.now()}`;
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        console.log(`Uploading file ${i + 1}/${selectedFiles.length}:`, file.name);
+        console.log(`Uploading to storage: ${file.name}`);
         
         const fileName = `${folderName}/${file.name}`;
         
@@ -105,15 +168,15 @@ const UploadCase = () => {
           .upload(fileName, file);
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
+          console.error('Storage upload error:', uploadError);
           throw uploadError;
         }
 
         uploadedFiles.push(uploadData.path);
-        setUploadProgress(20 + (60 * (i + 1)) / selectedFiles.length);
+        setUploadProgress(50 + (35 * (i + 1)) / selectedFiles.length);
       }
 
-      console.log('All files uploaded to storage');
+      console.log('Supabase storage upload complete');
       setUploadProgress(85);
 
       // Create case in database
