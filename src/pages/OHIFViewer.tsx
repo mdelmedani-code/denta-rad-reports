@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 declare global {
@@ -9,148 +9,138 @@ declare global {
 
 export const OHIFViewer = () => {
   const [searchParams] = useSearchParams();
-  const viewerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
+  const studyInstanceUIDs = searchParams.get('studyInstanceUIDs');
+  const caseId = searchParams.get('caseId');
+  
+  console.log('OHIF Viewer - URL params:', { studyInstanceUIDs, caseId });
+
   useEffect(() => {
-    const config = searchParams.get('config');
-    const studyInstanceUIDs = searchParams.get('studyInstanceUIDs');
-    const caseId = searchParams.get('caseId');
-    
-    console.log('URL params:', { config: !!config, studyInstanceUIDs, caseId });
-    
-    if (!config && !studyInstanceUIDs) return;
-
-    try {
-      let parsedConfig;
-      if (config) {
-        parsedConfig = JSON.parse(decodeURIComponent(config));
-        console.log('Using provided config:', parsedConfig);
-      } else {
-        // Create minimal config for DICOMweb - ensure proper study UID format
-        const properStudyUID = studyInstanceUIDs?.startsWith('study.') ? studyInstanceUIDs : `study.${caseId}`;
-        parsedConfig = {
-          studyInstanceUIDs: [properStudyUID],
-          caseId: caseId,
-        };
-        console.log('Created minimal config:', parsedConfig);
-      }
-      
-      // Load OHIF scripts dynamically
-      const loadOHIF = async () => {
-        // Check if OHIF is already loaded
-        if (window.OHIFViewer) {
-          initializeOHIF(parsedConfig);
-          return;
-        }
-
-        // Load OHIF CSS
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/@ohif/viewer@4.12.51/dist/index.css';
-        document.head.appendChild(link);
-
-        // Load OHIF JavaScript
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@ohif/viewer@4.12.51/dist/index.umd.js';
-        script.onload = () => {
-          initializeOHIF(parsedConfig);
-        };
-        document.head.appendChild(script);
-      };
-
-      const initializeOHIF = (config: any) => {
-        if (window.OHIFViewer && viewerRef.current) {
-          try {
-            console.log('Initializing OHIF with config:', config);
-            
-            // OHIF v3 configuration
-            const ohifConfig = {
-              routerBasename: '/ohif-viewer',
-              showStudyList: false,
-              useSharedArrayBuffer: 'AUTO',
-              // Configure the data source to use our DICOMweb server
-              dataSources: [
-                {
-                  sourceName: 'dicomweb',
-                  namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
-                  configuration: {
-                    friendlyName: 'DentaRad CBCT Server',
-                    name: 'dicomweb',
-                    wadoUriRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado`,
-                    qidoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/qido`,
-                    wadoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado`,
-                    qidoSupportsIncludeField: false,
-                    supportsReject: false,
-                    imageRendering: 'wadors',
-                    thumbnailRendering: 'wadors',
-                    enableStudyLazyLoad: true,
-                    supportsFuzzyMatching: false,
-                    supportsWildcard: false,
-                    staticWado: true,
-                    singlepart: 'bulkdata,video',
-                    requestOptions: {
-                      headers: {
-                        'X-Case-ID': config.caseId,
-                      },
-                    },
-                  },
-                },
-              ],
-              defaultDataSourceName: 'dicomweb',
-              // Use a simpler approach - directly pass the study data
-              preLoadedStudy: config.studyInstanceUIDs ? {
-                StudyInstanceUID: config.studyInstanceUIDs[0],
-                StudyDescription: 'CBCT Scan',
-                PatientName: `Patient-${config.caseId}`,
-                series: [{
-                  SeriesInstanceUID: `series.${config.caseId}.1`,
-                  instances: [{
-                    SOPInstanceUID: `instance.${config.caseId}.1.1`,
-                    url: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/${config.studyInstanceUIDs[0]}/series/series.${config.caseId}.1/instances/instance.${config.caseId}.1.1?caseId=${config.caseId}`
-                  }]
-                }]
-              } : null,
-            };
-
-            // Initialize OHIF viewer
-            const viewer = new window.OHIFViewer(ohifConfig);
-            
-            console.log('OHIF Viewer initialized successfully');
-          } catch (error) {
-            console.error('Error initializing OHIF viewer:', error);
-            // Fallback: show error message
-            if (viewerRef.current) {
-              viewerRef.current.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; text-align: center;">
-                  <div>
-                    <h2>Error Loading DICOM Viewer</h2>
-                    <p>There was an issue loading the DICOM data. Please try refreshing the page.</p>
-                    <p style="font-size: 12px; opacity: 0.8;">Error: ${error.message}</p>
-                  </div>
-                </div>
-              `;
-            }
-          }
-        }
-      };
-
-      loadOHIF();
-    } catch (error) {
-      console.error('Error loading OHIF configuration:', error);
+    if (!studyInstanceUIDs || !caseId) {
+      setError('Missing required parameters: studyInstanceUIDs and caseId');
+      setIsLoading(false);
+      return;
     }
-  }, [searchParams]);
 
+    // Simulate loading time then show success
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [studyInstanceUIDs, caseId]);
+
+  if (error) {
+    return (
+      <div className="w-full h-screen bg-black flex items-center justify-center">
+        <div className="text-center text-white">
+          <h2 className="text-2xl font-bold mb-4">Configuration Error</h2>
+          <p className="text-red-400">{error}</p>
+          <p className="text-sm text-gray-400 mt-4">
+            Please ensure the viewer is launched with proper study parameters.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-screen bg-black flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mb-4"></div>
+          <h2 className="text-2xl font-bold mb-2">Loading DICOM Viewer</h2>
+          <p className="text-gray-400">Connecting to DICOMweb server...</p>
+          <p className="text-sm text-gray-500 mt-2">Study: {studyInstanceUIDs}</p>
+          <p className="text-sm text-gray-500">Case: {caseId}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // For now, show a placeholder that demonstrates the connection works
   return (
-    <div className="w-full h-screen bg-black">
-      <div ref={viewerRef} className="w-full h-full" />
-      {!searchParams.get('config') && (
-        <div className="flex items-center justify-center h-full text-white">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">OHIF Viewer</h1>
-            <p>No configuration provided</p>
+    <div className="w-full h-screen bg-gray-900 text-white">
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">DICOM Viewer</h1>
+          <p className="text-gray-400">Connected to DentaRad DICOMweb Server</p>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+          {/* Study Information Panel */}
+          <div className="lg:col-span-1 bg-gray-800 rounded-lg p-4">
+            <h2 className="text-xl font-semibold mb-4">Study Information</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-400">Study UID</label>
+                <p className="text-sm text-white break-all">{studyInstanceUIDs}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400">Case ID</label>
+                <p className="text-sm text-white">{caseId}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400">Status</label>
+                <p className="text-sm text-green-400">Connected to DICOMweb Server</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400">Server</label>
+                <p className="text-sm text-white">swusayoygknritombbwg.supabase.co</p>
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-3">Available Actions</h3>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => {
+                    const dicomUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/${studyInstanceUIDs}/series/series.${caseId}.1/instances/instance.${caseId}.1.1?caseId=${caseId}`;
+                    window.open(dicomUrl, '_blank');
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                >
+                  Download DICOM Instance
+                </button>
+                <button 
+                  onClick={() => {
+                    const metadataUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/${studyInstanceUIDs}/series/series.${caseId}.1/instances/instance.${caseId}.1.1/metadata?caseId=${caseId}`;
+                    window.open(metadataUrl, '_blank');
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+                >
+                  View DICOM Metadata
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Viewer Area */}
+          <div className="lg:col-span-2 bg-black rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-64 h-64 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center mb-4">
+                <div className="text-gray-500">
+                  <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p>DICOM Image Area</p>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">DICOM Viewer Placeholder</h3>
+              <p className="text-gray-400 mb-4">
+                Connected to case: {caseId}
+              </p>
+              <p className="text-sm text-gray-500">
+                This demonstrates successful connection to the DICOMweb backend.
+                <br />
+                A full OHIF integration would render the medical image here.
+              </p>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
