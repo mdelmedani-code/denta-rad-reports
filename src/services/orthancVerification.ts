@@ -5,15 +5,16 @@ import { getCurrentPACSConfig } from "@/config/pacs";
  */
 export const verifyOrthancStudy = async (studyId: string): Promise<boolean> => {
   try {
-    const pacsConfig = getCurrentPACSConfig();
+    console.log('Verifying study in Orthanc:', studyId);
     
     const response = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
       headers: {
-        'Authorization': pacsConfig.auth.headers.Authorization,
+        'Authorization': 'Basic ' + btoa('orthanc:orthanc'),
         'Accept': 'application/json'
       }
     });
 
+    console.log('Verification response status:', response.status);
     return response.ok;
   } catch (error) {
     console.error('Error verifying Orthanc study:', error);

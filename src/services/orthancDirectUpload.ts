@@ -91,12 +91,14 @@ export const uploadToOrthancPACS = async (
     // Return info from first uploaded file
     const firstResult = uploadResults[0];
     
+    console.log('First upload result:', firstResult);
+    
     return {
       success: true,
       orthancId: firstResult.ID,
-      studyInstanceUID: firstResult.StudyInstanceUID,
-      seriesInstanceUID: firstResult.SeriesInstanceUID,
-      sopInstanceUID: firstResult.SOPInstanceUID
+      studyInstanceUID: firstResult.ParentStudy, // Use ParentStudy instead of StudyInstanceUID
+      seriesInstanceUID: firstResult.ParentSeries, // Use ParentSeries instead of SeriesInstanceUID  
+      sopInstanceUID: firstResult.ID // Use the instance ID itself
     };
     
   } catch (error) {

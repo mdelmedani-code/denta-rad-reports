@@ -24,7 +24,7 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
         // Get case data to retrieve Orthanc study ID
         const { data: caseData, error: caseError } = await supabase
           .from('cases')
-          .select('orthanc_study_id, patient_name')
+          .select('orthanc_study_id, orthanc_series_id, orthanc_instance_ids, patient_name')
           .eq('id', caseId)
           .single();
 
@@ -32,12 +32,36 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
           throw new Error('Case not found');
         }
 
+        console.log('Case data from database:', caseData);
+
         if (!caseData.orthanc_study_id) {
           throw new Error('No DICOM data available - case not uploaded to PACS');
         }
 
-        console.log('Case data:', caseData);
-        console.log('Using Orthanc Study ID:', caseData.orthanc_study_id);
+        // The orthanc_study_id from uploadToOrthancPACS is actually the ParentStudy ID from Orthanc
+        // Let's try to get the actual study first
+        const studyId = caseData.orthanc_study_id;
+        console.log('Using Orthanc Study ID:', studyId);
+
+        // First, let's verify the study exists in Orthanc
+        try {
+          const response = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
+            headers: {
+              'Authorization': 'Basic ' + btoa('orthanc:orthanc'),
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`Study not found in Orthanc: ${response.status} ${response.statusText}`);
+          }
+
+          const studyInfo = await response.json();
+          console.log('Study found in Orthanc:', studyInfo);
+        } catch (orthancError) {
+          console.error('Error verifying study in Orthanc:', orthancError);
+          throw new Error('Study not accessible in PACS - please check connection');
+        }
 
         // Configure OHIF to connect directly to Orthanc
         const orthancUrl = 'http://116.203.35.168:8042'; // Direct Orthanc connection
