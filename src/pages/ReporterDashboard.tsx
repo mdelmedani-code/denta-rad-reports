@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
-import { buildOHIFUrl } from "@/config/ohif";
+
 
 interface Case {
   id: string;
@@ -164,23 +164,13 @@ const ReporterDashboard = () => {
       return;
     }
 
-    // Check if this is a PACS study (Study UID format) or Supabase storage path
-    const isPACSStudy = caseData.file_path.includes('1.2.840.10008') || caseData.file_path.length > 50;
-    
-    let ohifUrl: string;
-    if (isPACSStudy) {
-      // For PACS studies, use the study UID directly
-      ohifUrl = buildOHIFUrl(caseData.id, caseData.file_path);
-    } else {
-      // For Supabase storage cases, use case ID to generate synthetic study UID
-      ohifUrl = buildOHIFUrl(caseData.id);
-    }
-    
-    window.open(ohifUrl, '_blank');
+    // For now, open a simple viewer page
+    const viewerUrl = `/viewer/${caseData.id}`;
+    window.open(viewerUrl, '_blank');
     
     toast({
-      title: "OHIF Viewer Opened",
-      description: `Opening ${isPACSStudy ? 'PACS study' : 'DICOM images'} in OHIF viewer for ${caseData.patient_name}`,
+      title: "Viewer Opened",
+      description: `Opening medical imaging viewer for ${caseData.patient_name}`,
     });
   };
 
@@ -751,13 +741,13 @@ const ReporterDashboard = () => {
                    </Alert>
                  )}
                  
-                 {/* Embedded OHIF Viewer */}
-                 <div className="h-[600px] border rounded-lg overflow-hidden">
-                   <iframe
-                     src={buildOHIFUrl(selectedCase.id, selectedCase.file_path?.includes('1.2.840.10008') ? selectedCase.file_path : undefined)}
-                     className="w-full h-full"
-                     title={`OHIF Viewer - ${selectedCase.patient_name}`}
-                   />
+                  {/* Embedded Viewer Placeholder */}
+                  <div className="h-[600px] border rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <div className="text-center text-gray-600">
+                      <p className="text-lg font-medium mb-2">Medical Imaging Viewer</p>
+                      <p className="text-sm">Viewer integration coming soon</p>
+                      <p className="text-xs mt-2">Case: {selectedCase.patient_name}</p>
+                    </div>
                  </div>
                </div>
 
