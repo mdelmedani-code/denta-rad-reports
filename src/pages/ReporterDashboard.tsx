@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   FileText, 
   Search, 
-  Eye, 
   Save,
   LogOut,
   ImageIcon,
@@ -27,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
-import { OrthancOHIFViewer } from "@/components/OrthancOHIFViewer";
+import { buildOHIFUrl } from "@/config/ohif";
 
 interface Case {
   id: string;
@@ -155,7 +154,7 @@ const ReporterDashboard = () => {
     navigate('/admin/login');
   };
 
-  const openDicomViewer = (caseData: Case) => {
+  const openOHIFViewer = (caseData: Case) => {
     if (!caseData.file_path) {
       toast({
         title: "No Images",
@@ -168,27 +167,21 @@ const ReporterDashboard = () => {
     // Check if this is a PACS study (Study UID format) or Supabase storage path
     const isPACSStudy = caseData.file_path.includes('1.2.840.10008') || caseData.file_path.length > 50;
     
+    let ohifUrl: string;
     if (isPACSStudy) {
-      // For PACS studies, open OHIF viewer with study UID
-      const studyUID = caseData.file_path;
-      const ohifUrl = `${window.location.origin}/ohif-viewer?StudyInstanceUIDs=${studyUID}&caseId=${caseData.id}`;
-      window.open(ohifUrl, '_blank');
-      
-      toast({
-        title: "OHIF Viewer Opened",
-        description: `Opening PACS study in OHIF viewer for ${caseData.patient_name}`,
-      });
+      // For PACS studies, use the study UID directly
+      ohifUrl = buildOHIFUrl(caseData.id, caseData.file_path);
     } else {
-      // For Supabase storage cases with multiple DICOM files, open OHIF with case ID
-      // This will use our DICOMweb server to serve the DICOM files
-      const ohifUrl = `${window.location.origin}/ohif-viewer?StudyInstanceUIDs=study.${caseData.id}&caseId=${caseData.id}`;
-      window.open(ohifUrl, '_blank');
-      
-      toast({
-        title: "OHIF Viewer Opened",
-        description: `Opening DICOM images in OHIF viewer for ${caseData.patient_name}`,
-      });
+      // For Supabase storage cases, use case ID to generate synthetic study UID
+      ohifUrl = buildOHIFUrl(caseData.id);
     }
+    
+    window.open(ohifUrl, '_blank');
+    
+    toast({
+      title: "OHIF Viewer Opened",
+      description: `Opening ${isPACSStudy ? 'PACS study' : 'DICOM images'} in OHIF viewer for ${caseData.patient_name}`,
+    });
   };
 
   const createSecureShareLink = async (reportId: string) => {
@@ -652,25 +645,16 @@ const ReporterDashboard = () => {
                       <p><strong>Field of View:</strong> {case_.field_of_view.replace('_', ' ')}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => openDicomViewer(case_)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                      View Images
-                    </Button>
-                    <Button
-                      onClick={() => window.open(`/viewer/${case_.id}`, '_blank')}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                      Open in New Tab
-                    </Button>
+                   <div className="flex gap-2">
+                     <Button
+                       onClick={() => openOHIFViewer(case_)}
+                       variant="outline"
+                       size="sm"
+                       className="flex items-center gap-2"
+                     >
+                       <ImageIcon className="w-4 h-4" />
+                       Open in OHIF Viewer
+                     </Button>
                      {case_.status !== 'report_ready' ? (
                       <Button
                         onClick={() => startReporting(case_)}
@@ -741,38 +725,41 @@ const ReporterDashboard = () => {
           
           {selectedCase && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column - DICOM Viewer */}
-              <div className="space-y-4">
-                {/* DICOM Viewer Options */}
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    onClick={() => window.open(`/viewer/${selectedCase.id}`, '_blank')}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                    Open in New Tab
-                  </Button>
-                </div>
-                
-                {/* Concurrent Editing Warning */}
-                {showConcurrentWarning && (
-                  <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    <AlertDescription className="text-amber-800 dark:text-amber-200">
-                      <strong>Warning:</strong> Another user is currently viewing this case. 
-                      If you save your report, it may overwrite their work if they haven't finalized it yet.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {/* Orthanc + OHIF Viewer Integration */}
-                <OrthancOHIFViewer 
-                  caseId={selectedCase.id}
-                  className="h-full"
-                />
-              </div>
+              {/* Left Column - OHIF Viewer */}
+               <div className="space-y-4">
+                 {/* OHIF Viewer Options */}
+                 <div className="flex gap-2 mb-4">
+                   <Button
+                     onClick={() => openOHIFViewer(selectedCase)}
+                     variant="outline"
+                     size="sm"
+                     className="flex items-center gap-2"
+                   >
+                     <ImageIcon className="w-4 h-4" />
+                     Open OHIF in New Tab
+                   </Button>
+                 </div>
+                 
+                 {/* Concurrent Editing Warning */}
+                 {showConcurrentWarning && (
+                   <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                     <AlertDescription className="text-amber-800 dark:text-amber-200">
+                       <strong>Warning:</strong> Another user is currently viewing this case. 
+                       If you save your report, it may overwrite their work if they haven't finalized it yet.
+                     </AlertDescription>
+                   </Alert>
+                 )}
+                 
+                 {/* Embedded OHIF Viewer */}
+                 <div className="h-[600px] border rounded-lg overflow-hidden">
+                   <iframe
+                     src={buildOHIFUrl(selectedCase.id, selectedCase.file_path?.includes('1.2.840.10008') ? selectedCase.file_path : undefined)}
+                     className="w-full h-full"
+                     title={`OHIF Viewer - ${selectedCase.patient_name}`}
+                   />
+                 </div>
+               </div>
 
               {/* Right Column - Reporting Interface */}
               <div className="space-y-4">
