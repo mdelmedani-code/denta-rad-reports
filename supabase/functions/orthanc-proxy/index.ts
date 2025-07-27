@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
       const orthancUrl = `http://116.203.35.168:8042/instances`
       
       console.log('Uploading file to Orthanc:', orthancUrl, 'File:', fileName)
+      console.log('Request headers:', { 'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=' })
       
       const response = await fetch(orthancUrl, {
         method: 'POST',
@@ -39,12 +40,29 @@ Deno.serve(async (req) => {
         body: formData
       })
       
+      console.log('Orthanc response status:', response.status)
+      console.log('Orthanc response headers:', Object.fromEntries(response.headers.entries()))
+      
+      const responseText = await response.text()
+      console.log('Orthanc response body:', responseText)
+      
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Orthanc upload failed: ${response.status} ${errorText}`)
+        throw new Error(`Orthanc upload failed: ${response.status} ${responseText}`)
       }
 
-      const data = await response.json()
+      // Try to parse as JSON, fall back to returning the text response
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.log('Response is not JSON, returning as text:', parseError)
+        data = { 
+          success: true, 
+          message: responseText,
+          ID: 'unknown',
+          status: response.status 
+        }
+      }
       
       return new Response(
         JSON.stringify(data),

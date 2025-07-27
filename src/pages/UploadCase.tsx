@@ -431,6 +431,54 @@ const UploadCase = () => {
             </Button>
           </div>
 
+          {/* PACS Connection Test */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <h3 className="font-medium">PACS Server Test</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      console.log('Testing PACS connection...');
+                      const { data, error } = await supabase.functions.invoke('test-orthanc-connection');
+                      console.log('PACS test result:', { data, error });
+                      
+                      if (error) {
+                        toast({
+                          title: "PACS Test Failed",
+                          description: `Error: ${error.message}`,
+                          variant: "destructive",
+                        });
+                      } else if (data?.success) {
+                        toast({
+                          title: "PACS Test Successful",
+                          description: "Connection to Orthanc server is working",
+                        });
+                      } else {
+                        toast({
+                          title: "PACS Test Failed",
+                          description: `Server returned status ${data?.status}`,
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (err) {
+                      console.error('PACS test error:', err);
+                      toast({
+                        title: "PACS Test Error",
+                        description: "Failed to test connection",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Test PACS Connection
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Debug Info */}
           <div className="text-xs text-muted-foreground border rounded p-2 space-y-1">
             <div><strong>Debug Info:</strong></div>
