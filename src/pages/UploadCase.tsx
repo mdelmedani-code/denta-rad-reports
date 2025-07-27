@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { Upload, ArrowLeft, Cloud } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +28,6 @@ const UploadCase = () => {
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('Files selected:', e.target.files);
@@ -75,7 +73,6 @@ const UploadCase = () => {
     }
 
     setUploading(true);
-    setUploadProgress(10);
 
     try {
       // Get user's clinic ID
@@ -89,38 +86,16 @@ const UploadCase = () => {
         throw new Error('Unable to determine clinic association');
       }
 
-      setUploadProgress(10);
-
-      // Step 1: Upload to Orthanc PACS with progress tracking
+      // Upload to Orthanc PACS
       console.log('=== UPLOADING TO ORTHANC PACS ===');
-      setUploadProgress(20);
       
-      // Create a wrapper to track individual file progress
-      let completedFiles = 0;
-      const totalFiles = selectedFiles.length;
-      
-      // Use the existing service but track progress manually
       const orthancResult = await uploadToOrthancPACS(selectedFiles, 'temp-case-id');
       
-      // Since the service doesn't provide progress callbacks, we'll simulate based on logs
-      // This is a temporary solution - ideally we'd modify the service
-      const progressInterval = setInterval(() => {
-        if (completedFiles < totalFiles) {
-          completedFiles++;
-          const fileProgress = 20 + (50 * completedFiles / totalFiles); // 20% to 70%
-          setUploadProgress(Math.min(fileProgress, 70));
-        }
-      }, 1000); // Update every second as files complete
-      
-      // Wait for upload to complete
       if (!orthancResult.success) {
-        clearInterval(progressInterval);
         throw new Error(`PACS upload failed: ${orthancResult.error}`);
       }
-      
-      clearInterval(progressInterval);
+
       console.log('Orthanc upload successful:', orthancResult);
-      setUploadProgress(80);
 
       toast({
         title: "PACS Upload Complete",
@@ -128,7 +103,7 @@ const UploadCase = () => {
       });
 
       // Step 2: Create case in database with Orthanc IDs
-      setUploadProgress(90);
+      // Create case in database with Orthanc IDs
       
       const { data: caseData, error: caseError } = await supabase
         .from('cases')
@@ -152,8 +127,6 @@ const UploadCase = () => {
         console.error('Case creation error:', caseError);
         throw caseError;
       }
-
-      setUploadProgress(100);
 
       console.log('Case created successfully:', caseData.id);
 
@@ -187,7 +160,6 @@ const UploadCase = () => {
       });
     } finally {
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -351,16 +323,13 @@ const UploadCase = () => {
             </CardContent>
           </Card>
 
-          {/* Upload Progress */}
+          {/* Upload Status */}
           {uploading && (
             <Card>
               <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Upload Progress</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <Progress value={uploadProgress} className="w-full" />
+                <div className="flex items-center justify-center gap-4">
+                  <Cloud className="w-6 h-6 animate-pulse" />
+                  <span className="text-lg font-medium">Uploading to PACS...</span>
                 </div>
               </CardContent>
             </Card>
@@ -374,7 +343,7 @@ const UploadCase = () => {
               className="w-full md:w-auto px-8"
             >
               <Cloud className="w-4 h-4 mr-2" />
-              {uploading ? `Uploading... ${uploadProgress}%` : "Upload Case"}
+              {uploading ? "Uploading..." : "Upload Case"}
             </Button>
           </div>
 
