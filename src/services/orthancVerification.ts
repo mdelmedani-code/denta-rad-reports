@@ -1,21 +1,27 @@
 import { getCurrentPACSConfig } from "@/config/pacs";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Verify that a study exists in Orthanc PACS
+ * Verify that a study exists in Orthanc PACS using the proxy
  */
 export const verifyOrthancStudy = async (studyId: string): Promise<boolean> => {
   try {
-    console.log('Verifying study in Orthanc:', studyId);
+    console.log('Verifying study in Orthanc via proxy:', studyId);
     
-    const response = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
-      headers: {
-        'Authorization': 'Basic ' + btoa('orthanc:orthanc'),
-        'Accept': 'application/json'
+    const { data, error } = await supabase.functions.invoke('orthanc-proxy', {
+      body: {
+        endpoint: `/studies/${studyId}`,
+        method: 'GET'
       }
     });
 
-    console.log('Verification response status:', response.status);
-    return response.ok;
+    if (error) {
+      console.error('Proxy verification error:', error);
+      return false;
+    }
+
+    console.log('Verification successful:', data);
+    return true;
   } catch (error) {
     console.error('Error verifying Orthanc study:', error);
     return false;
