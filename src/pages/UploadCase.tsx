@@ -100,10 +100,14 @@ const UploadCase = () => {
         .from('profiles')
         .select('clinic_id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !profile?.clinic_id) {
-        throw new Error('Unable to determine clinic association');
+      if (profileError) {
+        throw new Error(`Database error: ${profileError.message}`);
+      }
+      
+      if (!profile?.clinic_id) {
+        throw new Error('Unable to determine clinic association. Please contact support.');
       }
 
       setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 10, stage: 'uploading' });
@@ -360,9 +364,12 @@ const UploadCase = () => {
                         multiple
                         onChange={handleFolderChange}
                         className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+                        style={{
+                          WebkitAppearance: 'none',
+                        }}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Or select an entire folder containing DICOM files
+                        Choose Folder - Select an entire folder containing DICOM files
                       </p>
                     </div>
                   </div>

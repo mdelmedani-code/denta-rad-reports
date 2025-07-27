@@ -266,9 +266,8 @@ export const uploadDICOMAndCreateCase = async (
         field_of_view: patientData.fieldOfView as any,
         urgency: patientData.urgency as any,
         clinic_id: patientData.clinicId,
-        orthanc_study_id: uploadResult.studyInstanceUID,
-        orthanc_series_id: uploadResult.seriesInstanceUID,
-        orthanc_instance_ids: [uploadResult.sopInstanceUID],
+        orthanc_study_id: uploadResult.studyInstanceUID || null,
+        orthanc_instance_ids: uploadResult.sopInstanceUID ? [uploadResult.sopInstanceUID] : null,
         status: 'uploaded' as any
       })
       .select()
