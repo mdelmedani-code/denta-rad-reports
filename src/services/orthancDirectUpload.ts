@@ -38,7 +38,18 @@ export const uploadToOrthancPACS = async (
         const fileBuffer = await file.arrayBuffer();
         console.log(`File buffer created, converting to base64...`);
         
-        const base64File = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+        // Use FileReader for more robust base64 conversion
+        const base64File = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove the data URL prefix (data:application/octet-stream;base64,)
+            const base64Data = result.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = () => reject(new Error('Failed to convert file to base64'));
+          reader.readAsDataURL(file);
+        });
         console.log(`Base64 conversion complete, length: ${base64File.length}`);
         
         // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
