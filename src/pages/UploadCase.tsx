@@ -89,10 +89,12 @@ const UploadCase = () => {
         throw new Error('Unable to determine clinic association');
       }
 
-      setUploadProgress(30);
+      setUploadProgress(10);
 
       // Step 1: Upload to Orthanc PACS
       console.log('=== UPLOADING TO ORTHANC PACS ===');
+      setUploadProgress(20);
+      
       const orthancResult = await uploadToOrthancPACS(selectedFiles, 'temp-case-id');
       
       if (!orthancResult.success) {
@@ -100,15 +102,16 @@ const UploadCase = () => {
       }
 
       console.log('Orthanc upload successful:', orthancResult);
-      
-      setUploadProgress(70);
+      setUploadProgress(80);
 
       toast({
         title: "PACS Upload Complete",
-        description: "Files successfully uploaded to Orthanc PACS",
+        description: `Successfully uploaded ${selectedFiles.length} files to Orthanc PACS`,
       });
 
       // Step 2: Create case in database with Orthanc IDs
+      setUploadProgress(90);
+      
       const { data: caseData, error: caseError } = await supabase
         .from('cases')
         .insert({
