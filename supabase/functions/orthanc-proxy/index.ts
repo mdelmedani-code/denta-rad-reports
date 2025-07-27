@@ -17,10 +17,17 @@ Deno.serve(async (req) => {
       
       console.log('Processing file upload:', fileName, 'Base64 size:', base64Data.length)
       
-      // Convert base64 back to binary - more robust method
+      // Convert base64 back to binary - handle padding issues
       let bytes
       try {
-        const binaryString = atob(base64Data)
+        // Clean base64 string and add proper padding if needed
+        let cleanBase64 = base64Data.replace(/[^A-Za-z0-9+/]/g, '')
+        const padding = cleanBase64.length % 4
+        if (padding > 0) {
+          cleanBase64 += '='.repeat(4 - padding)
+        }
+        
+        const binaryString = atob(cleanBase64)
         bytes = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i)
