@@ -29,6 +29,7 @@ const ADDON_PRICES = {
 };
 
 const UploadCase = () => {
+  console.log('UploadCase component rendering');
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
