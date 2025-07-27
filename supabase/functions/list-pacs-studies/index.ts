@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
     })
     
     console.log('Orthanc studies response status:', response.status)
+    console.log('Orthanc studies response headers:', Object.fromEntries(response.headers.entries()))
     
     const responseText = await response.text()
     console.log('Orthanc studies response:', responseText)

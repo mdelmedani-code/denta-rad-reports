@@ -477,6 +477,45 @@ const UploadCase = () => {
                   >
                     Test PACS Connection
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        console.log('Getting PACS studies...');
+                        const { data, error } = await supabase.functions.invoke('list-pacs-studies');
+                        console.log('PACS studies result:', { data, error });
+                        
+                        if (error) {
+                          toast({
+                            title: "PACS Query Failed",
+                            description: `Error: ${error.message}`,
+                            variant: "destructive",
+                          });
+                        } else if (data?.success) {
+                          toast({
+                            title: "PACS Studies Found",
+                            description: `Found ${data.totalStudies} studies in PACS`,
+                          });
+                        } else {
+                          toast({
+                            title: "Query Complete",
+                            description: `${data?.totalStudies || 0} studies found`,
+                          });
+                        }
+                      } catch (err) {
+                        console.error('PACS query error:', err);
+                        toast({
+                          title: "PACS Query Error",
+                          description: "Failed to query studies",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Check PACS Studies
+                  </Button>
                 </div>
               </div>
             </CardContent>
