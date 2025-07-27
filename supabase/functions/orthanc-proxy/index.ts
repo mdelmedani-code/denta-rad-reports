@@ -15,27 +15,49 @@ Deno.serve(async (req) => {
       const base64Data = requestBody.fileData
       const fileName = requestBody.fileName
       
-      // Convert base64 back to binary
-      const binaryString = atob(base64Data)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
+      console.log('Processing file upload:', fileName, 'Base64 size:', base64Data.length)
+      
+      // Convert base64 back to binary - more robust method
+      let bytes
+      try {
+        const binaryString = atob(base64Data)
+        bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        console.log('Successfully converted base64 to binary, size:', bytes.length)
+      } catch (conversionError) {
+        console.error('Base64 conversion failed:', conversionError)
+        throw new Error(`File conversion failed: ${conversionError.message}`)
       }
       
-      // Create FormData for Orthanc
+      // Validate file appears to be DICOM (check for DICOM header)
+      if (bytes.length > 132) {
+        const fileHeader = new TextDecoder().decode(bytes.slice(128, 132))
+        if (fileHeader !== 'DICM') {
+          console.warn('File does not appear to be a valid DICOM file. Header:', fileHeader)
+          console.log('First 200 bytes:', Array.from(bytes.slice(0, 200)).map(b => b.toString(16).padStart(2, '0')).join(' '))
+        } else {
+          console.log('Valid DICOM header detected')
+        }
+      }
+      
+      // Create FormData for Orthanc with correct content type
       const formData = new FormData()
-      const blob = new Blob([bytes], { type: requestBody.contentType || 'application/dicom' })
+      const blob = new Blob([bytes], { type: 'application/dicom' })
       formData.append('file', blob, fileName)
+      
+      console.log('FormData created - blob size:', blob.size, 'type:', blob.type)
       
       const orthancUrl = `http://116.203.35.168:8042/instances`
       
-      console.log('Uploading file to Orthanc:', orthancUrl, 'File:', fileName)
-      console.log('Request headers:', { 'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=' })
+      console.log('Uploading to Orthanc:', orthancUrl)
       
       const response = await fetch(orthancUrl, {
         method: 'POST',
         headers: {
           'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+          // Don't set Content-Type, let browser handle FormData
         },
         body: formData
       })
@@ -44,23 +66,56 @@ Deno.serve(async (req) => {
       console.log('Orthanc response headers:', Object.fromEntries(response.headers.entries()))
       
       const responseText = await response.text()
-      console.log('Orthanc response body:', responseText)
+      console.log('Orthanc response body length:', responseText.length)
+      console.log('Orthanc response body:', responseText.substring(0, 500)) // First 500 chars
       
       if (!response.ok) {
         throw new Error(`Orthanc upload failed: ${response.status} ${responseText}`)
       }
 
-      // Try to parse as JSON, fall back to returning the text response
+      // Try to parse as JSON
       let data
       try {
         data = JSON.parse(responseText)
+        console.log('Successfully parsed JSON response with ID:', data.ID)
       } catch (parseError) {
-        console.log('Response is not JSON, returning as text:', parseError)
+        console.log('Response is not JSON, treating as error. Parse error:', parseError.message)
+        
+        // Empty response usually means the file was rejected
+        if (responseText.trim() === '') {
+          throw new Error('Orthanc rejected the file (empty response). File may not be valid DICOM.')
+        }
+        
         data = { 
-          success: true, 
+          success: false, 
           message: responseText,
-          ID: 'unknown',
-          status: response.status 
+          error: 'Invalid response format',
+          status: response.status
+        }
+      }
+      
+      // If we got a proper JSON response with an ID, verify the upload worked
+      if (data && data.ID && data.ID !== 'unknown') {
+        console.log('Upload appears successful, Instance ID:', data.ID)
+        
+        // Query the instance to get study details
+        try {
+          const instanceUrl = `http://116.203.35.168:8042/instances/${data.ID}`
+          const instanceResponse = await fetch(instanceUrl, {
+            headers: {
+              'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+              'Accept': 'application/json'
+            }
+          })
+          
+          if (instanceResponse.ok) {
+            const instanceData = await instanceResponse.json()
+            console.log('Instance details retrieved:', instanceData.ParentStudy)
+            data.StudyInstanceUID = instanceData.ParentStudy
+            data.success = true
+          }
+        } catch (queryError) {
+          console.log('Could not query instance details:', queryError)
         }
       }
       
