@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { DicomViewer } from "@/components/DicomViewer";
+import { OHIFEnhancedViewer } from "@/components/OHIFEnhancedViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -213,8 +213,8 @@ const DicomViewerPage = () => {
           </CardContent>
         </Card>
 
-        {/* DICOM Viewer */}
-        <DicomViewer 
+        {/* OHIF Enhanced DICOM Viewer - Aligned with Reporting Modal */}
+        <OHIFEnhancedViewer 
           caseId={caseData.id}
           filePath={caseData.file_path}
           className="h-[calc(100vh-300px)]"
