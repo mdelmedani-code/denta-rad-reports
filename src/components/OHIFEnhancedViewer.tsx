@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
-import { getOHIFConfig } from "@/config/ohif";
 
 interface OHIFEnhancedViewerProps {
   caseId: string;
@@ -13,7 +12,8 @@ interface OHIFEnhancedViewerProps {
 export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }: OHIFEnhancedViewerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [ohifApp, setOhifApp] = useState<any>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!caseId) {
@@ -22,13 +22,107 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
       return;
     }
 
-    // Just set a small delay to show loading state
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    initializeOHIF();
 
-    return () => clearTimeout(timer);
-  }, [caseId, filePath]);
+    return () => {
+      if (ohifApp) {
+        // Cleanup OHIF when component unmounts
+        try {
+          ohifApp.destroy?.();
+        } catch (e) {
+          console.warn('Error destroying OHIF app:', e);
+        }
+      }
+    };
+  }, [caseId]);
+
+  const initializeOHIF = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Dynamic import of OHIF
+      const { default: OHIFViewer } = await import('@ohif/viewer');
+      
+      if (!viewerRef.current) {
+        throw new Error('Viewer container not found');
+      }
+
+      // Generate study UID
+      const isPACSStudy = filePath && (filePath.includes('1.2.840.10008') || filePath.length > 50);
+      const studyUID = isPACSStudy ? filePath : `1.2.826.0.1.3680043.8.498.${caseId.replace(/-/g, '')}`;
+
+      // OHIF Configuration
+      const config = {
+        routerBasename: '/',
+        whiteLabeling: {
+          createLogoComponentFn: function(React: any) {
+            return React.createElement(
+              'div',
+              {
+                style: {
+                  color: 'white',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  padding: '8px 16px',
+                }
+              },
+              'DentaRad OHIF Viewer'
+            );
+          },
+        },
+        extensions: [],
+        modes: [],
+        showStudyList: false,
+        dataSources: [
+          {
+            namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+            sourceName: 'dicomweb',
+            configuration: {
+              friendlyName: 'DentaRad DICOMweb Server',
+              name: 'dentarad',
+              wadoUriRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server?caseId=${caseId}`,
+              qidoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server?caseId=${caseId}`,
+              wadoRoot: `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server?caseId=${caseId}`,
+              qidoSupportsIncludeField: false,
+              supportsReject: false,
+              imageRendering: 'wadors',
+              thumbnailRendering: 'wadors',
+              enableStudyLazyLoad: true,
+              supportsFuzzyMatching: false,
+              supportsWildcard: true,
+              staticWado: true,
+              singlepart: 'bulkdata,video',
+              requestOptions: {
+                mode: 'cors',
+                headers: {
+                  'Accept': 'application/dicom+json',
+                  'Content-Type': 'application/dicom+json',
+                },
+              },
+            },
+          },
+        ],
+        defaultDataSourceName: 'dicomweb',
+      };
+
+      // Initialize OHIF viewer
+      const app = new OHIFViewer({
+        container: viewerRef.current,
+        config,
+        studyInstanceUIDs: [studyUID],
+      });
+
+      await app.init();
+      setOhifApp(app);
+      setIsLoading(false);
+
+    } catch (error) {
+      console.error('Error initializing OHIF:', error);
+      setError(`Failed to initialize OHIF viewer: ${error.message}`);
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -60,11 +154,6 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
     );
   }
 
-  // Build the OHIF URL
-  const isPACSStudy = filePath && (filePath.includes('1.2.840.10008') || filePath.length > 50);
-  const studyUID = isPACSStudy ? filePath : `1.2.826.0.1.3680043.8.498.${caseId.replace(/-/g, '')}`;
-  const ohifUrl = `/ohif-viewer?StudyInstanceUIDs=${studyUID}&caseId=${caseId}`;
-
   return (
     <div className={`w-full h-full bg-black ${className}`}>
       {/* Header */}
@@ -79,19 +168,11 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
         </div>
       </div>
 
-      {/* OHIF Viewer Iframe */}
-      <iframe
-        ref={iframeRef}
-        src={ohifUrl}
-        className="w-full h-full bg-black border-0"
+      {/* OHIF Viewer Container */}
+      <div 
+        ref={viewerRef}
+        className="w-full h-full bg-black"
         style={{ minHeight: 'calc(100vh - 48px)' }}
-        title={`OHIF Viewer - Case ${caseId}`}
-        onLoad={() => {
-          console.log('OHIF viewer loaded successfully');
-        }}
-        onError={() => {
-          setError('Failed to load OHIF viewer');
-        }}
       />
     </div>
   );
