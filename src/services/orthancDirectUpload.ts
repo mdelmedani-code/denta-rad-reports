@@ -50,18 +50,17 @@ export const uploadToOrthancPACS = async (
         const fileBuffer = await file.arrayBuffer();
         console.log(`File buffer created, size: ${fileBuffer.byteLength} bytes`);
         
-        // Convert to base64 using a more reliable method
+        // Convert to base64 more safely - avoid chunking which can cause corruption
         const bytes = new Uint8Array(fileBuffer);
         let binary = '';
-        const chunkSize = 8192; // Process in chunks to avoid stack overflow
         
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.slice(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        // Convert bytes to string safely without chunking
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
         }
         
         const base64File = btoa(binary);
-        console.log(`Base64 conversion complete, length: ${base64File.length}`);
+        console.log(`Base64 conversion complete, original: ${fileBuffer.byteLength}, base64: ${base64File.length}`);
         
         // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
         const { data, error: functionError } = await supabase.functions.invoke('orthanc-proxy', {
