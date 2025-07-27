@@ -327,9 +327,18 @@ const UploadCase = () => {
           {uploading && (
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-4">
-                  <Cloud className="w-6 h-6 animate-pulse" />
-                  <span className="text-lg font-medium">Uploading to PACS...</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Cloud className="w-6 h-6 animate-pulse" />
+                    <span className="text-lg font-medium">Uploading to PACS...</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setUploading(false)}
+                    className="ml-4"
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </CardContent>
             </Card>
