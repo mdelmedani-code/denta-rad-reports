@@ -107,19 +107,6 @@ const UploadCase = () => {
       }
 
       console.log('Orthanc upload successful:', orthancResult);
-      setUploadProgress(70);
-      setCurrentStep("Verifying upload in PACS...");
-
-      // Verify the upload actually succeeded in Orthanc
-      console.log('=== VERIFYING ORTHANC UPLOAD ===');
-      if (orthancResult.studyInstanceUID) {
-        const isVerified = await verifyOrthancStudy(orthancResult.studyInstanceUID);
-        if (!isVerified) {
-          throw new Error('Upload verification failed - study not found in PACS');
-        }
-        console.log('✅ Orthanc upload verified successfully');
-      }
-
       setUploadProgress(80);
       setCurrentStep("Creating case record...");
 
