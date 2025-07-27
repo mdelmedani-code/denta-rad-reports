@@ -15,26 +15,34 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadOHIF = async () => {
+    const initializeOHIF = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // For now, we'll use a simple iframe approach
-        // This can be enhanced later with direct OHIF integration
-        const timer = setTimeout(() => {
-          setIsLoading(false);
-        }, 2000);
+        // Create OHIF iframe integration
+        const viewerUrl = `https://viewer.ohif.org/viewer?StudyInstanceUIDs=${studyInstanceUID || 'default'}&url=https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/cases/${caseId}`;
+        
+        if (containerRef.current) {
+          const iframe = document.createElement('iframe');
+          iframe.src = viewerUrl;
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+          iframe.style.border = 'none';
+          iframe.allow = 'fullscreen';
+          
+          containerRef.current.appendChild(iframe);
+        }
 
-        return () => clearTimeout(timer);
+        setIsLoading(false);
       } catch (err) {
-        console.error('Error loading OHIF:', err);
-        setError('Failed to load OHIF viewer');
+        console.error('Error initializing OHIF:', err);
+        setError('Failed to initialize OHIF viewer');
         setIsLoading(false);
       }
     };
 
-    loadOHIF();
+    initializeOHIF();
   }, [caseId, studyInstanceUID]);
 
   if (isLoading) {
@@ -80,23 +88,12 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
         </div>
       </div>
 
-      {/* Viewer Container */}
+      {/* OHIF Viewer Container */}
       <div 
         ref={containerRef}
-        className="w-full h-full flex items-center justify-center text-white"
-        style={{ minHeight: 'calc(100vh - 80px)' }}
-      >
-        <div className="text-center">
-          <p className="text-lg mb-2">OHIF Viewer Ready</p>
-          <p className="text-sm text-gray-400">Case ID: {caseId}</p>
-          {studyInstanceUID && (
-            <p className="text-sm text-gray-400">Study UID: {studyInstanceUID}</p>
-          )}
-          <p className="text-sm text-gray-300 mt-4">
-            OHIF integration will be implemented here
-          </p>
-        </div>
-      </div>
+        className="w-full"
+        style={{ height: 'calc(100vh - 80px)' }}
+      />
     </div>
   );
 };
