@@ -141,39 +141,9 @@ const UploadCase = () => {
         throw new Error(`Upload failed: ${result.orthancResult.error}`);
       }
 
-      console.log('Upload successful:', result);
-      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 80, stage: 'processing' });
-      setCurrentStep("Creating case record...");
-
-      // Create case in database with Orthanc IDs
-      const { data: caseData, error: caseError } = await supabase
-        .from('cases')
-        .insert({
-          patient_name: formData.patientName,
-          patient_internal_id: formData.patientInternalId || null,
-          patient_dob: formData.patientDob || null,
-          clinical_question: formData.clinicalQuestion,
-          field_of_view: formData.fieldOfView,
-          urgency: formData.urgency,
-          clinic_id: profile.clinic_id,
-          study_instance_uid: result.studyInstanceUID,
-          series_instance_uid: result.orthancResult.seriesInstanceUID,
-          sop_instance_uid: result.orthancResult.sopInstanceUID,
-          orthanc_study_id: result.orthancResult.orthancId,
-          status: 'uploaded'
-        })
-        .select()
-        .single();
-
-      if (caseError) {
-        console.error('Case creation error:', caseError);
-        throw caseError;
-      }
-
-      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 100, stage: 'complete' });
-      setCurrentStep("Upload complete!");
-
-      console.log('Case created successfully:', caseData.id);
+      console.log('Upload and case creation completed successfully:', result);
+      
+      setCurrentStep("Upload completed successfully!");
 
       toast({
         title: "Success!",

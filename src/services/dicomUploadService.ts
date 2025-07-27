@@ -271,7 +271,7 @@ export const uploadDICOMAndCreateCase = async (
         status: 'uploaded' as any
       })
       .select()
-      .single();
+      .maybeSingle();
     
     if (caseError) {
       console.error('Case creation error:', caseError);
