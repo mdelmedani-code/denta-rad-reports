@@ -65,8 +65,6 @@ Deno.serve(async (req) => {
       console.log('Orthanc upload response status:', response.status)
       console.log('Orthanc upload response headers:', Object.fromEntries(response.headers.entries()))
       
-      console.log('Orthanc response status:', response.status)
-      console.log('Orthanc response headers:', Object.fromEntries(response.headers.entries()))
       
       const responseText = await response.text()
       console.log('Orthanc response body length:', responseText.length)
@@ -76,50 +74,46 @@ Deno.serve(async (req) => {
         throw new Error(`Orthanc upload failed: ${response.status} ${responseText}`)
       }
 
+      // Check if we got a proper response
+      if (responseText.trim() === '') {
+        console.error('Empty response from Orthanc - file was likely rejected')
+        throw new Error('Orthanc rejected the file (empty response). File may not be valid DICOM.')
+      }
+
       // Try to parse as JSON
       let data
       try {
         data = JSON.parse(responseText)
         console.log('Successfully parsed JSON response with ID:', data.ID)
-      } catch (parseError) {
-        console.log('Response is not JSON, treating as error. Parse error:', parseError.message)
         
-        // Empty response usually means the file was rejected
-        if (responseText.trim() === '') {
-          throw new Error('Orthanc rejected the file (empty response). File may not be valid DICOM.')
-        }
-        
-        data = { 
-          success: false, 
-          message: responseText,
-          error: 'Invalid response format',
-          status: response.status
-        }
-      }
-      
-      // If we got a proper JSON response with an ID, verify the upload worked
-      if (data && data.ID && data.ID !== 'unknown') {
-        console.log('Upload appears successful, Instance ID:', data.ID)
-        
-        // Query the instance to get study details
-        try {
-          const instanceUrl = `http://116.203.35.168:8042/instances/${data.ID}`
-          const instanceResponse = await fetch(instanceUrl, {
-            headers: {
-              'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
-              'Accept': 'application/json'
-            }
-          })
+        // If we got a proper JSON response with an ID, the upload was successful
+        if (data && data.ID && data.ID !== 'unknown') {
+          console.log('Upload successful! Instance ID:', data.ID)
           
-          if (instanceResponse.ok) {
-            const instanceData = await instanceResponse.json()
-            console.log('Instance details retrieved:', instanceData.ParentStudy)
-            data.StudyInstanceUID = instanceData.ParentStudy
-            data.success = true
+          // Query the instance to get study details
+          try {
+            const instanceUrl = `http://116.203.35.168:8042/instances/${data.ID}`
+            const instanceResponse = await fetch(instanceUrl, {
+              headers: {
+                'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+                'Accept': 'application/json'
+              }
+            })
+            
+            if (instanceResponse.ok) {
+              const instanceData = await instanceResponse.json()
+              console.log('Instance details retrieved. Study ID:', instanceData.ParentStudy)
+              data.StudyInstanceUID = instanceData.ParentStudy
+              data.success = true
+            }
+          } catch (queryError) {
+            console.log('Could not query instance details:', queryError)
           }
-        } catch (queryError) {
-          console.log('Could not query instance details:', queryError)
         }
+      } catch (parseError) {
+        console.error('Response is not JSON:', parseError.message)
+        console.error('Raw response:', responseText)
+        throw new Error(`Invalid response from Orthanc: ${responseText}`)
       }
       
       return new Response(
