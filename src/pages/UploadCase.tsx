@@ -681,8 +681,15 @@ const UploadCase = () => {
                   className="w-full"
                   onClick={(e) => {
                     console.log('Button clicked directly');
-                    console.log('Button disabled?', uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion);
-                    console.log('Files:', { selectedFile, selectedFiles });
+                    const isDisabled = uploading || (!selectedFile && !selectedFiles) || (selectedFile && Object.keys(selectedFile).length === 0) || !formData.patientName || !formData.clinicalQuestion;
+                    console.log('Button disabled?', isDisabled);
+                    console.log('Upload state:', { uploading });
+                    console.log('Files state:', { 
+                      selectedFile, 
+                      selectedFiles, 
+                      hasSelectedFile: !!selectedFile,
+                      isSelectedFileEmpty: selectedFile && Object.keys(selectedFile).length === 0
+                    });
                     console.log('Form data:', { patientName: formData.patientName, clinicalQuestion: formData.clinicalQuestion });
                   }}
                 >
