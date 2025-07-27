@@ -16,18 +16,23 @@ export const OHIFViewer = () => {
     const studyInstanceUIDs = searchParams.get('studyInstanceUIDs');
     const caseId = searchParams.get('caseId');
     
+    console.log('URL params:', { config: !!config, studyInstanceUIDs, caseId });
+    
     if (!config && !studyInstanceUIDs) return;
 
     try {
       let parsedConfig;
       if (config) {
         parsedConfig = JSON.parse(decodeURIComponent(config));
+        console.log('Using provided config:', parsedConfig);
       } else {
-        // Create minimal config for DICOMweb
+        // Create minimal config for DICOMweb - ensure proper study UID format
+        const properStudyUID = studyInstanceUIDs?.startsWith('study.') ? studyInstanceUIDs : `study.${caseId}`;
         parsedConfig = {
-          studyInstanceUIDs: [studyInstanceUIDs],
+          studyInstanceUIDs: [properStudyUID],
           caseId: caseId,
         };
+        console.log('Created minimal config:', parsedConfig);
       }
       
       // Load OHIF scripts dynamically
