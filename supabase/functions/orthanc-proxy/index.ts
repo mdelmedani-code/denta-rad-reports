@@ -7,26 +7,37 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Check if this is a file upload
-    const contentType = req.headers.get('content-type')
+    const requestBody = await req.json()
     
-    if (contentType?.includes('multipart/form-data')) {
-      // Handle file upload directly
-      const formData = await req.formData()
+    // Check if this is a file upload with base64 data
+    if (requestBody.fileData && requestBody.fileName) {
+      // Handle base64 file upload
+      const base64Data = requestBody.fileData
+      const fileName = requestBody.fileName
+      
+      // Convert base64 back to binary
+      const binaryString = atob(base64Data)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      
+      // Create FormData for Orthanc
+      const formData = new FormData()
+      const blob = new Blob([bytes], { type: requestBody.contentType || 'application/dicom' })
+      formData.append('file', blob, fileName)
       
       const orthancUrl = `http://116.203.35.168:8042/instances`
       
-      const orthancRequest: RequestInit = {
+      console.log('Uploading file to Orthanc:', orthancUrl, 'File:', fileName)
+      
+      const response = await fetch(orthancUrl, {
         method: 'POST',
         headers: {
           'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
         },
         body: formData
-      }
-
-      console.log('Uploading file to Orthanc:', orthancUrl)
-      
-      const response = await fetch(orthancUrl, orthancRequest)
+      })
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -46,7 +57,7 @@ Deno.serve(async (req) => {
       )
     } else {
       // Handle JSON requests (for studies, etc.)
-      const { method, url } = await req.json()
+      const { method, url } = requestBody
       
       if (!url.includes('/studies') && !url.includes('/instances')) {
         throw new Error('Invalid endpoint')

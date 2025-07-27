@@ -26,13 +26,17 @@ export const uploadToOrthancPACS = async (
     for (const file of fileArray) {
       console.log(`Uploading ${file.name} to Orthanc PACS via proxy...`);
       
-      // Create FormData for the file
-      const formData = new FormData();
-      formData.append('file', file);
+      // Convert file to base64 for edge function
+      const fileBuffer = await file.arrayBuffer();
+      const base64File = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
       
       // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
       const { data, error: functionError } = await supabase.functions.invoke('orthanc-proxy', {
-        body: formData
+        body: {
+          fileName: file.name,
+          fileData: base64File,
+          contentType: file.type
+        }
       });
       
       if (functionError) {
