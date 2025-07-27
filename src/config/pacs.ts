@@ -1,29 +1,31 @@
 // PACS Configuration for Orthanc + DICOMweb Integration
 export const PACS_CONFIG = {
-  // Development/Current - Using Supabase edge function
+  // Development/Current - Using your Orthanc PACS server
   development: {
     dicomweb: {
-      wadoRs: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado',
-      qidoRs: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/qido', 
-      stowRs: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/stow'
-    },
-    auth: {
-      type: 'supabase',
-      headers: {} // Will be populated with Supabase auth headers
-    }
-  },
-  
-  // Production - Orthanc PACS Server (configure these URLs when Orthanc is deployed)
-  production: {
-    dicomweb: {
-      wadoRs: 'https://pacs.dentarad.com/dicom-web/wado',
-      qidoRs: 'https://pacs.dentarad.com/dicom-web/qido',
-      stowRs: 'https://pacs.dentarad.com/dicom-web/stow'
+      wadoRs: 'http://116.203.35.168:8042/dicom-web/wado',
+      qidoRs: 'http://116.203.35.168:8042/dicom-web/qido',
+      stowRs: 'http://116.203.35.168:8042/dicom-web/stow'
     },
     auth: {
       type: 'orthanc',
       headers: {
-        'Authorization': 'Bearer {token}' // Will be populated with Orthanc auth token
+        'Authorization': 'Basic ' + btoa('admin:LionEagle0304!')
+      }
+    }
+  },
+  
+  // Production - Orthanc PACS Server with SSL
+  production: {
+    dicomweb: {
+      wadoRs: 'https://pacs.dentarad.co.uk/dicom-web/wado',
+      qidoRs: 'https://pacs.dentarad.co.uk/dicom-web/qido',
+      stowRs: 'https://pacs.dentarad.co.uk/dicom-web/stow'
+    },
+    auth: {
+      type: 'orthanc',
+      headers: {
+        'Authorization': 'Basic ' + btoa('admin:LionEagle0304!')
       }
     }
   }

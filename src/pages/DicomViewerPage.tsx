@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { OrthancOHIFViewer } from "@/components/OrthancOHIFViewer";
+import { OrthancDICOMViewer } from "@/components/OrthancDICOMViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -214,7 +214,7 @@ const DicomViewerPage = () => {
         </Card>
 
         {/* Orthanc + OHIF Viewer Integration */}
-        <OrthancOHIFViewer 
+        <OrthancDICOMViewer 
           caseId={caseData.id}
           className="h-[calc(100vh-300px)]"
         />
