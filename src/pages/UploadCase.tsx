@@ -7,11 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Calculator, ArrowLeft } from "lucide-react";
+import { Upload, Calculator, ArrowLeft, Server, Cloud } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { uploadToOrthancPACS } from "@/services/orthancDirectUpload";
 
 interface PricingBreakdown {
   basePrice: number;
@@ -333,6 +334,81 @@ const UploadCase = () => {
     }
   };
 
+  const handleDirectPACSUpload = async () => {
+    if (!user || (!selectedFile && !selectedFiles)) {
+      toast({
+        title: "Error",
+        description: "Please select files to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      console.log('Starting direct PACS upload...');
+      
+      // Get user's clinic ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('clinic_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile?.clinic_id) {
+        throw new Error('Unable to determine clinic association');
+      }
+
+      // Prepare files for upload
+      const filesToUpload = selectedFiles ? Array.from(selectedFiles) : [selectedFile!];
+      
+      // Upload directly to Orthanc PACS
+      const uploadResult = await uploadToOrthancPACS(filesToUpload, 'direct-upload');
+      
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Failed to upload to PACS');
+      }
+
+      // Create case in database with PACS reference
+      const { data: caseData, error: caseError } = await supabase
+        .from('cases')
+        .insert({
+          patient_name: formData.patientName,
+          patient_internal_id: formData.patientInternalId || null,
+          patient_dob: formData.patientDob || null,
+          clinical_question: formData.clinicalQuestion,
+          field_of_view: formData.fieldOfView,
+          urgency: formData.urgency,
+          clinic_id: profile.clinic_id,
+          file_path: uploadResult.studyInstanceUID, // Store Study UID as reference
+          status: 'uploaded'
+        })
+        .select()
+        .single();
+
+      if (caseError) throw caseError;
+
+      toast({
+        title: "Uploaded to PACS Successfully!",
+        description: `Files uploaded directly to imaging server. Study UID: ${uploadResult.studyInstanceUID}`,
+      });
+
+      // Navigate to the DICOM viewer for this case
+      navigate(`/admin/dicom-viewer/${caseData.id}`);
+      
+    } catch (error: any) {
+      console.error('Direct PACS upload error:', error);
+      toast({
+        title: "PACS Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -550,19 +626,37 @@ const UploadCase = () => {
                 </CardContent>
               </Card>
 
-              <Button 
-                type="submit" 
-                disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
-                className="w-full"
-                onClick={(e) => {
-                  console.log('Button clicked directly');
-                  console.log('Button disabled?', uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion);
-                  console.log('Files:', { selectedFile, selectedFiles });
-                  console.log('Form data:', { patientName: formData.patientName, clinicalQuestion: formData.clinicalQuestion });
-                }}
-              >
-                {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit Case"}
-              </Button>
+              <div className="space-y-4">
+                <Button 
+                  type="submit" 
+                  disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
+                  className="w-full"
+                  onClick={(e) => {
+                    console.log('Button clicked directly');
+                    console.log('Button disabled?', uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion);
+                    console.log('Files:', { selectedFile, selectedFiles });
+                    console.log('Form data:', { patientName: formData.patientName, clinicalQuestion: formData.clinicalQuestion });
+                  }}
+                >
+                  <Cloud className="w-4 h-4 mr-2" />
+                  {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit to Storage & Queue"}
+                </Button>
+
+                <Button 
+                  type="button"
+                  variant="outline"
+                  disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
+                  className="w-full"
+                  onClick={handleDirectPACSUpload}
+                >
+                  <Server className="w-4 h-4 mr-2" />
+                  {uploading ? "Uploading..." : "Upload Directly to PACS Server"}
+                </Button>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  Regular upload goes to file storage. Direct PACS upload immediately stores in the imaging server for instant viewing.
+                </p>
+              </div>
               
               {/* Debug info */}
               <div className="text-xs text-muted-foreground mt-2 space-y-1">
