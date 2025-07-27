@@ -197,7 +197,33 @@ const UploadCase = () => {
     try {
       let uploadPath: string;
       let uploadedFiles: string[] = [];
+      let pacsUploadResult = null;
 
+      // Prepare files for upload
+      const filesToUpload = selectedFiles ? Array.from(selectedFiles) : [selectedFile!];
+
+      // Upload to PACS server first (for primary storage)
+      try {
+        console.log('Uploading to PACS server...');
+        pacsUploadResult = await uploadToOrthancPACS(filesToUpload, 'backup-upload');
+        console.log('PACS upload result:', pacsUploadResult);
+        
+        if (pacsUploadResult.success) {
+          toast({
+            title: "Uploaded to PACS",
+            description: "Files successfully uploaded to imaging server",
+          });
+        }
+      } catch (pacsError) {
+        console.error('PACS upload failed:', pacsError);
+        toast({
+          title: "PACS Upload Warning",
+          description: "Files will be stored in backup only. PACS upload failed.",
+          variant: "destructive",
+        });
+      }
+
+      // Upload to Supabase storage (for backup and manual access)
       if (selectedFiles && selectedFiles.length > 1) {
         // Upload multiple DICOM files from folder
         const folderName = `${user.id}/${Date.now()}`;
@@ -316,9 +342,13 @@ const UploadCase = () => {
         const fileCount = selectedFiles ? selectedFiles.length : 1;
         const fileText = selectedFiles && selectedFiles.length > 1 ? `${fileCount} DICOM files` : 'case';
         
+        const uploadStatusText = pacsUploadResult?.success 
+          ? "Uploaded to PACS server and backup storage"
+          : "Uploaded to backup storage (PACS upload failed)";
+        
         toast({
           title: "Case Uploaded Successfully", 
-          description: `${fileText} submitted with estimated cost: £${pricing.total.toFixed(2)}. Invoice will be generated automatically.`,
+          description: `${fileText} submitted with estimated cost: £${pricing.total.toFixed(2)}. ${uploadStatusText}. Invoice will be generated automatically.`,
         });
       }
 
