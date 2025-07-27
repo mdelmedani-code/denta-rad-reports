@@ -35,21 +35,32 @@ export const uploadToOrthancPACS = async (
       
       try {
         // Convert file to base64 for edge function
-        const fileBuffer = await file.arrayBuffer();
-        console.log(`File buffer created, converting to base64...`);
-        
-        // Use FileReader for more robust base64 conversion
-        const base64File = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            // Remove the data URL prefix (data:application/octet-stream;base64,)
-            const base64Data = result.split(',')[1];
-            resolve(base64Data);
-          };
-          reader.onerror = () => reject(new Error('Failed to convert file to base64'));
-          reader.readAsDataURL(file);
+        console.log(`File object:`, {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
         });
+        
+        // Check if file is still accessible
+        if (!file || file.size === 0) {
+          throw new Error(`File ${file.name} is not accessible or empty`);
+        }
+        
+        const fileBuffer = await file.arrayBuffer();
+        console.log(`File buffer created, size: ${fileBuffer.byteLength} bytes`);
+        
+        // Convert to base64 using a more reliable method
+        const bytes = new Uint8Array(fileBuffer);
+        let binary = '';
+        const chunkSize = 8192; // Process in chunks to avoid stack overflow
+        
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.slice(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        
+        const base64File = btoa(binary);
         console.log(`Base64 conversion complete, length: ${base64File.length}`);
         
         // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
