@@ -130,12 +130,16 @@ export const uploadDICOMFiles = async (
 };
 
 /**
- * Upload file directly to Orthanc via edge function
+ * Upload file directly to Orthanc via edge function with retry logic
  */
 const uploadDirectToOrthanc = async (
   file: File,
-  onProgress?: (progress: UploadProgress) => void
+  onProgress?: (progress: UploadProgress) => void,
+  retryCount: number = 0
 ): Promise<UploadResult> => {
+  const maxRetries = 3;
+  const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+  
   try {
     if (onProgress) {
       onProgress({
@@ -172,12 +176,27 @@ const uploadDirectToOrthanc = async (
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Upload failed: ${response.status} ${errorText}`);
+      
+      // If it's a server error and we haven't exhausted retries, try again
+      if (response.status >= 500 && retryCount < maxRetries) {
+        console.log(`Upload attempt ${retryCount + 1} failed, retrying in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return uploadDirectToOrthanc(file, onProgress, retryCount + 1);
+      }
+      
+      throw new Error(`Upload failed after ${retryCount + 1} attempts: ${response.status} ${errorText}`);
     }
     
     const data = await response.json();
     
     if (!data.success) {
+      // If it's a connection error and we haven't exhausted retries, try again
+      if (data.error?.includes('error sending request') && retryCount < maxRetries) {
+        console.log(`Upload attempt ${retryCount + 1} failed with connection error, retrying in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return uploadDirectToOrthanc(file, onProgress, retryCount + 1);
+      }
+      
       throw new Error(data.error || 'Upload failed');
     }
     
@@ -199,7 +218,18 @@ const uploadDirectToOrthanc = async (
     };
     
   } catch (error) {
-    console.error('Direct upload error:', error);
+    console.error(`Direct upload error (attempt ${retryCount + 1}):`, error);
+    
+    // If it's a network error and we haven't exhausted retries, try again
+    if (retryCount < maxRetries && (
+      error instanceof TypeError || 
+      (error instanceof Error && error.message.includes('fetch'))
+    )) {
+      console.log(`Upload attempt ${retryCount + 1} failed with network error, retrying in ${retryDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return uploadDirectToOrthanc(file, onProgress, retryCount + 1);
+    }
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Direct upload failed'
