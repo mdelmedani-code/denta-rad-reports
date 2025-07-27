@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Upload, Calculator, ArrowLeft, Server, Cloud } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,6 +49,8 @@ const UploadCase = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState("");
   const [isReupload, setIsReupload] = useState(false);
   const [caseId, setCaseId] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -658,9 +661,23 @@ const UploadCase = () => {
               </Card>
 
               <div className="space-y-4">
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="space-y-3 mb-4 p-4 bg-secondary/50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Upload Progress</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="w-full" />
+                    {uploadStatus && (
+                      <p className="text-xs text-muted-foreground">{uploadStatus}</p>
+                    )}
+                  </div>
+                )}
+
                 <Button 
                   type="submit" 
-                  disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
+                  disabled={uploading || (!selectedFile && !selectedFiles) || (selectedFile && Object.keys(selectedFile).length === 0) || !formData.patientName || !formData.clinicalQuestion}
                   className="w-full"
                   onClick={(e) => {
                     console.log('Button clicked directly');
@@ -670,7 +687,7 @@ const UploadCase = () => {
                   }}
                 >
                   <Cloud className="w-4 h-4 mr-2" />
-                  {uploading ? "Uploading..." : isReupload ? "Update Case" : "Upload Case"}
+                  {uploading ? `Uploading... ${uploadProgress}%` : isReupload ? "Update Case" : "Upload Case"}
                 </Button>
                 
                 <p className="text-xs text-muted-foreground text-center">
