@@ -431,15 +431,16 @@ const UploadCase = () => {
             </Button>
           </div>
 
-          {/* PACS Connection Test */}
-          <Card>
+          {/* Debug Section - Only for Testing */}
+          <Card className="border-dashed border-muted-foreground/30">
             <CardContent className="pt-6">
               <div className="space-y-4">
-                <h3 className="font-medium">PACS Server Test</h3>
+                <h3 className="font-medium text-muted-foreground">🔧 Debug Tools (Testing Only)</h3>
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     onClick={async () => {
                       try {
                         console.log('Testing PACS connection...');
@@ -475,44 +476,6 @@ const UploadCase = () => {
                     }}
                   >
                     Test PACS Connection
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        console.log('Getting PACS studies...');
-                        const { data, error } = await supabase.functions.invoke('list-pacs-studies');
-                        console.log('PACS studies result:', { data, error });
-                        
-                        if (error) {
-                          toast({
-                            title: "PACS Query Failed",
-                            description: `Error: ${error.message}`,
-                            variant: "destructive",
-                          });
-                        } else if (data?.success) {
-                          toast({
-                            title: "PACS Studies Found",
-                            description: `Found ${data.totalStudies} studies in PACS`,
-                          });
-                        } else {
-                          toast({
-                            title: "No Studies Found",
-                            description: "No studies currently in PACS",
-                          });
-                        }
-                      } catch (err) {
-                        console.error('PACS query error:', err);
-                        toast({
-                          title: "PACS Query Error",
-                          description: "Failed to query studies",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    List PACS Studies
                   </Button>
                 </div>
               </div>
