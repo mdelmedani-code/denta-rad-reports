@@ -165,13 +165,28 @@ const ReporterDashboard = () => {
       return;
     }
 
-    // Navigate to the DICOM viewer page
-    navigate(`/admin/dicom-viewer/${caseData.id}`);
+    // Check if this is a PACS study (Study UID format) or Supabase storage path
+    const isPACSStudy = caseData.file_path.includes('1.2.840.10008') || caseData.file_path.length > 50;
     
-    toast({
-      title: "DICOM Viewer Opened",
-      description: "Opening images for case: " + caseData.patient_name,
-    });
+    if (isPACSStudy) {
+      // For PACS studies, open OHIF viewer with study UID
+      const studyUID = caseData.file_path;
+      const ohifUrl = `${window.location.origin}/ohif-viewer?StudyInstanceUIDs=${studyUID}`;
+      window.open(ohifUrl, '_blank');
+      
+      toast({
+        title: "OHIF Viewer Opened",
+        description: `Opening PACS study in OHIF viewer for ${caseData.patient_name}`,
+      });
+    } else {
+      // For Supabase storage files, use the existing DICOM viewer
+      navigate(`/admin/dicom-viewer/${caseData.id}`);
+      
+      toast({
+        title: "DICOM Viewer Opened",
+        description: "Opening images for case: " + caseData.patient_name,
+      });
+    }
   };
 
   const createSecureShareLink = async (reportId: string) => {
