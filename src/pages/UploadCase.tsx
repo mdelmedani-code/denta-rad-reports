@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { Upload, ArrowLeft, Cloud } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,8 @@ const UploadCase = () => {
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('Files selected:', e.target.files);
@@ -74,9 +77,14 @@ const UploadCase = () => {
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    setCurrentStep("Preparing upload...");
 
     try {
       // Get user's clinic ID
+      setUploadProgress(10);
+      setCurrentStep("Validating account...");
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('clinic_id')
@@ -88,6 +96,8 @@ const UploadCase = () => {
       }
 
       // Upload to Orthanc PACS
+      setUploadProgress(20);
+      setCurrentStep(`Uploading ${selectedFiles.length} files to PACS...`);
       console.log('=== UPLOADING TO ORTHANC PACS ===');
       
       const orthancResult = await uploadToOrthancPACS(selectedFiles, 'temp-case-id');
@@ -97,6 +107,8 @@ const UploadCase = () => {
       }
 
       console.log('Orthanc upload successful:', orthancResult);
+      setUploadProgress(70);
+      setCurrentStep("Verifying upload in PACS...");
 
       // Verify the upload actually succeeded in Orthanc
       console.log('=== VERIFYING ORTHANC UPLOAD ===');
@@ -107,6 +119,9 @@ const UploadCase = () => {
         }
         console.log('✅ Orthanc upload verified successfully');
       }
+
+      setUploadProgress(80);
+      setCurrentStep("Creating case record...");
 
       toast({
         title: "PACS Upload Complete",
@@ -139,7 +154,13 @@ const UploadCase = () => {
         throw caseError;
       }
 
+      setUploadProgress(95);
+      setCurrentStep("Finalizing...");
+
       console.log('Case created successfully:', caseData.id);
+
+      setUploadProgress(100);
+      setCurrentStep("Upload complete!");
 
       toast({
         title: "Success!",
@@ -171,6 +192,8 @@ const UploadCase = () => {
       });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+      setCurrentStep("");
     }
   };
 
@@ -334,22 +357,38 @@ const UploadCase = () => {
             </CardContent>
           </Card>
 
-          {/* Upload Status */}
+          {/* Upload Progress */}
           {uploading && (
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Cloud className="w-6 h-6 animate-pulse" />
-                    <span className="text-lg font-medium">Uploading to PACS...</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Cloud className="w-6 h-6 animate-pulse" />
+                      <div>
+                        <div className="text-lg font-medium">Upload in Progress</div>
+                        <div className="text-sm text-muted-foreground">{currentStep}</div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setUploading(false);
+                        setUploadProgress(0);
+                        setCurrentStep("");
+                      }}
+                      className="ml-4"
+                    >
+                      Cancel
+                    </Button>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setUploading(false)}
-                    className="ml-4"
-                  >
-                    Cancel
-                  </Button>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Progress</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="w-full" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -363,7 +402,7 @@ const UploadCase = () => {
               className="w-full md:w-auto px-8"
             >
               <Cloud className="w-4 h-4 mr-2" />
-              {uploading ? "Uploading..." : "Upload Case"}
+              {uploading ? `Uploading... ${uploadProgress}%` : "Upload Case"}
             </Button>
           </div>
 
