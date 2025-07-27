@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import * as cornerstone from "@cornerstonejs/core";
 import * as cornerstoneTools from "@cornerstonejs/tools";
-import * as cornerstoneDICOMImageLoader from "@cornerstonejs/dicom-image-loader";
+import cornerstoneDICOMImageLoader from "@cornerstonejs/dicom-image-loader";
 import * as cornerstoneStreamingImageVolumeLoader from "@cornerstonejs/streaming-image-volume-loader";
 import { DentalTools } from "./DentalTools";
 import { useAuth } from "@/hooks/useAuth";
@@ -97,7 +97,7 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
       try {
         await cornerstone.init();
         setIsInitialized(true);
-        console.log('Cornerstone initialized - image loaders will be configured dynamically');
+        console.log('Cornerstone initialized for DICOM viewing');
       } catch (error) {
         console.error('Failed to initialize Cornerstone:', error);
         setError('Failed to initialize DICOM viewer');
@@ -198,18 +198,23 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
           const viewport = renderingEngine.getViewport(viewportId) as cornerstone.Types.IStackViewport;
           
           if (viewport && 'setStack' in viewport) {
-            // Create a custom image loader for our DICOMweb endpoint
-            const imageId = `custom:${fileUrl}`;
+            // Create custom image loader for DICOMweb endpoint
+            const imageId = `dicomweb:${fileUrl}`;
+            console.log('Using DICOM Image ID:', imageId);
             
-            // Register a simple image loader for our custom protocol
-            cornerstone.registerImageLoader('custom', (imageId: string) => {
-              const url = imageId.replace('custom:', '');
+            // Register custom image loader
+            cornerstone.registerImageLoader('dicomweb', (imageId: string) => {
+              const url = imageId.replace('dicomweb:', '');
               
               return {
                 promise: new Promise(async (resolve, reject) => {
                   try {
-                    console.log('Loading DICOM image from:', url);
-                    const response = await fetch(url);
+                    console.log('Fetching DICOM from:', url);
+                    const response = await fetch(url, {
+                      headers: {
+                        'Accept': 'application/dicom'
+                      }
+                    });
                     
                     if (!response.ok) {
                       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -218,38 +223,31 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
                     const arrayBuffer = await response.arrayBuffer();
                     console.log('Received DICOM data, size:', arrayBuffer.byteLength);
                     
-                    // Convert ArrayBuffer to Uint8Array for pixel data
-                    const pixelData = new Uint8Array(arrayBuffer);
-                    
-                    // Create a basic grayscale image object
+                    // Create basic image object for Cornerstone
                     const imageObject = {
                       imageId,
-                      minPixelValue: 0,
-                      maxPixelValue: 65535,
+                      minPixelValue: -1024,
+                      maxPixelValue: 3071,
                       slope: 1,
-                      intercept: 0,
-                      windowCenter: 32768,
-                      windowWidth: 65536,
-                      getPixelData: () => pixelData,
+                      intercept: -1024,
+                      windowCenter: 40,
+                      windowWidth: 400,
+                      getPixelData: () => new Uint16Array(arrayBuffer),
                       rows: 512,
                       columns: 512,
                       height: 512,
                       width: 512,
                       color: false,
                       rgba: false,
-                      columnPixelSpacing: 1,
-                      rowPixelSpacing: 1,
+                      columnPixelSpacing: 0.5,
+                      rowPixelSpacing: 0.5,
                       invert: false,
-                      sizeInBytes: arrayBuffer.byteLength,
-                      spacing: [1, 1],
-                      origin: [0, 0, 0],
-                      direction: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+                      sizeInBytes: arrayBuffer.byteLength
                     };
                     
-                    console.log('Created image object for Cornerstone.js');
-                    resolve(imageObject as any);
+                    resolve(imageObject);
                   } catch (error) {
-                    console.error('Failed to load DICOM image:', error);
+                    console.error('Failed to load DICOM:', error);
                     reject(error);
                   }
                 })
@@ -259,55 +257,50 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
             // Create image IDs array
             const imageIds = [imageId];
             
-            // Set the stack on the viewport
-            await viewport.setStack(imageIds, 0);
-            
-            // Add basic mouse interaction for now
-            element.addEventListener('wheel', (event) => {
-              event.preventDefault();
-              // Zoom functionality can be added here later
-              console.log('Mouse wheel scroll detected');
-            });
-            
-            // Add keyboard navigation placeholder
-            element.addEventListener('keydown', (event) => {
-              switch (event.key) {
-                case 'ArrowUp':
-                case 'ArrowLeft':
-                case 'ArrowDown':
-                case 'ArrowRight':
-                  event.preventDefault();
-                  console.log('Arrow key navigation detected:', event.key);
-                  break;
-              }
-            });
-            
-            // Make element focusable for keyboard events
-            element.tabIndex = 0;
-            
-            // Render the viewport
-            viewport.render();
-            
-            console.log('DICOM image displayed successfully');
-            setIsLoading(false);
+            try {
+              // Set the stack on the viewport
+              await viewport.setStack(imageIds, 0);
+              console.log('DICOM stack set successfully');
+              
+              // Add viewport event listeners
+              element.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                console.log('Mouse wheel scroll detected');
+              });
+              
+              // Add keyboard navigation
+              element.addEventListener('keydown', (event) => {
+                switch (event.key) {
+                  case 'ArrowUp':
+                  case 'ArrowLeft':
+                  case 'ArrowDown':
+                  case 'ArrowRight':
+                    event.preventDefault();
+                    console.log('Arrow key navigation detected:', event.key);
+                    break;
+                }
+              });
+              
+              // Make element focusable for keyboard events
+              element.tabIndex = 0;
+              
+              // Render the viewport
+              viewport.render();
+              
+              console.log('DICOM image displayed successfully');
+              setIsLoading(false);
+            } catch (stackError) {
+              console.error('Error setting DICOM stack:', stackError);
+              setError(`Failed to load DICOM image: ${stackError.message}`);
+              setIsLoading(false);
+            }
           } else {
             throw new Error('Failed to get viewport or viewport does not support stack operations');
           }
           
         } catch (cornerstoneError) {
           console.error('Cornerstone rendering error:', cornerstoneError);
-          
-          // Fallback: Display a simple canvas with the image URL for debugging
-          element.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; text-align: center; padding: 20px;">
-              <div style="margin-bottom: 16px; font-size: 18px;">DICOM File Available</div>
-              <div style="color: #9CA3AF; font-size: 14px; margin-bottom: 16px;">Backend URL: ${fileUrl}</div>
-              <div style="color: #FEF3C7; font-size: 12px; background: rgba(245, 158, 11, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                Cornerstone.js integration in progress...<br/>
-                Error: ${cornerstoneError.message}
-              </div>
-            </div>
-          `;
+          setError(`DICOM rendering failed: ${cornerstoneError.message}`);
           setIsLoading(false);
         }
         
@@ -320,6 +313,7 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
 
     initViewer();
   }, [fileUrl, isInitialized]);
+
 
   const handleToolChange = (tool: string) => {
     setActiveTool(tool);

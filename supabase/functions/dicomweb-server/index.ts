@@ -242,36 +242,8 @@ function parseDICOM(buffer: Uint8Array): DICOMMetadata | null {
 }
 
 async function generateImageFromDICOM(buffer: Uint8Array): Promise<Uint8Array> {
-  try {
-    // For now, we'll create a simple PNG representation
-    // In a full implementation, you'd extract and process the actual pixel data
-    
-    // Create a simple 512x512 placeholder image
-    const width = 512;
-    const height = 512;
-    const channels = 3; // RGB
-    
-    // Create PNG header and data
-    const pngSignature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
-    
-    // For simplicity, create a basic grayscale pattern
-    // In production, this would extract and process actual DICOM pixel data
-    const imageData = new Uint8Array(width * height * channels);
-    for (let i = 0; i < imageData.length; i += channels) {
-      const gray = Math.floor(Math.random() * 256); // Placeholder pattern
-      imageData[i] = gray;     // R
-      imageData[i + 1] = gray; // G
-      imageData[i + 2] = gray; // B
-    }
-    
-    // Return the original DICOM as-is for now
-    // The frontend will handle the display
-    return buffer;
-    
-  } catch (error) {
-    console.error('Error generating image from DICOM:', error);
-    throw error;
-  }
+  // Return the original DICOM buffer - let the frontend DICOM viewer handle processing
+  return buffer;
 }
 
 serve(async (req) => {
