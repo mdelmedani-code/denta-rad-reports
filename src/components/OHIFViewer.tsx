@@ -20,8 +20,28 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
         setIsLoading(true);
         setError(null);
 
-        // Create OHIF iframe integration
-        const viewerUrl = `https://viewer.ohif.org/viewer?StudyInstanceUIDs=${studyInstanceUID || 'default'}&url=https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/cases/${caseId}`;
+        // Configure OHIF viewer to use the DICOMweb server
+        const dicomWebUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/cases/${caseId}`;
+        
+        // Build OHIF viewer URL with proper DICOMweb configuration
+        const config = {
+          dataSources: [{
+            namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
+            sourceName: 'dicomweb',
+            configuration: {
+              friendlyName: 'DentaRad PACS',
+              name: 'DentaRad',
+              wadoUriRoot: `${dicomWebUrl}/wado`,
+              qidoRoot: `${dicomWebUrl}/studies`,
+              wadoRoot: `${dicomWebUrl}/studies`,
+              qidoSupportsIncludeField: true,
+              imageRendering: 'wadouri',
+              thumbnailRendering: 'wadouri'
+            }
+          }]
+        };
+
+        const viewerUrl = `https://viewer.ohif.org/viewer?url=${encodeURIComponent(`${dicomWebUrl}/studies`)}&configUrl=${encodeURIComponent('data:application/json,' + JSON.stringify(config))}`;
         
         if (containerRef.current) {
           const iframe = document.createElement('iframe');
