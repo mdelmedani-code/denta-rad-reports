@@ -670,22 +670,11 @@ const UploadCase = () => {
                   }}
                 >
                   <Cloud className="w-4 h-4 mr-2" />
-                  {uploading ? "Uploading..." : isReupload ? "Update Case" : "Submit to Storage & Queue"}
-                </Button>
-
-                <Button 
-                  type="button"
-                  variant="outline"
-                  disabled={uploading || (!selectedFile && !selectedFiles) || !formData.patientName || !formData.clinicalQuestion}
-                  className="w-full"
-                  onClick={handleDirectPACSUpload}
-                >
-                  <Server className="w-4 h-4 mr-2" />
-                  {uploading ? "Uploading..." : "Upload Directly to PACS Server"}
+                  {uploading ? "Uploading..." : isReupload ? "Update Case" : "Upload Case"}
                 </Button>
                 
                 <p className="text-xs text-muted-foreground text-center">
-                  Regular upload goes to file storage. Direct PACS upload immediately stores in the imaging server for instant viewing.
+                  Files will be uploaded to secure storage and queued for analysis.
                 </p>
               </div>
               
