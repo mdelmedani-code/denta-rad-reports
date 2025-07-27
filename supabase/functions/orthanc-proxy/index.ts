@@ -49,25 +49,21 @@ Deno.serve(async (req) => {
         }
       }
       
-      // Create FormData for Orthanc with correct content type
+      // Create FormData for Orthanc upload - try direct binary approach
       const formData = new FormData()
-      const blob = new Blob([bytes], { type: 'application/dicom' })
-      formData.append('file', blob, fileName)
       
-      console.log('FormData created - blob size:', blob.size, 'type:', blob.type)
-      
-      const orthancUrl = `http://116.203.35.168:8042/instances`
-      
-      console.log('Uploading to Orthanc:', orthancUrl)
-      
-      const response = await fetch(orthancUrl, {
+      // Try uploading as raw binary data instead of blob
+      const response = await fetch(`http://116.203.35.168:8042/instances`, {
         method: 'POST',
         headers: {
           'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
-          // Don't set Content-Type, let browser handle FormData
+          'Content-Type': 'application/dicom',
         },
-        body: formData
+        body: bytes
       })
+      
+      console.log('Orthanc upload response status:', response.status)
+      console.log('Orthanc upload response headers:', Object.fromEntries(response.headers.entries()))
       
       console.log('Orthanc response status:', response.status)
       console.log('Orthanc response headers:', Object.fromEntries(response.headers.entries()))
