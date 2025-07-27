@@ -622,12 +622,20 @@ const UploadCase = () => {
                   >
                     <Upload className={`w-8 h-8 mx-auto mb-4 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
                     <div className="space-y-2">
-                      <Label htmlFor="file-upload" className="cursor-pointer">
-                        <span className="text-primary font-medium">
-                          Choose files or folder to upload
-                        </span>
-                        <span className="text-muted-foreground"> or drag and drop</span>
-                      </Label>
+                      <div className="flex gap-2 justify-center">
+                        <Label htmlFor="file-upload" className="cursor-pointer">
+                          <Button type="button" variant="outline" asChild>
+                            <span>Choose Files</span>
+                          </Button>
+                        </Label>
+                        <Label htmlFor="folder-upload" className="cursor-pointer">
+                          <Button type="button" variant="outline" asChild>
+                            <span>Choose Folder</span>
+                          </Button>
+                        </Label>
+                      </div>
+                      <p className="text-muted-foreground">or drag and drop files/folders here</p>
+                      
                       <Input
                         id="file-upload"
                         type="file"
@@ -637,8 +645,17 @@ const UploadCase = () => {
                         className="hidden"
                         required
                       />
+                      <input
+                        id="folder-upload"
+                        type="file"
+                        onChange={handleFileChange}
+                        accept=".dcm"
+                        multiple
+                        {...({ webkitdirectory: "" } as any)}
+                        className="hidden"
+                      />
                       <p className="text-sm text-muted-foreground">
-                        Supported: DICOM files (.dcm), ZIP archives, or drag multiple DICOM files
+                        Supported: DICOM files (.dcm), ZIP archives, or DICOM folders
                       </p>
                       {isDragOver && (
                         <p className="text-sm text-primary font-medium">
