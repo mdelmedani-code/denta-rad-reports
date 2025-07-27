@@ -135,8 +135,11 @@ export const OHIFEnhancedViewer = ({ caseId, filePath, onClose, className = "" }
           return;
         }
         
-        // Construct the DICOMweb image URL
-        const dicomwebUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/1/series/1/instances/1?caseId=${caseId}`;
+        // Construct the DICOMweb image URL with case-specific study UID
+        const studyUID = `study.${caseId}`;
+        const seriesUID = `series.${caseId}.1`;
+        const instanceUID = `instance.${caseId}.1.1`;
+        const dicomwebUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/wado/studies/${studyUID}/series/${seriesUID}/instances/${instanceUID}?caseId=${caseId}`;
         
         console.log('Using DICOMweb URL:', dicomwebUrl);
         setFileUrl(dicomwebUrl);
