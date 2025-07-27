@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToOrthancPACS } from "@/services/orthancDirectUpload";
+import { verifyOrthancStudy } from "@/services/orthancVerification";
 
 const UploadCase = () => {
   const { user } = useAuth();
@@ -96,6 +97,16 @@ const UploadCase = () => {
       }
 
       console.log('Orthanc upload successful:', orthancResult);
+
+      // Verify the upload actually succeeded in Orthanc
+      console.log('=== VERIFYING ORTHANC UPLOAD ===');
+      if (orthancResult.studyInstanceUID) {
+        const isVerified = await verifyOrthancStudy(orthancResult.studyInstanceUID);
+        if (!isVerified) {
+          throw new Error('Upload verification failed - study not found in PACS');
+        }
+        console.log('✅ Orthanc upload verified successfully');
+      }
 
       toast({
         title: "PACS Upload Complete",
