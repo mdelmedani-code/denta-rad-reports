@@ -741,9 +741,10 @@ const UploadCase = () => {
               
               {/* Debug info */}
               <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                <div>Files selected: {selectedFile ? '✓ Single file' : selectedFiles ? `✓ ${selectedFiles.length} files` : '✗ No files'}</div>
-                <div>Patient name: {formData.patientName ? '✓' : '✗ Required'}</div>
-                <div>Clinical question: {formData.clinicalQuestion ? '✓' : '✗ Required'}</div>
+                <div>Files selected: {selectedFile ? '✓ Single file: ' + selectedFile.name : selectedFiles ? `✓ ${selectedFiles.length} files` : '✗ No files'}</div>
+                <div>Patient name: {formData.patientName ? '✓ "' + formData.patientName + '"' : '✗ Required (empty)'}</div>
+                <div>Clinical question: {formData.clinicalQuestion ? '✓ "' + formData.clinicalQuestion + '"' : '✗ Required (empty)'}</div>
+                <div>Button disabled: {(uploading || (!selectedFile && !selectedFiles) || (selectedFile && Object.keys(selectedFile).length === 0) || !formData.patientName || !formData.clinicalQuestion) ? 'YES' : 'NO'}</div>
               </div>
             </form>
           </div>
