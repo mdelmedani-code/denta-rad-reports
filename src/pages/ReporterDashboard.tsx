@@ -171,7 +171,7 @@ const ReporterDashboard = () => {
     if (isPACSStudy) {
       // For PACS studies, open OHIF viewer with study UID
       const studyUID = caseData.file_path;
-      const ohifUrl = `${window.location.origin}/ohif-viewer?StudyInstanceUIDs=${studyUID}`;
+      const ohifUrl = `${window.location.origin}/ohif-viewer?StudyInstanceUIDs=${studyUID}&caseId=${caseData.id}`;
       window.open(ohifUrl, '_blank');
       
       toast({
@@ -179,12 +179,14 @@ const ReporterDashboard = () => {
         description: `Opening PACS study in OHIF viewer for ${caseData.patient_name}`,
       });
     } else {
-      // For Supabase storage files, use the existing DICOM viewer
-      navigate(`/admin/dicom-viewer/${caseData.id}`);
+      // For Supabase storage cases with multiple DICOM files, open OHIF with case ID
+      // This will use our DICOMweb server to serve the DICOM files
+      const ohifUrl = `${window.location.origin}/ohif-viewer?StudyInstanceUIDs=study.${caseData.id}&caseId=${caseData.id}`;
+      window.open(ohifUrl, '_blank');
       
       toast({
-        title: "DICOM Viewer Opened",
-        description: "Opening images for case: " + caseData.patient_name,
+        title: "OHIF Viewer Opened",
+        description: `Opening DICOM images in OHIF viewer for ${caseData.patient_name}`,
       });
     }
   };

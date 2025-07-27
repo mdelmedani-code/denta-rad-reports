@@ -11,25 +11,57 @@ export const OHIFViewer = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [studyData, setStudyData] = useState<any>(null);
   
-  const studyInstanceUIDs = searchParams.get('studyInstanceUIDs');
+  const studyInstanceUIDs = searchParams.get('StudyInstanceUIDs');
   const caseId = searchParams.get('caseId');
   
   console.log('OHIF Viewer - URL params:', { studyInstanceUIDs, caseId });
 
   useEffect(() => {
     if (!studyInstanceUIDs || !caseId) {
-      setError('Missing required parameters: studyInstanceUIDs and caseId');
+      setError('Missing required parameters: StudyInstanceUIDs and caseId');
       setIsLoading(false);
       return;
     }
 
-    // Simulate loading time then show success
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+    const loadStudyData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Test connection to our DICOMweb server for this case
+        const testUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-server/studies?caseId=${caseId}`;
+        console.log('Testing DICOMweb connection for case:', caseId);
+        
+        const response = await fetch(testUrl, {
+          headers: {
+            'Accept': 'application/dicom+json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`DICOMweb server error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('DICOMweb server response:', data);
+        
+        setStudyData({
+          studyUID: studyInstanceUIDs,
+          caseId: caseId,
+          serverStatus: 'connected',
+          studyCount: data.studies?.length || 1
+        });
+        
+      } catch (error) {
+        console.error('Error connecting to DICOMweb server:', error);
+        setError(`Failed to connect to DICOMweb server: ${error.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    loadStudyData();
   }, [studyInstanceUIDs, caseId]);
 
   if (error) {

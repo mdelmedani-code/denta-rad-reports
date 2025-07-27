@@ -278,7 +278,7 @@ serve(async (req) => {
         // Get case info from database
         const { data: caseData, error: caseError } = await supabase
           .from('cases')
-          .select('file_path, patient_name')
+          .select('patient_name, upload_date')
           .eq('id', caseId)
           .single();
           
@@ -290,14 +290,44 @@ serve(async (req) => {
           });
         }
 
+        // List all DICOM files for this case from storage
+        const { data: fileList, error: listError } = await supabase.storage
+          .from('cbct-scans')
+          .list(caseId, { limit: 100 });
+
+        let totalFiles = 0;
+        if (fileList) {
+          // Count files in all subdirectories
+          for (const item of fileList) {
+            if (item.name) {
+              if (item.name.endsWith('.dcm')) {
+                totalFiles++;
+              } else {
+                // It's a folder, list its contents
+                const { data: subFiles } = await supabase.storage
+                  .from('cbct-scans')
+                  .list(`${caseId}/${item.name}`, { limit: 100 });
+                
+                if (subFiles) {
+                  totalFiles += subFiles.filter(f => f.name.endsWith('.dcm')).length;
+                }
+              }
+            }
+          }
+        }
+
+        console.log('DICOM files found for case:', totalFiles);
+
         // Return study-level metadata
         const studyMetadata = [{
           "0020000D": { "vr": "UI", "Value": [studyUID] }, // Study Instance UID
           "00100010": { "vr": "PN", "Value": [{ "Alphabetic": caseData.patient_name || "Unknown Patient" }] },
           "00081030": { "vr": "LO", "Value": ["CBCT Study"] },
           "00200010": { "vr": "SH", "Value": ["001"] }, // Study ID
-          "00080020": { "vr": "DA", "Value": [new Date().toISOString().split('T')[0].replace(/-/g, '')] },
-          "00080030": { "vr": "TM", "Value": [new Date().toTimeString().split(' ')[0].replace(/:/g, '')] }
+          "00080020": { "vr": "DA", "Value": [new Date(caseData.upload_date).toISOString().split('T')[0].replace(/-/g, '')] },
+          "00080030": { "vr": "TM", "Value": [new Date(caseData.upload_date).toTimeString().split(' ')[0].replace(/:/g, '')] },
+          "00201206": { "vr": "IS", "Value": [fileList?.length.toString() || "1"] }, // Number of Study Related Instances
+          "studies": { "count": fileList?.length || 0 }
         }];
 
         return new Response(JSON.stringify(studyMetadata), {
@@ -380,8 +410,12 @@ serve(async (req) => {
       // Image endpoint: /wado/studies/{studyUID}/series/{seriesUID}/instances/{instanceUID}
       if (pathParts.includes('instances')) {
         const studyUID = pathParts[pathParts.indexOf('studies') + 1];
+        const seriesUID = pathParts[pathParts.indexOf('series') + 1];
+        const instanceUID = pathParts[pathParts.indexOf('instances') + 1];
         const caseId = studyUID.replace('study.', '') || url.searchParams.get('caseId') || req.headers.get('X-Case-ID');
         const accept = req.headers.get('accept') || '';
+        
+        console.log('Instance request:', { studyUID, seriesUID, instanceUID, caseId });
         
         if (!caseId) {
           return new Response(JSON.stringify({ error: 'Case ID required' }), {
@@ -393,7 +427,7 @@ serve(async (req) => {
         // Get case info from database
         const { data: caseData, error: caseError } = await supabase
           .from('cases')
-          .select('file_path')
+          .select('patient_name')
           .eq('id', caseId)
           .single();
           
@@ -404,12 +438,80 @@ serve(async (req) => {
           });
         }
         
+        // Extract instance number from instanceUID (e.g., instance.caseId.1.1 -> get the last number)
+        const instanceParts = instanceUID.split('.');
+        const instanceNumber = instanceParts[instanceParts.length - 1] || '1';
+        
+        // Find all DICOM files for this case
+        const { data: fileList, error: listError } = await supabase.storage
+          .from('cbct-scans')
+          .list(caseId, { limit: 100 });
+
+        let targetFile = null;
+        let fileIndex = 1;
+        
+        if (fileList) {
+          // Look through directories to find DICOM files
+          for (const item of fileList) {
+            if (item.name && !item.name.endsWith('.dcm')) {
+              // It's a folder, list its contents
+              const { data: subFiles } = await supabase.storage
+                .from('cbct-scans')
+                .list(`${caseId}/${item.name}`, { limit: 200 });
+              
+              if (subFiles) {
+                const dcmFiles = subFiles.filter(f => f.name.endsWith('.dcm')).sort((a, b) => a.name.localeCompare(b.name));
+                
+                for (const dcmFile of dcmFiles) {
+                  if (fileIndex.toString() === instanceNumber) {
+                    targetFile = `${caseId}/${item.name}/${dcmFile.name}`;
+                    break;
+                  }
+                  fileIndex++;
+                }
+                
+                if (targetFile) break;
+              }
+            }
+          }
+        }
+        
+        if (!targetFile) {
+          // Fallback to first available file
+          console.log('Target file not found, using first available file');
+          if (fileList && fileList.length > 0) {
+            const firstDir = fileList[0];
+            if (firstDir.name) {
+              const { data: subFiles } = await supabase.storage
+                .from('cbct-scans')
+                .list(`${caseId}/${firstDir.name}`, { limit: 1 });
+              
+              if (subFiles && subFiles.length > 0) {
+                const firstFile = subFiles.find(f => f.name.endsWith('.dcm'));
+                if (firstFile) {
+                  targetFile = `${caseId}/${firstDir.name}/${firstFile.name}`;
+                }
+              }
+            }
+          }
+        }
+        
+        if (!targetFile) {
+          return new Response(JSON.stringify({ error: 'No DICOM files found for this case' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        console.log('Downloading DICOM file:', targetFile);
+        
         // Get DICOM file from storage
         const { data: fileData, error: fileError } = await supabase.storage
           .from('cbct-scans')
-          .download(caseData.file_path);
+          .download(targetFile);
           
         if (fileError || !fileData) {
+          console.error('Error downloading file:', fileError);
           return new Response(JSON.stringify({ error: 'DICOM file not found' }), {
             status: 404,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -417,6 +519,7 @@ serve(async (req) => {
         }
         
         const buffer = new Uint8Array(await fileData.arrayBuffer());
+        console.log('DICOM file loaded, size:', buffer.length);
         
         // Return raw DICOM data
         if (accept.includes('application/dicom')) {
