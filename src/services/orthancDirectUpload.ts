@@ -23,18 +23,17 @@ export const uploadToOrthancPACS = async (
     const uploadResults = [];
     
     for (const file of fileArray) {
-      console.log(`Uploading ${file.name} to Orthanc PACS...`);
+      console.log(`Uploading ${file.name} to Orthanc PACS via proxy...`);
       
-      // Upload using Orthanc's REST API /instances endpoint
-      const orthancUrl = `https://116.203.35.168:443/instances`;
-      
+      // Create FormData for the file
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch(orthancUrl, {
+      // Use Supabase Edge Function as proxy to avoid CORS/Mixed Content issues
+      const response = await fetch(`https://swusayoygknritombbwg.supabase.co/functions/v1/orthanc-proxy`, {
         method: 'POST',
         headers: {
-          'Authorization': pacsConfig.auth.headers.Authorization
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dXNheW95Z2tucml0b21iYndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTkzMjEsImV4cCI6MjA2OTAzNTMyMX0.sOAz9isiZUp8BmFVDQRV-G16iWc0Rk8mM9obUKko2dY`,
         },
         body: formData
       });
