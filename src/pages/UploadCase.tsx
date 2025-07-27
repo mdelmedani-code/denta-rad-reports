@@ -11,8 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { uploadToOrthancPACS } from "@/services/orthancDirectUpload";
-import { verifyOrthancStudy } from "@/services/orthancVerification";
+import { uploadDICOMAndCreateCase, UploadProgress } from "@/services/dicomUploadService";
 
 const UploadCase = () => {
   const { user } = useAuth();
@@ -30,7 +29,7 @@ const UploadCase = () => {
   
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [currentStep, setCurrentStep] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,14 +76,11 @@ const UploadCase = () => {
     }
 
     setUploading(true);
-    setUploadProgress(0);
+    setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 0, stage: 'uploading' });
     setCurrentStep("Preparing upload...");
 
     try {
       // Get user's clinic ID
-      setUploadProgress(10);
-      setCurrentStep("Validating account...");
-      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('clinic_id')
@@ -95,29 +91,42 @@ const UploadCase = () => {
         throw new Error('Unable to determine clinic association');
       }
 
-      // Upload to Orthanc PACS
-      setUploadProgress(20);
-      setCurrentStep(`Uploading ${selectedFiles.length} files to PACS...`);
-      console.log('=== UPLOADING TO ORTHANC PACS ===');
+      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 10, stage: 'uploading' });
+      setCurrentStep(`Uploading ${selectedFiles.length} files...`);
+      console.log('=== UPLOADING USING NEW SERVICE ===');
       
-      const orthancResult = await uploadToOrthancPACS(selectedFiles, 'temp-case-id');
+      // Upload using new service
+      const result = await uploadDICOMAndCreateCase(
+        selectedFiles,
+        {
+          patientName: formData.patientName,
+          patientInternalId: formData.patientInternalId,
+          patientDob: formData.patientDob,
+          clinicalQuestion: formData.clinicalQuestion,
+          fieldOfView: formData.fieldOfView,
+          urgency: formData.urgency,
+          clinicId: profile.clinic_id
+        },
+        (progress) => {
+          setUploadProgress(progress);
+          setCurrentStep(
+            progress.stage === 'uploading' ? 'Uploading files...' :
+            progress.stage === 'processing' ? 'Processing with PACS...' :
+            progress.stage === 'complete' ? 'Upload complete!' :
+            'Upload failed'
+          );
+        }
+      );
       
-      if (!orthancResult.success) {
-        throw new Error(`PACS upload failed: ${orthancResult.error}`);
+      if (!result.orthancResult.success) {
+        throw new Error(`Upload failed: ${result.orthancResult.error}`);
       }
 
-      console.log('Orthanc upload successful:', orthancResult);
-      setUploadProgress(80);
+      console.log('Upload successful:', result);
+      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 80, stage: 'processing' });
       setCurrentStep("Creating case record...");
 
-      toast({
-        title: "PACS Upload Complete",
-        description: `Successfully uploaded ${selectedFiles.length} files to Orthanc PACS`,
-      });
-
-      // Step 2: Create case in database with Orthanc IDs
       // Create case in database with Orthanc IDs
-      
       const { data: caseData, error: caseError } = await supabase
         .from('cases')
         .insert({
@@ -128,9 +137,10 @@ const UploadCase = () => {
           field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
           clinic_id: profile.clinic_id,
-          orthanc_study_id: orthancResult.studyInstanceUID,
-          orthanc_series_id: orthancResult.seriesInstanceUID,
-          orthanc_instance_ids: orthancResult.sopInstanceUID ? [orthancResult.sopInstanceUID] : [],
+          study_instance_uid: result.studyInstanceUID,
+          series_instance_uid: result.orthancResult.seriesInstanceUID,
+          sop_instance_uid: result.orthancResult.sopInstanceUID,
+          orthanc_study_id: result.orthancResult.orthancId,
           status: 'uploaded'
         })
         .select()
@@ -141,13 +151,10 @@ const UploadCase = () => {
         throw caseError;
       }
 
-      setUploadProgress(95);
-      setCurrentStep("Finalizing...");
+      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 100, stage: 'complete' });
+      setCurrentStep("Upload complete!");
 
       console.log('Case created successfully:', caseData.id);
-
-      setUploadProgress(100);
-      setCurrentStep("Upload complete!");
 
       toast({
         title: "Success!",
@@ -172,6 +179,8 @@ const UploadCase = () => {
 
     } catch (error: any) {
       console.error('Upload failed:', error);
+      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 0, stage: 'error' });
+      setCurrentStep("Upload failed");
       toast({
         title: "Upload Failed",
         description: error.message || "An error occurred during upload",
@@ -179,8 +188,10 @@ const UploadCase = () => {
       });
     } finally {
       setUploading(false);
-      setUploadProgress(0);
-      setCurrentStep("");
+      setTimeout(() => {
+        setUploadProgress(null);
+        setCurrentStep("");
+      }, 3000);
     }
   };
 
@@ -305,7 +316,7 @@ const UploadCase = () => {
           <Card>
             <CardHeader>
               <CardTitle>File Upload</CardTitle>
-              <CardDescription>Select DICOM files or ZIP archives to upload</CardDescription>
+              <CardDescription>Select DICOM files to upload</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
@@ -321,13 +332,13 @@ const UploadCase = () => {
                       id="fileInput"
                       type="file"
                       onChange={handleFileChange}
-                      accept=".dcm,.zip,.rar"
+                      accept=".dcm"
                       multiple
                       className="hidden"
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Supported: DICOM files (.dcm), ZIP archives (.zip, .rar)
+                    Supported: DICOM files (.dcm) - Maximum 50MB per file
                   </p>
                   {selectedFiles.length > 0 && (
                     <div className="text-sm text-foreground">
@@ -345,13 +356,13 @@ const UploadCase = () => {
           </Card>
 
           {/* Upload Progress */}
-          {uploading && (
+          {uploading && uploadProgress && (
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <Cloud className="w-6 h-6 animate-pulse" />
+                      <Cloud className={`w-6 h-6 ${uploadProgress.stage === 'uploading' ? 'animate-pulse' : ''}`} />
                       <div>
                         <div className="text-lg font-medium">Upload in Progress</div>
                         <div className="text-sm text-muted-foreground">{currentStep}</div>
@@ -361,7 +372,7 @@ const UploadCase = () => {
                       variant="outline" 
                       onClick={() => {
                         setUploading(false);
-                        setUploadProgress(0);
+                        setUploadProgress(null);
                         setCurrentStep("");
                       }}
                       className="ml-4"
@@ -372,9 +383,14 @@ const UploadCase = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span>Progress</span>
-                      <span>{uploadProgress}%</span>
+                      <span>{uploadProgress.percentage}%</span>
                     </div>
-                    <Progress value={uploadProgress} className="w-full" />
+                    <Progress value={uploadProgress.percentage} className="w-full" />
+                    {uploadProgress.bytesTotal > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        {(uploadProgress.bytesUploaded / 1024 / 1024).toFixed(1)} MB / {(uploadProgress.bytesTotal / 1024 / 1024).toFixed(1)} MB
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -389,7 +405,7 @@ const UploadCase = () => {
               className="w-full md:w-auto px-8"
             >
               <Cloud className="w-4 h-4 mr-2" />
-              {uploading ? `Uploading... ${uploadProgress}%` : "Upload Case"}
+              {uploading ? `Uploading... ${uploadProgress?.percentage || 0}%` : "Upload Case"}
             </Button>
           </div>
 
