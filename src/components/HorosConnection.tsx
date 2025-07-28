@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Monitor, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
-interface OsiriXConnectionProps {
+interface HorosConnectionProps {
   caseData: {
     id: string;
     patient_name: string;
@@ -14,7 +14,7 @@ interface OsiriXConnectionProps {
   };
 }
 
-export const OsiriXConnection = ({ caseData }: OsiriXConnectionProps) => {
+export const HorosConnection = ({ caseData }: HorosConnectionProps) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -44,14 +44,14 @@ export const OsiriXConnection = ({ caseData }: OsiriXConnectionProps) => {
       <DialogTrigger asChild>
         <Button variant="outline" className="text-blue-600 hover:text-blue-700">
           <Monitor className="w-4 h-4 mr-2" />
-          Open in OsiriX
+          Open in Horos
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Monitor className="w-5 h-5" />
-            Connect to PACS with OsiriX
+            Connect to PACS with Horos
           </DialogTitle>
         </DialogHeader>
         
@@ -60,9 +60,9 @@ export const OsiriXConnection = ({ caseData }: OsiriXConnectionProps) => {
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-blue-900 mb-2">How to connect:</h3>
             <ol className="text-sm text-blue-800 space-y-1">
-              <li>1. Open OsiriX on your Mac</li>
-              <li>2. Go to <strong>Window → DICOM Query/Retrieve</strong></li>
-              <li>3. Click <strong>Add Server</strong> and enter our PACS details</li>
+              <li>1. Open Horos on your Mac</li>
+              <li>2. Go to <strong>Window → Database</strong></li>
+              <li>3. Click <strong>Sources</strong> tab and add our PACS server</li>
               <li>4. Search for the study using the Study Instance UID below</li>
             </ol>
           </div>
@@ -182,7 +182,7 @@ export const OsiriXConnection = ({ caseData }: OsiriXConnectionProps) => {
                 </Button>
               </div>
               <p className="text-xs text-yellow-700 mt-2">
-                Copy this UID and search for it in OsiriX to find the study
+                Copy this UID and search for it in Horos to find the study
               </p>
             </div>
           </div>

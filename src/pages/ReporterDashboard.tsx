@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
-import { OsiriXConnection } from "@/components/OsiriXConnection";
+import { HorosConnection } from "@/components/HorosConnection";
 
 
 interface Case {
@@ -639,7 +639,7 @@ const ReporterDashboard = () => {
                     </div>
                   </div>
                    <div className="flex gap-2">
-                     <OsiriXConnection caseData={{
+                     <HorosConnection caseData={{
                        id: case_.id,
                        patient_name: case_.patient_name,
                        orthanc_study_id: case_.orthanc_study_id || '',
@@ -718,9 +718,9 @@ const ReporterDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - OHIF Viewer */}
                <div className="space-y-4">
-                 {/* OsiriX Connection */}
+                 {/* Horos Connection */}
                  <div className="flex gap-2 mb-4">
-                   <OsiriXConnection caseData={{
+                   <HorosConnection caseData={{
                      id: selectedCase.id,
                      patient_name: selectedCase.patient_name,
                      orthanc_study_id: selectedCase.orthanc_study_id || '',
@@ -743,8 +743,8 @@ const ReporterDashboard = () => {
                   {/* Image Review Instructions */}
                   <div className="h-[600px] border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
                     <div className="text-center text-gray-600 max-w-md">
-                      <p className="text-lg font-medium mb-2">Review Images in OsiriX</p>
-                      <p className="text-sm mb-4">Use the "Open in OsiriX" button above to connect to PACS and view the DICOM images for this case.</p>
+                      <p className="text-lg font-medium mb-2">Review Images in Horos</p>
+                      <p className="text-sm mb-4">Use the "Open in Horos" button above to connect to PACS and view the DICOM images for this case.</p>
                       <p className="text-xs text-gray-500">Case: {selectedCase.patient_name}</p>
                       {selectedCase.orthanc_study_id && (
                         <p className="text-xs font-mono mt-2 bg-gray-200 p-2 rounded">{selectedCase.orthanc_study_id}</p>
