@@ -70,13 +70,12 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
           throw new Error('Study not accessible in PACS - please check connection');
         }
 
-        // Configure OHIF to connect directly to Orthanc using the actual DICOM Study Instance UID
-        const orthancUrl = 'http://116.203.35.168:8042'; // Direct Orthanc connection
+        // Configure OHIF to connect via our DICOMweb proxy
+        const proxyUrl = 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy';
         const studyUID = caseData.orthanc_study_id; // This is now the actual DICOM Study Instance UID
         
-        // Build OHIF viewer URL with correct Orthanc DICOMweb endpoints
-        // Use the correct DICOMweb path that Orthanc provides
-        const viewerUrl = `https://viewer.ohif.org/viewer?StudyInstanceUIDs=${encodeURIComponent(studyUID)}&url=${encodeURIComponent(orthancUrl + '/dicom-web')}`;
+        // Build OHIF viewer URL with our DICOMweb proxy
+        const viewerUrl = `https://viewer.ohif.org/viewer?StudyInstanceUIDs=${encodeURIComponent(studyUID)}&url=${encodeURIComponent(proxyUrl)}`;
         
         console.log('OHIF Viewer URL:', viewerUrl);
         console.log('Study Instance UID being used:', studyUID);
