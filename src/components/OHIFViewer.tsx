@@ -43,35 +43,43 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
         const studyId = caseData.orthanc_study_id;
         console.log('Using Orthanc Study ID:', studyId);
 
-        // First, let's verify the study exists in Orthanc
+        // First, let's verify the study exists in Orthanc by converting DICOM UID to Orthanc ID
         try {
-          const response = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
+          // Look up the study by DICOM Study Instance UID
+          const lookupResponse = await fetch(`http://116.203.35.168:8042/tools/lookup`, {
+            method: 'POST',
             headers: {
-              'Authorization': 'Basic ' + btoa('orthanc:orthanc'),
-              'Accept': 'application/json'
-            }
+              'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+              'Content-Type': 'text/plain'
+            },
+            body: studyId
           });
 
-          if (!response.ok) {
-            throw new Error(`Study not found in Orthanc: ${response.status} ${response.statusText}`);
+          if (!lookupResponse.ok) {
+            throw new Error(`Study lookup failed: ${lookupResponse.status} ${lookupResponse.statusText}`);
           }
 
-          const studyInfo = await response.json();
-          console.log('Study found in Orthanc:', studyInfo);
+          const lookupResults = await lookupResponse.json();
+          console.log('Orthanc lookup results:', lookupResults);
+
+          if (!lookupResults || lookupResults.length === 0) {
+            throw new Error('Study not found in PACS - DICOM files may not have been uploaded correctly');
+          }
         } catch (orthancError) {
           console.error('Error verifying study in Orthanc:', orthancError);
           throw new Error('Study not accessible in PACS - please check connection');
         }
 
-        // Configure OHIF to connect directly to Orthanc
+        // Configure OHIF to connect directly to Orthanc using the actual DICOM Study Instance UID
         const orthancUrl = 'http://116.203.35.168:8042'; // Direct Orthanc connection
-        const studyUID = caseData.orthanc_study_id;
+        const studyUID = caseData.orthanc_study_id; // This is now the actual DICOM Study Instance UID
         
-        // Build OHIF viewer URL with direct Orthanc DICOMweb endpoints
-        // Note: OHIF.org viewer supports direct Orthanc connections
-        const viewerUrl = `https://viewer.ohif.org/viewer?StudyInstanceUIDs=${studyUID}&url=${orthancUrl}/dicom-web`;
+        // Build OHIF viewer URL with correct Orthanc DICOMweb endpoints
+        // Use the correct DICOMweb path that Orthanc provides
+        const viewerUrl = `https://viewer.ohif.org/viewer?StudyInstanceUIDs=${encodeURIComponent(studyUID)}&url=${encodeURIComponent(orthancUrl + '/dicom-web')}`;
         
         console.log('OHIF Viewer URL:', viewerUrl);
+        console.log('Study Instance UID being used:', studyUID);
         
         if (containerRef.current) {
           containerRef.current.innerHTML = ''; // Clear previous content
