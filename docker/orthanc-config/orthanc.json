@@ -75,6 +75,11 @@
   "HttpRequestTimeout": 60,
   "HttpTimeout": 60,
   
+  "DicomModalities": {
+    "HOROS": ["HOROS", "*", 11112],
+    "ANY-SCP": ["*", "*", "*"]
+  },
+  
   "UserMetadata": {
     "DentaRad-CaseId": 1024,
     "DentaRad-ClinicId": 1025,
