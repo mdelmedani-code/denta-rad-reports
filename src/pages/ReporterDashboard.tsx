@@ -204,6 +204,42 @@ const ReporterDashboard = () => {
     }
   };
 
+  const openInHoros = (caseData: Case) => {
+    if (!caseData.orthanc_study_id) {
+      toast({
+        title: "No DICOM Data",
+        description: "This case doesn't have DICOM data available for Horos viewing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Try to open Horos via URL scheme (if available on Mac)
+      const horosUrl = `horos://open?studyInstanceUID=${encodeURIComponent(caseData.orthanc_study_id)}&server=116.203.35.168&port=8042&aetitle=ORTHANC`;
+      
+      // Create a hidden link and try to open it
+      const link = document.createElement('a');
+      link.href = horosUrl;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Opening in Horos",
+        description: "Attempting to open study in Horos. If Horos doesn't open, please configure PACS manually.",
+      });
+    } catch (error) {
+      console.error('Error opening Horos:', error);
+      toast({
+        title: "Unable to auto-open Horos",
+        description: "Please open Horos manually and configure the PACS connection.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const startReporting = async (caseData: Case) => {
     setSelectedCase(caseData);
     
@@ -615,82 +651,98 @@ const ReporterDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Cases Awaiting Reports</CardTitle>
-            <CardDescription>Click "Start Reporting" to begin working on a case</CardDescription>
+            <CardDescription>Click on a case to automatically open it in Horos, or use the "Start Reporting" button to create a report</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredCases.map((case_) => (
-                <div key={case_.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-2">
-                      <h3 className="font-semibold">{case_.patient_name}</h3>
-                      <Badge className={getStatusColor(case_.status)}>
-                        {case_.status.replace('_', ' ')}
-                      </Badge>
-                      <Badge className={getUrgencyColor(case_.urgency)}>
-                        {case_.urgency}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p><strong>Clinic:</strong> {case_.clinics.name}</p>
-                      <p><strong>Clinical Question:</strong> {case_.clinical_question}</p>
-                      <p><strong>Upload Date:</strong> {new Date(case_.upload_date).toLocaleDateString()}</p>
-                      <p><strong>Field of View:</strong> {case_.field_of_view.replace('_', ' ')}</p>
-                    </div>
-                  </div>
-                   <div className="flex gap-2">
-                     <HorosConnection caseData={{
-                       id: case_.id,
-                       patient_name: case_.patient_name,
-                       orthanc_study_id: case_.orthanc_study_id || '',
-                       orthanc_series_id: case_.orthanc_series_id,
-                       clinical_question: case_.clinical_question
-                     }} />
-                     {case_.status !== 'report_ready' ? (
-                      <Button
-                        onClick={() => startReporting(case_)}
-                        className="flex items-center gap-2"
-                        variant={case_.status === 'in_progress' ? 'outline' : 'default'}
-                      >
-                        <FileText className="w-4 h-4" />
-                        {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={() => startReporting(case_)}
-                          variant="secondary"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <FileText className="w-4 h-4" />
-                          View & Amend Report
-                        </Button>
-                        {case_.reports?.[0]?.pdf_url && (
-                          <>
-                            <Button
-                              onClick={() => window.open(case_.reports[0].pdf_url, '_blank')}
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2"
-                            >
-                              <Download className="w-4 h-4" />
-                              Download PDF
-                            </Button>
-                            <Button
-                              onClick={() => createSecureShareLink(case_.reports[0].id)}
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-2"
-                            >
-                              <Share2 className="w-4 h-4" />
-                              Share Report
-                            </Button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
+               {filteredCases.map((case_) => (
+                 <div 
+                   key={case_.id} 
+                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                   onClick={() => openInHoros(case_)}
+                 >
+                   <div className="flex-1">
+                     <div className="flex items-center gap-4 mb-2">
+                       <h3 className="font-semibold">{case_.patient_name}</h3>
+                       <Badge className={getStatusColor(case_.status)}>
+                         {case_.status.replace('_', ' ')}
+                       </Badge>
+                       <Badge className={getUrgencyColor(case_.urgency)}>
+                         {case_.urgency}
+                       </Badge>
+                     </div>
+                     <div className="text-sm text-muted-foreground space-y-1">
+                       <p><strong>Clinic:</strong> {case_.clinics.name}</p>
+                       <p><strong>Clinical Question:</strong> {case_.clinical_question}</p>
+                       <p><strong>Upload Date:</strong> {new Date(case_.upload_date).toLocaleDateString()}</p>
+                       <p><strong>Field of View:</strong> {case_.field_of_view.replace('_', ' ')}</p>
+                     </div>
+                   </div>
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <HorosConnection caseData={{
+                        id: case_.id,
+                        patient_name: case_.patient_name,
+                        orthanc_study_id: case_.orthanc_study_id || '',
+                        orthanc_series_id: case_.orthanc_series_id,
+                        clinical_question: case_.clinical_question
+                      }} />
+                      {case_.status !== 'report_ready' ? (
+                       <Button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           startReporting(case_);
+                         }}
+                         className="flex items-center gap-2"
+                         variant={case_.status === 'in_progress' ? 'outline' : 'default'}
+                       >
+                         <FileText className="w-4 h-4" />
+                         {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
+                       </Button>
+                     ) : (
+                       <>
+                         <Button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             startReporting(case_);
+                           }}
+                           variant="secondary"
+                           size="sm"
+                           className="flex items-center gap-2"
+                         >
+                           <FileText className="w-4 h-4" />
+                           View & Amend Report
+                         </Button>
+                         {case_.reports?.[0]?.pdf_url && (
+                           <>
+                             <Button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 window.open(case_.reports[0].pdf_url, '_blank');
+                               }}
+                               variant="outline"
+                               size="sm"
+                               className="flex items-center gap-2"
+                             >
+                               <Download className="w-4 h-4" />
+                               Download PDF
+                             </Button>
+                             <Button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 createSecureShareLink(case_.reports[0].id);
+                               }}
+                               variant="outline"
+                               size="sm"
+                               className="flex items-center gap-2"
+                             >
+                               <Share2 className="w-4 h-4" />
+                               Share Report
+                             </Button>
+                           </>
+                         )}
+                       </>
+                     )}
+                   </div>
                 </div>
               ))}
               
