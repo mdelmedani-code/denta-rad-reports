@@ -96,11 +96,45 @@ Deno.serve(async (req) => {
     
     console.log('Upload successful! Instance ID:', orthancData.ID);
     
-    // Get detailed instance information
-    let studyInstanceUID = orthancData.ParentStudy;
+    // Get detailed instance information including DICOM Study Instance UID
+    let studyInstanceUID = orthancData.ParentStudy; // This is Orthanc internal ID, not DICOM UID
     let seriesInstanceUID = orthancData.ParentSeries;
+    let dicomStudyInstanceUID = null;
+    let dicomSeriesInstanceUID = null;
+    let dicomSOPInstanceUID = null;
     
     try {
+      // Get the DICOM Study Instance UID from the study
+      const studyUrl = `http://116.203.35.168:8042/studies/${orthancData.ParentStudy}`;
+      const studyResponse = await fetch(studyUrl, {
+        headers: {
+          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (studyResponse.ok) {
+        const studyData = await studyResponse.json();
+        console.log('Retrieved study details:', studyData);
+        dicomStudyInstanceUID = studyData.MainDicomTags?.StudyInstanceUID;
+      }
+      
+      // Get the DICOM Series Instance UID
+      const seriesUrl = `http://116.203.35.168:8042/series/${orthancData.ParentSeries}`;
+      const seriesResponse = await fetch(seriesUrl, {
+        headers: {
+          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (seriesResponse.ok) {
+        const seriesData = await seriesResponse.json();
+        console.log('Retrieved series details:', seriesData);
+        dicomSeriesInstanceUID = seriesData.MainDicomTags?.SeriesInstanceUID;
+      }
+      
+      // Get the DICOM SOP Instance UID
       const instanceUrl = `http://116.203.35.168:8042/instances/${orthancData.ID}`;
       const instanceResponse = await fetch(instanceUrl, {
         headers: {
@@ -112,20 +146,21 @@ Deno.serve(async (req) => {
       if (instanceResponse.ok) {
         const instanceData = await instanceResponse.json();
         console.log('Retrieved instance details:', instanceData);
-        studyInstanceUID = instanceData.ParentStudy || studyInstanceUID;
-        seriesInstanceUID = instanceData.ParentSeries || seriesInstanceUID;
+        dicomSOPInstanceUID = instanceData.MainDicomTags?.SOPInstanceUID;
       }
     } catch (queryError) {
-      console.warn('Could not retrieve detailed instance information:', queryError);
+      console.warn('Could not retrieve detailed DICOM information:', queryError);
     }
     
-    // Return success response
+    // Return success response with both Orthanc IDs and DICOM UIDs
     return new Response(JSON.stringify({
       success: true,
       orthancId: orthancData.ID,
-      studyInstanceUID,
-      seriesInstanceUID,
-      sopInstanceUID: orthancData.ID,
+      orthancStudyId: studyInstanceUID, // Orthanc internal study ID
+      orthancSeriesId: seriesInstanceUID, // Orthanc internal series ID
+      studyInstanceUID: dicomStudyInstanceUID || studyInstanceUID, // DICOM Study Instance UID
+      seriesInstanceUID: dicomSeriesInstanceUID || seriesInstanceUID, // DICOM Series Instance UID  
+      sopInstanceUID: dicomSOPInstanceUID || orthancData.ID, // DICOM SOP Instance UID
       message: 'File successfully uploaded to PACS'
     }), {
       status: 200,
