@@ -285,7 +285,7 @@ export const uploadDICOMAndCreateCase = async (
   }
   
   try {
-    // Create the case record in Supabase
+    // Create the case record in Supabase with proper PACS identifiers
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
       .insert({
@@ -296,7 +296,9 @@ export const uploadDICOMAndCreateCase = async (
         field_of_view: patientData.fieldOfView as any,
         urgency: patientData.urgency as any,
         clinic_id: patientData.clinicId,
-        orthanc_study_id: uploadResult.studyInstanceUID || null,
+        study_instance_uid: uploadResult.studyInstanceUID, // This is the key for PACS retrieval
+        orthanc_study_id: uploadResult.orthancId,
+        orthanc_series_id: uploadResult.seriesInstanceUID,
         orthanc_instance_ids: uploadResult.sopInstanceUID ? [uploadResult.sopInstanceUID] : null,
         status: 'uploaded' as any
       })

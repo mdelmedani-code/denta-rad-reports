@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.direct-dicom-upload]
 verify_jwt = false
+
+[functions.get-pacs-study]
+verify_jwt = true

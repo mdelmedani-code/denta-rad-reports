@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Settings } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Settings, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
+import { DicomViewer } from "@/components/DicomViewer";
 
 interface Case {
   id: string;
@@ -23,6 +24,8 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -73,6 +76,11 @@ const Dashboard = () => {
 
   const handleReupload = (caseId: string) => {
     navigate(`/upload-case?reupload=${caseId}`);
+  };
+
+  const handleViewImages = (caseId: string) => {
+    setSelectedCaseId(caseId);
+    setViewerOpen(true);
   };
 
 
@@ -193,6 +201,14 @@ const Dashboard = () => {
                           </td>
                           <td className="py-2">
                             <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewImages(case_.id)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Images
+                              </Button>
                               {case_.status === 'uploaded' && (
                                 <Button
                                   variant="outline"
@@ -257,6 +273,15 @@ const Dashboard = () => {
 
                           {/* Mobile Actions */}
                           <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewImages(case_.id)}
+                              className="w-full sm:w-auto"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Images
+                            </Button>
                             {case_.status === 'uploaded' && (
                               <Button
                                 variant="outline"
@@ -284,6 +309,18 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* DICOM Viewer Modal */}
+      {selectedCaseId && (
+        <DicomViewer
+          caseId={selectedCaseId}
+          isOpen={viewerOpen}
+          onClose={() => {
+            setViewerOpen(false);
+            setSelectedCaseId(null);
+          }}
+        />
+      )}
     </div>
   );
 };
