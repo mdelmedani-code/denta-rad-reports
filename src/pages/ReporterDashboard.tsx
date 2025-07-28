@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { HorosConnection } from "@/components/HorosConnection";
 
 
 interface Case {
@@ -40,6 +41,8 @@ interface Case {
   file_path: string | null;
   patient_dob: string | null;
   patient_internal_id: string | null;
+  orthanc_study_id: string | null;
+  orthanc_series_id: string | null;
   clinics: {
     name: string;
     contact_email: string;
@@ -636,15 +639,13 @@ const ReporterDashboard = () => {
                     </div>
                   </div>
                    <div className="flex gap-2">
-                     <Button
-                       onClick={() => openOHIFViewer(case_)}
-                       variant="outline"
-                       size="sm"
-                       className="flex items-center gap-2"
-                     >
-                       <ImageIcon className="w-4 h-4" />
-                       Open in OHIF Viewer
-                     </Button>
+                     <HorosConnection caseData={{
+                       id: case_.id,
+                       patient_name: case_.patient_name,
+                       orthanc_study_id: case_.orthanc_study_id || '',
+                       orthanc_series_id: case_.orthanc_series_id,
+                       clinical_question: case_.clinical_question
+                     }} />
                      {case_.status !== 'report_ready' ? (
                       <Button
                         onClick={() => startReporting(case_)}
@@ -717,17 +718,15 @@ const ReporterDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - OHIF Viewer */}
                <div className="space-y-4">
-                 {/* OHIF Viewer Options */}
+                 {/* Horos Connection */}
                  <div className="flex gap-2 mb-4">
-                   <Button
-                     onClick={() => openOHIFViewer(selectedCase)}
-                     variant="outline"
-                     size="sm"
-                     className="flex items-center gap-2"
-                   >
-                     <ImageIcon className="w-4 h-4" />
-                     Open OHIF in New Tab
-                   </Button>
+                   <HorosConnection caseData={{
+                     id: selectedCase.id,
+                     patient_name: selectedCase.patient_name,
+                     orthanc_study_id: selectedCase.orthanc_study_id || '',
+                     orthanc_series_id: selectedCase.orthanc_series_id,
+                     clinical_question: selectedCase.clinical_question
+                   }} />
                  </div>
                  
                  {/* Concurrent Editing Warning */}
@@ -741,14 +740,17 @@ const ReporterDashboard = () => {
                    </Alert>
                  )}
                  
-                  {/* Embedded Viewer Placeholder */}
-                  <div className="h-[600px] border rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <div className="text-center text-gray-600">
-                      <p className="text-lg font-medium mb-2">Medical Imaging Viewer</p>
-                      <p className="text-sm">Viewer integration coming soon</p>
-                      <p className="text-xs mt-2">Case: {selectedCase.patient_name}</p>
+                  {/* Image Review Instructions */}
+                  <div className="h-[600px] border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <div className="text-center text-gray-600 max-w-md">
+                      <p className="text-lg font-medium mb-2">Review Images in Horos</p>
+                      <p className="text-sm mb-4">Use the "Open in Horos" button above to connect to PACS and view the DICOM images for this case.</p>
+                      <p className="text-xs text-gray-500">Case: {selectedCase.patient_name}</p>
+                      {selectedCase.orthanc_study_id && (
+                        <p className="text-xs font-mono mt-2 bg-gray-200 p-2 rounded">{selectedCase.orthanc_study_id}</p>
+                      )}
                     </div>
-                 </div>
+                  </div>
                </div>
 
               {/* Right Column - Reporting Interface */}
