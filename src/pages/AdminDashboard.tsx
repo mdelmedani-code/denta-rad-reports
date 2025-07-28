@@ -21,7 +21,8 @@ import {
   Clock,
   TrendingUp,
   PoundSterling,
-  Calendar
+  Calendar,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -167,6 +168,35 @@ const AdminDashboard = () => {
       toast({
         title: "Error",
         description: "Failed to update status: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteCase = async (caseId: string) => {
+    if (!confirm('Are you sure you want to delete this case? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('cases')
+        .delete()
+        .eq('id', caseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Case deleted",
+        description: "Case has been permanently deleted",
+      });
+
+      fetchCases();
+      fetchIncomeStats(); // Refresh income stats after deletion
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete case: " + error.message,
         variant: "destructive",
       });
     }
@@ -597,6 +627,14 @@ const AdminDashboard = () => {
                             
                             <Button variant="outline" size="sm">
                               <Download className="w-4 h-4" />
+                            </Button>
+                            
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => deleteCase(case_.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </td>
