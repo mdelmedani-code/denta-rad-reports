@@ -151,10 +151,22 @@ Deno.serve(async (req) => {
       )
     } else {
       // Handle JSON requests (for studies, etc.)
-      const { method, url } = requestBody
+      const { method, url, endpoint } = requestBody
+      
+      // Support both 'url' and 'endpoint' parameter names
+      const requestPath = url || endpoint
       
       // Add null checks and better validation
-      if (!url || (!url.includes('/studies') && !url.includes('/instances') && !url.includes('/system'))) {
+      if (!requestPath || typeof requestPath !== 'string') {
+        return new Response(JSON.stringify({ 
+          error: 'Missing url or endpoint parameter' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      if (!requestPath.includes('/studies') && !requestPath.includes('/instances') && !requestPath.includes('/system')) {
         return new Response(JSON.stringify({ 
           error: 'Invalid endpoint. Only studies, instances, and system endpoints are allowed.' 
         }), {
@@ -163,7 +175,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const orthancUrl = `http://116.203.35.168:8042${url}`
+      const orthancUrl = `http://116.203.35.168:8042${requestPath}`
       
       const orthancRequest: RequestInit = {
         method: method || 'GET',
