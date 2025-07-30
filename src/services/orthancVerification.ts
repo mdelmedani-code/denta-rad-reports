@@ -6,22 +6,29 @@ import { supabase } from "@/integrations/supabase/client";
  */
 export const verifyOrthancStudy = async (studyId: string): Promise<boolean> => {
   try {
-    console.log('Verifying study in Orthanc via proxy:', studyId);
+    console.log('Verifying study in Orthanc via DICOMweb QIDO:', studyId);
     
-    const { data, error } = await supabase.functions.invoke('orthanc-proxy', {
+    // Use DICOMweb QIDO endpoint for verification
+    const { data, error } = await supabase.functions.invoke('dicomweb-proxy', {
       body: {
-        endpoint: `/studies/${studyId}`,
+        path: `/studies?StudyInstanceUID=${studyId}`,
         method: 'GET'
       }
     });
 
     if (error) {
-      console.error('Proxy verification error:', error);
+      console.error('QIDO verification error:', error);
       return false;
     }
 
-    console.log('Verification successful:', data);
-    return true;
+    // DICOMweb QIDO returns an array, check if study exists
+    if (Array.isArray(data) && data.length > 0) {
+      console.log('Study verification successful:', data[0]);
+      return true;
+    }
+
+    console.log('Study not found in QIDO response');
+    return false;
   } catch (error) {
     console.error('Error verifying Orthanc study:', error);
     return false;

@@ -39,13 +39,12 @@ export const getCurrentPACSConfig = () => {
 
 // OHIF Configuration for Orthanc DICOMweb
 export const getOHIFConfig = (studyInstanceUID?: string) => {
-  const pacsConfig = getCurrentPACSConfig();
-  
   return {
-    routerBasename: '/viewer',
+    routerBasename: '/',
     whiteLabeling: {
       createLogoComponentFn: () => null, // Can customize with DentaRad logo
     },
+    showStudyList: true,
     defaultDataSourceName: 'dicomweb',
     dataSources: [
       {
@@ -53,39 +52,32 @@ export const getOHIFConfig = (studyInstanceUID?: string) => {
         sourceName: 'dicomweb',
         configuration: {
           friendlyName: 'DentaRad PACS',
-          name: 'aws',
-          wadoUriRoot: pacsConfig.dicomweb.wadoRs,
-          qidoRoot: pacsConfig.dicomweb.qidoRs,
-          wadoRoot: pacsConfig.dicomweb.wadoRs,
-          qidoSupportsIncludeField: false,
-          supportsReject: false,
+          name: 'Orthanc',
+          // Use Supabase proxy to handle CORS and authentication
+          wadoUriRoot: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy',
+          qidoRoot: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy',
+          wadoRoot: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy',
+          qidoSupportsIncludeField: true,
+          supportsReject: true,
           imageRendering: 'wadors',
           thumbnailRendering: 'wadors',
           enableStudyLazyLoad: true,
-          supportsFuzzyMatching: false,
+          supportsFuzzyMatching: true,
           supportsWildcard: true,
-          staticWado: true,
-          singlepart: 'bulkdata,video',
-          requestOptions: {
-            headers: pacsConfig.auth.headers
-          }
         }
       }
     ],
     
     // Default study to load if StudyInstanceUID provided
     ...(studyInstanceUID && {
-      defaultRoutes: [
-        {
+      defaultRoutes: {
+        viewer: {
           path: '/viewer',
-          children: [
-            {
-              path: `/${studyInstanceUID}`,
-              component: 'ViewerRoute',
-            },
-          ],
+          params: {
+            StudyInstanceUIDs: studyInstanceUID,
+          },
         },
-      ]
+      },
     })
   };
 };
