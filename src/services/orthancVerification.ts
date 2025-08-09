@@ -8,18 +8,22 @@ export const verifyOrthancStudy = async (studyId: string): Promise<boolean> => {
   try {
     console.log('Verifying study in Orthanc via DICOMweb QIDO:', studyId);
     
-    // Use DICOMweb QIDO endpoint for verification
-    const { data, error } = await supabase.functions.invoke('dicomweb-proxy', {
-      body: {
-        path: `/studies?StudyInstanceUID=${studyId}`,
-        method: 'GET'
+    // Use DICOMweb QIDO endpoint via full URL to the proxy
+    const proxyUrl = `https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy/studies?StudyInstanceUID=${encodeURIComponent(studyId)}`;
+    const res = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dXNheW95Z2tucml0b21iYndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTkzMjEsImV4cCI6MjA2OTAzNTMyMX0.sOAz9isiZUp8BmFVDQRV-G16iWc0Rk8mM9obUKko2dY',
+        'Accept': 'application/dicom+json'
       }
     });
 
-    if (error) {
-      console.error('QIDO verification error:', error);
+    if (!res.ok) {
+      console.error('QIDO verification error:', res.status, await res.text());
       return false;
     }
+
+    const data = await res.json();
 
     // DICOMweb QIDO returns an array, check if study exists
     if (Array.isArray(data) && data.length > 0) {

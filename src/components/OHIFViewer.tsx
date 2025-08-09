@@ -43,32 +43,8 @@ export const OHIFViewer = ({ caseId, studyInstanceUID, onClose, className = "" }
         const studyId = caseData.orthanc_study_id;
         console.log('Using Orthanc Study ID:', studyId);
 
-        // First, let's verify the study exists in Orthanc by converting DICOM UID to Orthanc ID
-        try {
-          // Look up the study by DICOM Study Instance UID
-          const lookupResponse = await fetch(`http://116.203.35.168:8042/tools/lookup`, {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
-              'Content-Type': 'text/plain'
-            },
-            body: studyId
-          });
-
-          if (!lookupResponse.ok) {
-            throw new Error(`Study lookup failed: ${lookupResponse.status} ${lookupResponse.statusText}`);
-          }
-
-          const lookupResults = await lookupResponse.json();
-          console.log('Orthanc lookup results:', lookupResults);
-
-          if (!lookupResults || lookupResults.length === 0) {
-            throw new Error('Study not found in PACS - DICOM files may not have been uploaded correctly');
-          }
-        } catch (orthancError) {
-          console.error('Error verifying study in Orthanc:', orthancError);
-          throw new Error('Study not accessible in PACS - please check connection');
-        }
+        // Skip direct Orthanc verification from the browser to avoid exposing credentials.
+        // OHIF will query the PACS via the Supabase DICOMweb proxy and surface any errors.
 
         // Configure OHIF to connect via our DICOMweb proxy
         const proxyUrl = 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy';
