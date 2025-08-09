@@ -76,6 +76,7 @@ export type Database = {
           orthanc_series_id: string | null
           orthanc_study_id: string | null
           patient_dob: string | null
+          patient_id: string | null
           patient_internal_id: string | null
           patient_name: string
           report_path: string | null
@@ -98,6 +99,7 @@ export type Database = {
           orthanc_series_id?: string | null
           orthanc_study_id?: string | null
           patient_dob?: string | null
+          patient_id?: string | null
           patient_internal_id?: string | null
           patient_name: string
           report_path?: string | null
@@ -120,6 +122,7 @@ export type Database = {
           orthanc_series_id?: string | null
           orthanc_study_id?: string | null
           patient_dob?: string | null
+          patient_id?: string | null
           patient_internal_id?: string | null
           patient_name?: string
           report_path?: string | null
