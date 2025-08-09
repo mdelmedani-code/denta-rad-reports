@@ -50,6 +50,13 @@ export type Database = {
             foreignKeyName: "case_annotations_case_id_fkey"
             columns: ["case_id"]
             isOneToOne: false
+            referencedRelation: "case_studies"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "case_annotations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "cases"
             referencedColumns: ["id"]
           },
@@ -73,6 +80,7 @@ export type Database = {
           patient_name: string
           report_path: string | null
           status: Database["public"]["Enums"]["case_status"]
+          study_instance_uid: string | null
           updated_at: string | null
           upload_date: string | null
           urgency: Database["public"]["Enums"]["urgency_level"]
@@ -94,6 +102,7 @@ export type Database = {
           patient_name: string
           report_path?: string | null
           status?: Database["public"]["Enums"]["case_status"]
+          study_instance_uid?: string | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
@@ -115,6 +124,7 @@ export type Database = {
           patient_name?: string
           report_path?: string | null
           status?: Database["public"]["Enums"]["case_status"]
+          study_instance_uid?: string | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
@@ -201,6 +211,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "case_studies"
+            referencedColumns: ["case_id"]
+          },
           {
             foreignKeyName: "invoices_case_id_fkey"
             columns: ["case_id"]
@@ -392,6 +409,13 @@ export type Database = {
             foreignKeyName: "reports_case_id_fkey"
             columns: ["case_id"]
             isOneToOne: false
+            referencedRelation: "case_studies"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
             referencedRelation: "cases"
             referencedColumns: ["id"]
           },
@@ -399,7 +423,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      case_studies: {
+        Row: {
+          case_id: string | null
+          clinic_id: string | null
+          created_at: string | null
+          patient_name: string | null
+          study_instance_uid: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          clinic_id?: string | null
+          created_at?: string | null
+          patient_name?: string | null
+          study_instance_uid?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          clinic_id?: string | null
+          created_at?: string | null
+          patient_name?: string | null
+          study_instance_uid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_case_price: {
