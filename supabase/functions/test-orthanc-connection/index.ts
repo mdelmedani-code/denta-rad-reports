@@ -7,14 +7,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const orthancUrl = `http://116.203.35.168:8042/system`
+    const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+    const orthancUrl = `${orthancBase}/system`
     
     console.log('Testing connection to Orthanc:', orthancUrl)
     
+    const authHeader = 'Basic ' + btoa(`${Deno.env.get('ORTHANC_USERNAME') || ''}:${Deno.env.get('ORTHANC_PASSWORD') || ''}`);
     const response = await fetch(orthancUrl, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+        'Authorization': authHeader,
         'Accept': 'application/json'
       }
     })
@@ -57,7 +59,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: false,
         error: error.message,
-        url: `http://116.203.35.168:8042/system`
+        url: `${orthancBase}/system`
       }),
       {
         status: 500,

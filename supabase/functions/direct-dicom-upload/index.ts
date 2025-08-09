@@ -49,10 +49,15 @@ Deno.serve(async (req) => {
     // Upload directly to Orthanc
     console.log('Uploading to Orthanc PACS...');
     
-    const orthancResponse = await fetch(`http://116.203.35.168:8042/instances`, {
+    const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+    const orthancUser = Deno.env.get('ORTHANC_USERNAME') || '';
+    const orthancPass = Deno.env.get('ORTHANC_PASSWORD') || '';
+    const authHeader = 'Basic ' + btoa(`${orthancUser}:${orthancPass}`);
+    
+    const orthancResponse = await fetch(`${orthancBase}/instances`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+        'Authorization': authHeader,
         'Content-Type': 'application/dicom',
         'Content-Length': fileBytes.length.toString(),
       },
@@ -105,10 +110,10 @@ Deno.serve(async (req) => {
     
     try {
       // Get the DICOM Study Instance UID from the study
-      const studyUrl = `http://116.203.35.168:8042/studies/${orthancData.ParentStudy}`;
+      const studyUrl = `${orthancBase}/studies/${orthancData.ParentStudy}`;
       const studyResponse = await fetch(studyUrl, {
         headers: {
-          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Authorization': authHeader,
           'Accept': 'application/json'
         }
       });
@@ -120,10 +125,10 @@ Deno.serve(async (req) => {
       }
       
       // Get the DICOM Series Instance UID
-      const seriesUrl = `http://116.203.35.168:8042/series/${orthancData.ParentSeries}`;
+      const seriesUrl = `${orthancBase}/series/${orthancData.ParentSeries}`;
       const seriesResponse = await fetch(seriesUrl, {
         headers: {
-          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Authorization': authHeader,
           'Accept': 'application/json'
         }
       });
@@ -135,10 +140,10 @@ Deno.serve(async (req) => {
       }
       
       // Get the DICOM SOP Instance UID
-      const instanceUrl = `http://116.203.35.168:8042/instances/${orthancData.ID}`;
+      const instanceUrl = `${orthancBase}/instances/${orthancData.ID}`;
       const instanceResponse = await fetch(instanceUrl, {
         headers: {
-          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Authorization': authHeader,
           'Accept': 'application/json'
         }
       });

@@ -8,10 +8,8 @@ export const PACS_CONFIG = {
       stowRs: 'http://116.203.35.168:8042/dicom-web/stow'
     },
     auth: {
-      type: 'orthanc',
-      headers: {
-        'Authorization': 'Basic ' + btoa('admin:LionEagle0304!')
-      }
+      type: 'proxy',
+      headers: {}
     }
   },
   
@@ -23,10 +21,8 @@ export const PACS_CONFIG = {
       stowRs: 'https://pacs.dentarad.co.uk/dicom-web/stow'
     },
     auth: {
-      type: 'orthanc',
-      headers: {
-        'Authorization': 'Basic ' + btoa('admin:LionEagle0304!')
-      }
+      type: 'proxy',
+      headers: {}
     }
   }
 };
@@ -84,7 +80,7 @@ export const getOHIFConfig = (studyInstanceUID?: string) => {
 
 // Orthanc Study Upload Configuration
 export const ORTHANC_UPLOAD_CONFIG = {
-  endpoint: getCurrentPACSConfig().dicomweb.stowRs,
+  endpoint: 'https://swusayoygknritombbwg.supabase.co/functions/v1/dicomweb-proxy/stow',
   maxFileSize: 500 * 1024 * 1024, // 500MB max per file
   supportedFormats: ['.dcm', '.zip', '.tar', '.tar.gz'],
   chunkSize: 5 * 1024 * 1024, // 5MB chunks for large file upload

@@ -28,10 +28,14 @@ Deno.serve(async (req) => {
     console.log('Getting study from Orthanc:', studyInstanceUID)
     
     // First, find the study by StudyInstanceUID
-    const studiesResponse = await fetch(`http://116.203.35.168:8042/studies`, {
+    const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+    const orthancUser = Deno.env.get('ORTHANC_USERNAME') || '';
+    const orthancPass = Deno.env.get('ORTHANC_PASSWORD') || '';
+    const authHeader = 'Basic ' + btoa(`${orthancUser}:${orthancPass}`);
+    const studiesResponse = await fetch(`${orthancBase}/studies`, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+        'Authorization': authHeader,
         'Accept': 'application/json'
       }
     })
@@ -47,9 +51,9 @@ Deno.serve(async (req) => {
     let targetStudyId = null
     for (const studyId of studyIds) {
       try {
-        const studyDetailResponse = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
+        const studyDetailResponse = await fetch(`${orthancBase}/studies/${studyId}`, {
           headers: {
-            'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+            'Authorization': authHeader,
             'Accept': 'application/json'
           }
         })
@@ -85,9 +89,9 @@ Deno.serve(async (req) => {
     console.log('Found target study ID:', targetStudyId)
     
     // Get detailed study information with instances
-    const studyResponse = await fetch(`http://116.203.35.168:8042/studies/${targetStudyId}`, {
+    const studyResponse = await fetch(`${orthancBase}/studies/${targetStudyId}`, {
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+        'Authorization': authHeader,
         'Accept': 'application/json'
       }
     })
@@ -104,9 +108,9 @@ Deno.serve(async (req) => {
     if (studyData.Series) {
       for (const seriesId of studyData.Series) {
         try {
-          const seriesResponse = await fetch(`http://116.203.35.168:8042/series/${seriesId}`, {
+          const seriesResponse = await fetch(`${orthancBase}/series/${seriesId}`, {
             headers: {
-              'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+              'Authorization': authHeader,
               'Accept': 'application/json'
             }
           })
@@ -122,8 +126,8 @@ Deno.serve(async (req) => {
               for (const instanceId of previewInstances) {
                 instances.push({
                   id: instanceId,
-                  previewUrl: `http://116.203.35.168:8042/instances/${instanceId}/preview`,
-                  downloadUrl: `http://116.203.35.168:8042/instances/${instanceId}/file`
+                  previewUrl: `${orthancBase}/instances/${instanceId}/preview`,
+                  downloadUrl: `${orthancBase}/instances/${instanceId}/file`
                 })
               }
             }

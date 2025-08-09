@@ -16,15 +16,21 @@ Deno.serve(async (req) => {
     console.log('DICOMweb proxy request:', dicomwebPath);
     console.log('Query params:', url.search);
     
-    // Build the Orthanc DICOMweb URL
-    const orthancUrl = `http://116.203.35.168:8042/dicom-web/${dicomwebPath}${url.search}`;
+    // Build the Orthanc DICOMweb URL from secrets
+    const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+    const orthancUrl = `${orthancBase}/dicom-web/${dicomwebPath}${url.search}`;
     console.log('Full Orthanc DICOMweb URL:', orthancUrl);
+    
+    // Prepare Basic auth from secrets
+    const orthancUser = Deno.env.get('ORTHANC_USERNAME') || '';
+    const orthancPass = Deno.env.get('ORTHANC_PASSWORD') || '';
+    const authHeader = 'Basic ' + btoa(`${orthancUser}:${orthancPass}`);
     
     // Forward the request to Orthanc's DICOMweb endpoint
     const orthancResponse = await fetch(orthancUrl, {
       method: req.method,
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+        'Authorization': authHeader,
         'Accept': req.headers.get('Accept') || 'application/dicom+json',
         'Content-Type': req.headers.get('Content-Type') || 'application/dicom+json',
       },

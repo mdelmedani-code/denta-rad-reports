@@ -7,14 +7,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const orthancUrl = `http://116.203.35.168:8042/studies`
+    const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+    const authHeader = 'Basic ' + btoa(`${Deno.env.get('ORTHANC_USERNAME') || ''}:${Deno.env.get('ORTHANC_PASSWORD') || ''}`);
+    const orthancUrl = `${orthancBase}/studies`
     
     console.log('Getting studies from Orthanc:', orthancUrl)
     
     const response = await fetch(orthancUrl, {
       method: 'GET',
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+        'Authorization': authHeader,
         'Accept': 'application/json'
       }
     })
@@ -43,9 +45,9 @@ Deno.serve(async (req) => {
       
       for (const studyId of data.slice(0, 10)) { // Limit to first 10 studies
         try {
-          const detailResponse = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
+          const detailResponse = await fetch(`${orthancBase}/studies/${studyId}`, {
             headers: {
-              'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+              'Authorization': authHeader,
               'Accept': 'application/json'
             }
           })

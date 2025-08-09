@@ -71,10 +71,15 @@ Deno.serve(async (req) => {
     // Upload to Orthanc using binary data
     console.log('Uploading to Orthanc PACS...');
     
-    const orthancResponse = await fetch(`http://116.203.35.168:8042/instances`, {
+    const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+    const orthancUser = Deno.env.get('ORTHANC_USERNAME') || '';
+    const orthancPass = Deno.env.get('ORTHANC_PASSWORD') || '';
+    const authHeader = 'Basic ' + btoa(`${orthancUser}:${orthancPass}`);
+    
+    const orthancResponse = await fetch(`${orthancBase}/instances`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+        'Authorization': authHeader,
         'Content-Type': 'application/dicom',
         'Content-Length': fileBytes.length.toString(),
       },
@@ -123,10 +128,10 @@ Deno.serve(async (req) => {
     let seriesInstanceUID = orthancData.ParentSeries;
     
     try {
-      const instanceUrl = `http://116.203.35.168:8042/instances/${orthancData.ID}`;
+      const instanceUrl = `${orthancBase}/instances/${orthancData.ID}`;
       const instanceResponse = await fetch(instanceUrl, {
         headers: {
-          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Authorization': authHeader,
           'Accept': 'application/json'
         }
       });

@@ -68,10 +68,14 @@ Deno.serve(async (req) => {
       const formData = new FormData()
       
       // Try uploading as raw binary data instead of blob
-      const response = await fetch(`http://116.203.35.168:8042/instances`, {
+      const orthancBase = (Deno.env.get('ORTHANC_URL') || '').replace(/\/+$/, '');
+      const orthancUser = Deno.env.get('ORTHANC_USERNAME') || '';
+      const orthancPass = Deno.env.get('ORTHANC_PASSWORD') || '';
+      const authHeader = 'Basic ' + btoa(`${orthancUser}:${orthancPass}`);
+      const response = await fetch(`${orthancBase}/instances`, {
         method: 'POST',
         headers: {
-          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=', // admin:LionEagle0304!
+          'Authorization': authHeader,
           'Content-Type': 'application/dicom',
         },
         body: bytes
@@ -116,10 +120,10 @@ Deno.serve(async (req) => {
           
           // Query the instance to get study details
           try {
-            const instanceUrl = `http://116.203.35.168:8042/instances/${data.ID}`
+            const instanceUrl = `${orthancBase}/instances/${data.ID}`
             const instanceResponse = await fetch(instanceUrl, {
               headers: {
-                'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+                'Authorization': authHeader,
                 'Accept': 'application/json'
               }
             })
@@ -175,12 +179,12 @@ Deno.serve(async (req) => {
         });
       }
 
-      const orthancUrl = `http://116.203.35.168:8042${requestPath}`
+      const orthancUrl = `${orthancBase}${requestPath}`
       
       const orthancRequest: RequestInit = {
         method: method || 'GET',
         headers: {
-          'Authorization': 'Basic YWRtaW46TGlvbkVhZ2xlMDMwNCE=',
+          'Authorization': authHeader,
           'Accept': 'application/json'
         }
       }

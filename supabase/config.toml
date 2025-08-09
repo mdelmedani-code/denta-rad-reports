@@ -7,7 +7,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-notification]
-verify_jwt = false
+verify_jwt = true
 
 [functions.live-transcription]
 verify_jwt = false
@@ -16,10 +16,19 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.process-dicom-upload]
-verify_jwt = false
+verify_jwt = true
 
 [functions.direct-dicom-upload]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-pacs-study]
+verify_jwt = true
+
+[functions.orthanc-proxy]
+verify_jwt = true
+
+[functions.list-pacs-studies]
+verify_jwt = true
+
+[functions.test-orthanc-connection]
 verify_jwt = true
