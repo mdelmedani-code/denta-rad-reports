@@ -1,4 +1,3 @@
-import { getCurrentPACSConfig } from "@/config/pacs";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -44,20 +43,13 @@ export const verifyOrthancStudy = async (studyId: string): Promise<boolean> => {
  */
 export const getOrthancStudyInfo = async (studyId: string): Promise<any> => {
   try {
-    const pacsConfig = getCurrentPACSConfig();
-    
-    const response = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
-      headers: {
-        'Authorization': pacsConfig.auth.headers.Authorization,
-        'Accept': 'application/json'
-      }
+    const { data, error } = await supabase.functions.invoke('get-pacs-study', {
+      body: { studyInstanceUID: studyId }
     });
-
-    if (!response.ok) {
-      throw new Error(`Study not found: ${response.statusText}`);
+    if (error) {
+      throw new Error(error.message);
     }
-
-    return await response.json();
+    return data ?? null;
   } catch (error) {
     console.error('Error getting Orthanc study info:', error);
     return null;
@@ -69,16 +61,9 @@ export const getOrthancStudyInfo = async (studyId: string): Promise<any> => {
  */
 export const checkOrthancConnection = async (): Promise<boolean> => {
   try {
-    const pacsConfig = getCurrentPACSConfig();
-    
-    const response = await fetch(`http://116.203.35.168:8042/system`, {
-      headers: {
-        'Authorization': pacsConfig.auth.headers.Authorization,
-        'Accept': 'application/json'
-      }
-    });
-
-    return response.ok;
+    const { data, error } = await supabase.functions.invoke('test-orthanc-connection');
+    if (error) throw error;
+    return Boolean((data as any)?.success ?? false);
   } catch (error) {
     console.error('Orthanc connection failed:', error);
     return false;

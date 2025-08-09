@@ -1,4 +1,3 @@
-import { getCurrentPACSConfig } from "@/config/pacs";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface OrthancUploadResult {
@@ -17,7 +16,7 @@ export const uploadToOrthancPACS = async (
   files: File | File[],
   caseId: string
 ): Promise<OrthancUploadResult> => {
-  const pacsConfig = getCurrentPACSConfig();
+  
   
   try {
     const fileArray = Array.isArray(files) ? files : [files];
@@ -116,21 +115,11 @@ export const uploadToOrthancPACS = async (
  * Get all studies from Orthanc PACS
  */
 export const getOrthancStudies = async (): Promise<any[]> => {
-  const pacsConfig = getCurrentPACSConfig();
-  
   try {
-    const response = await fetch(`http://116.203.35.168:8042/studies`, {
-      headers: {
-        'Authorization': pacsConfig.auth.headers.Authorization,
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch studies: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    const { data, error } = await supabase.functions.invoke('list-pacs-studies');
+    if (error) throw error;
+    const anyData = data as any;
+    return (anyData?.studies ?? anyData ?? []) as any[];
   } catch (error) {
     console.error('Error fetching Orthanc studies:', error);
     return [];
@@ -141,21 +130,12 @@ export const getOrthancStudies = async (): Promise<any[]> => {
  * Get study details from Orthanc
  */
 export const getOrthancStudyDetails = async (studyId: string): Promise<any> => {
-  const pacsConfig = getCurrentPACSConfig();
-  
   try {
-    const response = await fetch(`http://116.203.35.168:8042/studies/${studyId}`, {
-      headers: {
-        'Authorization': pacsConfig.auth.headers.Authorization,
-        'Accept': 'application/json'
-      }
+    const { data, error } = await supabase.functions.invoke('get-pacs-study', {
+      body: { studyInstanceUID: studyId }
     });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch study details: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    if (error) throw error;
+    return data ?? null;
   } catch (error) {
     console.error('Error fetching study details:', error);
     return null;
