@@ -53,6 +53,36 @@ services:
       timeout: 10s
       retries: 3
 
+  # OHIF Viewer
+  ohif:
+    image: ohif/viewer:latest
+    container_name: ohif-viewer
+    depends_on:
+      orthanc:
+        condition: service_healthy
+    environment:
+      APP_CONFIG: |-
+        {
+          "servers": [
+            {
+              "id": "orthanc",
+              "type": "dicomWeb",
+              "name": "Orthanc",
+              "qidoRoot": "http://116.203.35.168:8042/dicom-web",
+              "wadoRoot": "http://116.203.35.168:8042/dicom-web",
+              "wadoUriRoot": "http://116.203.35.168:8042/wado",
+              "qidoSupportsIncludeField": true,
+              "supportsFuzzyMatching": true,
+              "requestOptions": { "auth": "admin:strongpassword" }
+            }
+          ]
+        }
+    ports:
+      - "3000:80"
+    networks:
+      - orthanc-network
+    restart: unless-stopped
+
   # Nginx Reverse Proxy with SSL
   nginx:
     image: nginx:alpine
