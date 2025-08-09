@@ -296,7 +296,9 @@ export const uploadDICOMAndCreateCase = async (
         field_of_view: patientData.fieldOfView as any,
         urgency: patientData.urgency as any,
         clinic_id: patientData.clinicId,
-        orthanc_study_id: uploadResult.studyInstanceUID, // Store the DICOM Study Instance UID for PACS retrieval
+        // Store in both legacy and new columns for compatibility and indexing
+        orthanc_study_id: uploadResult.studyInstanceUID,
+        study_instance_uid: uploadResult.studyInstanceUID,
         orthanc_series_id: uploadResult.seriesInstanceUID,
         orthanc_instance_ids: uploadResult.sopInstanceUID ? [uploadResult.sopInstanceUID] : null,
         status: 'uploaded' as any
