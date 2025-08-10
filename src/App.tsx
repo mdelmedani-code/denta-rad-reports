@@ -13,7 +13,7 @@ import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
-import ViewerPage from "./pages/ViewerPage";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,7 +69,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
              />
-            <Route path="/viewer/:caseId" element={<ViewerPage />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

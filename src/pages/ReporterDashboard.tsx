@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
-import { Eye } from "lucide-react";
+
 
 
 interface Case {
@@ -157,25 +157,6 @@ const ReporterDashboard = () => {
     navigate('/admin/login');
   };
 
-  const openOHIFViewer = (caseData: Case) => {
-    if (!caseData.orthanc_study_id) {
-      toast({
-        title: "No DICOM Data",
-        description: "This case doesn't have DICOM data available for viewing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Open OHIF viewer in new tab
-    const viewerUrl = `/viewer/${caseData.id}`;
-    window.open(viewerUrl, '_blank', 'width=1200,height=800');
-    
-    toast({
-      title: "OHIF Viewer Opened",
-      description: `Opening medical imaging viewer for ${caseData.patient_name}`,
-    });
-  };
 
   const createSecureShareLink = async (reportId: string) => {
     try {
@@ -616,15 +597,14 @@ const ReporterDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Cases Awaiting Reports</CardTitle>
-            <CardDescription>Click on a case to automatically open it in OHIF viewer, or use the "Start Reporting" button to create a report</CardDescription>
+            <CardDescription>Use the Start Reporting button to create a report.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
                {filteredCases.map((case_) => (
                  <div 
                    key={case_.id} 
-                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                   onClick={() => openOHIFViewer(case_)}
+                   className="flex items-center justify-between p-4 border rounded-lg transition-colors"
                  >
                    <div className="flex-1">
                      <div className="flex items-center gap-4 mb-2">
@@ -643,19 +623,6 @@ const ReporterDashboard = () => {
                        <p><strong>Field of View:</strong> {case_.field_of_view.replace('_', ' ')}</p>
                      </div>
                    </div>
-                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                       <Button
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           openOHIFViewer(case_);
-                         }}
-                         variant="outline"
-                         size="sm"
-                         className="flex items-center gap-2"
-                       >
-                         <Eye className="w-4 h-4" />
-                         Open in OHIF
-                       </Button>
                       {case_.status !== 'report_ready' ? (
                        <Button
                          onClick={(e) => {
@@ -712,7 +679,6 @@ const ReporterDashboard = () => {
                          )}
                        </>
                      )}
-                   </div>
                 </div>
               ))}
               
@@ -740,16 +706,6 @@ const ReporterDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - OHIF Viewer */}
                <div className="space-y-4">
-                  {/* OHIF Viewer Button */}
-                  <div className="flex gap-2 mb-4">
-                    <Button
-                      onClick={() => openOHIFViewer(selectedCase)}
-                      className="flex items-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Open in OHIF Viewer
-                    </Button>
-                  </div>
                  
                  {/* Concurrent Editing Warning */}
                  {showConcurrentWarning && (
@@ -762,17 +718,12 @@ const ReporterDashboard = () => {
                    </Alert>
                  )}
                  
-                   {/* Image Review Instructions */}
-                   <div className="h-[600px] border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
-                     <div className="text-center text-gray-600 max-w-md">
-                       <p className="text-lg font-medium mb-2">Review Images in OHIF Viewer</p>
-                       <p className="text-sm mb-4">Use the "Open in OHIF Viewer" button above to view the DICOM images for this case in a professional medical imaging viewer.</p>
-                       <p className="text-xs text-gray-500">Case: {selectedCase.patient_name}</p>
-                       {selectedCase.orthanc_study_id && (
-                         <p className="text-xs font-mono mt-2 bg-gray-200 p-2 rounded">{selectedCase.orthanc_study_id}</p>
-                       )}
-                     </div>
-                   </div>
+                    <div className="h-[600px] border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                      <div className="text-center text-muted-foreground max-w-md">
+                        <p className="text-lg font-medium mb-2">Image viewer temporarily unavailable</p>
+                        <p className="text-sm">We’re migrating PACS. You can continue reporting without the embedded viewer.</p>
+                      </div>
+                    </div>
                </div>
 
               {/* Right Column - Reporting Interface */}
