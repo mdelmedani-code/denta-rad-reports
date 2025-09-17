@@ -1,12 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
-import * as tus from "tus-js-client";
 
 export interface UploadResult {
   success: boolean;
-  studyInstanceUID?: string;
-  seriesInstanceUID?: string;
-  sopInstanceUID?: string;
-  orthancId?: string;
+  storagePaths?: string[];
   error?: string;
   progress?: number;
 }
@@ -18,12 +14,8 @@ export interface UploadProgress {
   stage: 'uploading' | 'processing' | 'complete' | 'error';
 }
 
-const SMALL_FILE_THRESHOLD = 6 * 1024 * 1024; // 6MB
-const SUPABASE_PROJECT_ID = 'swusayoygknritombbwg';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dXNheW95Z2tucml0b21iYndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTkzMjEsImV4cCI6MjA2OTAzNTMyMX0.sOAz9isiZUp8BmFVDQRV-G16iWc0Rk8mM9obUKko2dY';
-
 /**
- * Upload DICOM files directly to Orthanc via edge function
+ * Upload DICOM files to Supabase storage
  */
 export const uploadDICOMFiles = async (
   files: File | File[],
@@ -33,85 +25,60 @@ export const uploadDICOMFiles = async (
   const fileArray = Array.isArray(files) ? files : [files];
   
   try {
-    console.log(`Starting parallel upload of ${fileArray.length} files`);
+    console.log(`Starting upload of ${fileArray.length} files to Supabase storage`);
+    
+    const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
+    let completedSize = 0;
+    const storagePaths: string[] = [];
     
     if (onProgress) {
       onProgress({
         bytesUploaded: 0,
-        bytesTotal: fileArray.reduce((sum, f) => sum + f.size, 0),
+        bytesTotal: totalSize,
         percentage: 0,
         stage: 'uploading'
       });
     }
     
-    // Upload all files in parallel with concurrency limit
-    const BATCH_SIZE = 5; // Process 5 files at a time to avoid overwhelming the server
-    const uploadResults = [];
-    const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
-    let completedSize = 0;
-    
-    for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
-      const batch = fileArray.slice(i, i + BATCH_SIZE);
-      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(fileArray.length/BATCH_SIZE)}: ${batch.length} files`);
+    // Upload files sequentially to track progress properly
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      console.log(`Uploading file ${i + 1}/${fileArray.length}: ${file.name}`);
       
-      const batchPromises = batch.map(async (file, batchIndex) => {
-        const globalIndex = i + batchIndex;
-        console.log(`Uploading file ${globalIndex + 1}/${fileArray.length}: ${file.name}`);
-        
-        const result = await uploadDirectToOrthanc(file);
-        
-        if (result.success) {
-          completedSize += file.size;
-          
-          // Update overall progress after each completed file
-          if (onProgress) {
-            onProgress({
-              bytesUploaded: completedSize,
-              bytesTotal: totalSize,
-              percentage: Math.round((completedSize / totalSize) * 100),
-              stage: completedSize === totalSize ? 'complete' : 'uploading'
-            });
-          }
-        }
-        
-        return result;
-      });
+      // Create unique file path
+      const fileExt = file.name.split('.').pop() || 'dcm';
+      const fileName = `${caseId}/${Date.now()}_${i}_${file.name}`;
       
-      const batchResults = await Promise.all(batchPromises);
-      
-      // Check for any failures in this batch
-      const failed = batchResults.find(r => !r.success);
-      if (failed) {
-        throw new Error(failed.error || 'Batch upload failed');
+      const { error: uploadError } = await supabase.storage
+        .from('cbct-scans')
+        .upload(fileName, file);
+        
+      if (uploadError) {
+        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
       }
       
-      uploadResults.push(...batchResults);
+      storagePaths.push(fileName);
+      completedSize += file.size;
+      
+      if (onProgress) {
+        onProgress({
+          bytesUploaded: completedSize,
+          bytesTotal: totalSize,
+          percentage: Math.round((completedSize / totalSize) * 100),
+          stage: completedSize === totalSize ? 'complete' : 'uploading'
+        });
+      }
     }
     
-    // Return info from first uploaded file
-    const firstResult = uploadResults[0];
-    
-    if (onProgress) {
-      onProgress({
-        bytesUploaded: totalSize,
-        bytesTotal: totalSize,
-        percentage: 100,
-        stage: 'complete'
-      });
-    }
-    
-    console.log(`Successfully uploaded ${uploadResults.length} files to Orthanc`);
+    console.log(`Successfully uploaded ${fileArray.length} files to storage`);
     
     return {
       success: true,
-      orthancId: firstResult.orthancId,
-      studyInstanceUID: firstResult.studyInstanceUID,
-      seriesInstanceUID: firstResult.seriesInstanceUID,
-      sopInstanceUID: firstResult.sopInstanceUID
+      storagePaths
     };
     
   } catch (error) {
-    console.error('DICOM upload error:', error);
+    console.error('Storage upload error:', error);
     
     if (onProgress) {
       onProgress({
@@ -129,116 +96,9 @@ export const uploadDICOMFiles = async (
   }
 };
 
-/**
- * Upload file directly to Orthanc via edge function with retry logic
- */
-const uploadDirectToOrthanc = async (
-  file: File,
-  onProgress?: (progress: UploadProgress) => void,
-  retryCount: number = 0
-): Promise<UploadResult> => {
-  const maxRetries = 3;
-  const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-  
-  try {
-    if (onProgress) {
-      onProgress({
-        bytesUploaded: 0,
-        bytesTotal: file.size,
-        percentage: 0,
-        stage: 'uploading'
-      });
-    }
-    
-    // Create FormData with the file
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('fileName', file.name);
-    
-    // Call edge function with binary data
-    const response = await fetch(`https://swusayoygknritombbwg.supabase.co/functions/v1/direct-dicom-upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      body: formData
-    });
-    
-    if (onProgress) {
-      onProgress({
-        bytesUploaded: file.size * 0.8,
-        bytesTotal: file.size,
-        percentage: 80,
-        stage: 'processing'
-      });
-    }
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      
-      // If it's a server error and we haven't exhausted retries, try again
-      if (response.status >= 500 && retryCount < maxRetries) {
-        console.log(`Upload attempt ${retryCount + 1} failed, retrying in ${retryDelay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        return uploadDirectToOrthanc(file, onProgress, retryCount + 1);
-      }
-      
-      throw new Error(`Upload failed after ${retryCount + 1} attempts: ${response.status} ${errorText}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data.success) {
-      // If it's a connection error and we haven't exhausted retries, try again
-      if (data.error?.includes('error sending request') && retryCount < maxRetries) {
-        console.log(`Upload attempt ${retryCount + 1} failed with connection error, retrying in ${retryDelay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        return uploadDirectToOrthanc(file, onProgress, retryCount + 1);
-      }
-      
-      throw new Error(data.error || 'Upload failed');
-    }
-    
-    if (onProgress) {
-      onProgress({
-        bytesUploaded: file.size,
-        bytesTotal: file.size,
-        percentage: 100,
-        stage: 'complete'
-      });
-    }
-    
-    return {
-      success: true,
-      orthancId: data.orthancId,
-      studyInstanceUID: data.studyInstanceUID,
-      seriesInstanceUID: data.seriesInstanceUID,
-      sopInstanceUID: data.sopInstanceUID
-    };
-    
-  } catch (error) {
-    console.error(`Direct upload error (attempt ${retryCount + 1}):`, error);
-    
-    // If it's a network error and we haven't exhausted retries, try again
-    if (retryCount < maxRetries && (
-      error instanceof TypeError || 
-      (error instanceof Error && error.message.includes('fetch'))
-    )) {
-      console.log(`Upload attempt ${retryCount + 1} failed with network error, retrying in ${retryDelay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
-      return uploadDirectToOrthanc(file, onProgress, retryCount + 1);
-    }
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Direct upload failed'
-    };
-  }
-};
 
 /**
- * Create case record and integrate with existing workflow
+ * Create case record and upload to Supabase storage
  */
 export const uploadDICOMAndCreateCase = async (
   files: File | File[],
@@ -255,8 +115,11 @@ export const uploadDICOMAndCreateCase = async (
 ) => {
   console.log('=== STARTING UPLOAD AND CASE CREATION ===');
   
-  // Upload to Orthanc using new service
-  const uploadResult = await uploadDICOMFiles(files, 'temp-case-id', (progress) => {
+  // Create case record first to get an ID for file organization
+  const tempCaseId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Upload to Supabase storage
+  const uploadResult = await uploadDICOMFiles(files, tempCaseId, (progress) => {
     if (onProgress) {
       // Reserve 10% for case creation
       const uploadProgress = Math.round(progress.percentage * 0.9);
@@ -269,7 +132,7 @@ export const uploadDICOMAndCreateCase = async (
   });
   
   if (!uploadResult.success) {
-    throw new Error(`DICOM upload failed: ${uploadResult.error}`);
+    throw new Error(`File upload failed: ${uploadResult.error}`);
   }
   
   console.log('Upload successful, creating case record...');
@@ -285,7 +148,7 @@ export const uploadDICOMAndCreateCase = async (
   }
   
   try {
-    // Create the case record in Supabase with proper PACS identifiers
+    // Create the case record in Supabase
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
       .insert({
@@ -296,11 +159,7 @@ export const uploadDICOMAndCreateCase = async (
         field_of_view: patientData.fieldOfView as any,
         urgency: patientData.urgency as any,
         clinic_id: patientData.clinicId,
-        // Store in both legacy and new columns for compatibility and indexing
-        orthanc_study_id: uploadResult.studyInstanceUID,
-        study_instance_uid: uploadResult.studyInstanceUID,
-        orthanc_series_id: uploadResult.seriesInstanceUID,
-        orthanc_instance_ids: uploadResult.sopInstanceUID ? [uploadResult.sopInstanceUID] : null,
+        file_path: uploadResult.storagePaths?.[0] || null, // Store first file path as primary
         status: 'uploaded' as any
       })
       .select()
@@ -325,9 +184,9 @@ export const uploadDICOMAndCreateCase = async (
     
     return {
       caseId: caseData.id,
-      orthancResult: uploadResult,
-      studyInstanceUID: uploadResult.studyInstanceUID,
-      message: `Successfully uploaded to PACS and created case. Study UID: ${uploadResult.studyInstanceUID}`
+      uploadResult: uploadResult,
+      storagePaths: uploadResult.storagePaths,
+      message: `Successfully uploaded ${uploadResult.storagePaths?.length || 0} files and created case.`
     };
     
   } catch (error) {

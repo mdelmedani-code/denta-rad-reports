@@ -130,15 +130,15 @@ const UploadCase = () => {
           setUploadProgress(progress);
           setCurrentStep(
             progress.stage === 'uploading' ? 'Uploading files...' :
-            progress.stage === 'processing' ? 'Processing with PACS...' :
+            progress.stage === 'processing' ? 'Processing files...' :
             progress.stage === 'complete' ? 'Upload complete!' :
             'Upload failed'
           );
         }
       );
       
-      if (!result.orthancResult.success) {
-        throw new Error(`Upload failed: ${result.orthancResult.error}`);
+      if (!result.uploadResult.success) {
+        throw new Error(`Upload failed: ${result.uploadResult.error}`);
       }
 
       console.log('Upload and case creation completed successfully:', result);
@@ -425,104 +425,6 @@ const UploadCase = () => {
             </Button>
           </div>
 
-          {/* Debug Section - Only for Testing */}
-          <Card className="border-dashed border-muted-foreground/30">
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <h3 className="font-medium text-muted-foreground">🔧 Debug Tools (Testing Only)</h3>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        console.log('Testing PACS connection...');
-                        const { data, error } = await supabase.functions.invoke('test-orthanc-connection');
-                        console.log('PACS test result:', { data, error });
-                        
-                        if (error) {
-                          toast({
-                            title: "PACS Test Failed",
-                            description: `Error: ${error.message}`,
-                            variant: "destructive",
-                          });
-                        } else if (data?.success) {
-                          toast({
-                            title: "PACS Test Successful",
-                            description: "Connection to Orthanc server is working",
-                          });
-                        } else {
-                          toast({
-                            title: "PACS Test Failed",
-                            description: `Server returned status ${data?.status}`,
-                            variant: "destructive",
-                          });
-                        }
-                      } catch (err) {
-                        console.error('PACS test error:', err);
-                        toast({
-                          title: "PACS Test Error",
-                          description: "Failed to test connection",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Test PACS Connection
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        console.log('Getting PACS studies...');
-                        const { data, error } = await supabase.functions.invoke('list-pacs-studies');
-                        console.log('PACS studies result:', { data, error });
-                        
-                        if (error) {
-                          toast({
-                            title: "PACS Query Failed",
-                            description: `Error: ${error.message}`,
-                            variant: "destructive",
-                          });
-                        } else if (data?.success) {
-                          toast({
-                            title: "PACS Studies Found",
-                            description: `Found ${data.totalStudies} studies in PACS`,
-                          });
-                        } else {
-                          toast({
-                            title: "Query Complete",
-                            description: `${data?.totalStudies || 0} studies found`,
-                          });
-                        }
-                      } catch (err) {
-                        console.error('PACS query error:', err);
-                        toast({
-                          title: "PACS Query Error",
-                          description: "Failed to query studies",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Check PACS Studies
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Debug Info */}
-          <div className="text-xs text-muted-foreground border rounded p-2 space-y-1">
-            <div><strong>Debug Info:</strong></div>
-            <div>Files: {selectedFiles.length > 0 ? `✓ ${selectedFiles.length} files` : '✗ No files'}</div>
-            <div>Patient Name: {formData.patientName ? '✓ ' + formData.patientName : '✗ Required'}</div>
-            <div>Clinical Question: {formData.clinicalQuestion ? '✓ Provided' : '✗ Required'}</div>
-            <div>Can Submit: {canSubmit ? '✓ Ready' : '✗ Missing requirements'}</div>
-          </div>
         </form>
       </div>
     </div>

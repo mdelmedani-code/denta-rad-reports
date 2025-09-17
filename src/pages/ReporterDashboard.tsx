@@ -185,6 +185,78 @@ const ReporterDashboard = () => {
     }
   };
 
+  const openInHoros = async (caseData: Case) => {
+    if (!caseData.file_path) {
+      toast({
+        title: "No files available",
+        description: "This case doesn't have any uploaded files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Generate signed URL for the file
+      const { data, error } = await supabase.storage
+        .from('cbct-scans')
+        .createSignedUrl(caseData.file_path, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      // Try to open in Horos using custom URL scheme
+      const horosUrl = `horos://import?url=${encodeURIComponent(data.signedUrl)}`;
+      window.location.href = horosUrl;
+      
+      toast({
+        title: "Opening in Horos",
+        description: "If Horos doesn't open automatically, please check that it's installed.",
+      });
+    } catch (error) {
+      console.error('Error opening in Horos:', error);
+      toast({
+        title: "Error opening in Horos",
+        description: "Please try again or download the file manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openInOsirix = async (caseData: Case) => {
+    if (!caseData.file_path) {
+      toast({
+        title: "No files available",
+        description: "This case doesn't have any uploaded files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Generate signed URL for the file
+      const { data, error } = await supabase.storage
+        .from('cbct-scans')
+        .createSignedUrl(caseData.file_path, 3600); // 1 hour expiry
+
+      if (error) throw error;
+
+      // Try to open in OsiriX using custom URL scheme
+      const osirixUrl = `osirix://import?url=${encodeURIComponent(data.signedUrl)}`;
+      window.location.href = osirixUrl;
+      
+      toast({
+        title: "Opening in OsiriX",
+        description: "If OsiriX doesn't open automatically, please check that it's installed.",
+      });
+    } catch (error) {
+      console.error('Error opening in OsiriX:', error);
+      toast({
+        title: "Error opening in OsiriX",
+        description: "Please try again or download the file manually.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   const startReporting = async (caseData: Case) => {
     setSelectedCase(caseData);
@@ -606,23 +678,59 @@ const ReporterDashboard = () => {
                    key={case_.id} 
                    className="flex items-center justify-between p-4 border rounded-lg transition-colors"
                  >
-                   <div className="flex-1">
-                     <div className="flex items-center gap-4 mb-2">
-                       <h3 className="font-semibold">{case_.patient_name}</h3>
-                       <Badge className={getStatusColor(case_.status)}>
-                         {case_.status.replace('_', ' ')}
-                       </Badge>
-                       <Badge className={getUrgencyColor(case_.urgency)}>
-                         {case_.urgency}
-                       </Badge>
-                     </div>
-                     <div className="text-sm text-muted-foreground space-y-1">
-                       <p><strong>Clinic:</strong> {case_.clinics.name}</p>
-                       <p><strong>Clinical Question:</strong> {case_.clinical_question}</p>
-                       <p><strong>Upload Date:</strong> {new Date(case_.upload_date).toLocaleDateString()}</p>
-                       <p><strong>Field of View:</strong> {case_.field_of_view.replace('_', ' ')}</p>
-                     </div>
-                   </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-2">
+                        <h3 className="font-semibold">{case_.patient_name}</h3>
+                        <Badge className={getStatusColor(case_.status)}>
+                          {case_.status.replace('_', ' ')}
+                        </Badge>
+                        <Badge className={getUrgencyColor(case_.urgency)}>
+                          {case_.urgency}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p><strong>Clinic:</strong> {case_.clinics.name}</p>
+                        <p><strong>Clinical Question:</strong> {case_.clinical_question}</p>
+                        <p><strong>Upload Date:</strong> {new Date(case_.upload_date).toLocaleDateString()}</p>
+                        <p><strong>Field of View:</strong> {case_.field_of_view.replace('_', ' ')}</p>
+                        {case_.file_path && (
+                          <p><strong>Files:</strong> Available for download</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* DICOM Viewer Options */}
+                      {case_.file_path && (
+                        <div className="flex gap-2 mr-4">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInHoros(case_);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                            Open in Horos
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openInOsirix(case_);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                            Open in OsiriX
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Reporting Actions */}
                       {case_.status !== 'report_ready' ? (
                        <Button
                          onClick={(e) => {
@@ -635,58 +743,59 @@ const ReporterDashboard = () => {
                          <FileText className="w-4 h-4" />
                          {case_.status === 'in_progress' ? 'Continue Reporting' : 'Start Reporting'}
                        </Button>
-                     ) : (
-                       <>
-                         <Button
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             startReporting(case_);
-                           }}
-                           variant="secondary"
-                           size="sm"
-                           className="flex items-center gap-2"
-                         >
-                           <FileText className="w-4 h-4" />
-                           View & Amend Report
-                         </Button>
-                         {case_.reports?.[0]?.pdf_url && (
-                           <>
-                             <Button
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 window.open(case_.reports[0].pdf_url, '_blank');
-                               }}
-                               variant="outline"
-                               size="sm"
-                               className="flex items-center gap-2"
-                             >
-                               <Download className="w-4 h-4" />
-                               Download PDF
-                             </Button>
-                             <Button
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 createSecureShareLink(case_.reports[0].id);
-                               }}
-                               variant="outline"
-                               size="sm"
-                               className="flex items-center gap-2"
-                             >
-                               <Share2 className="w-4 h-4" />
-                               Share Report
-                             </Button>
-                           </>
-                         )}
-                       </>
-                     )}
-                </div>
-              ))}
-              
-              {filteredCases.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No cases found matching your search.
-                </div>
-              )}
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startReporting(case_);
+                            }}
+                            variant="secondary"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <FileText className="w-4 h-4" />
+                            View & Amend Report
+                          </Button>
+                          {case_.reports?.[0]?.pdf_url && (
+                            <>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(case_.reports[0].pdf_url, '_blank');
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                <Download className="w-4 h-4" />
+                                Download PDF
+                              </Button>
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  createSecureShareLink(case_.reports[0].id);
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                              >
+                                <Share2 className="w-4 h-4" />
+                                Share Report
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                     </div>
+                  </div>
+               ))}
+               
+               {filteredCases.length === 0 && (
+                 <div className="text-center py-8 text-muted-foreground">
+                   No cases found matching your search.
+                 </div>
+               )}
             </div>
           </CardContent>
         </Card>
