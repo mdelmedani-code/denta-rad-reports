@@ -1,5 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Trigger ZIP generation in background without blocking upload completion
+ */
+const triggerBackgroundZipGeneration = (caseId: string, filePath: string) => {
+  // Fire and forget - don't await this call
+  supabase.functions
+    .invoke('pregenerate-case-zip', {
+      body: { caseId, filePath }
+    })
+    .then((response) => {
+      console.log('Background ZIP generation triggered:', response);
+    })
+    .catch((error) => {
+      console.error('Failed to trigger background ZIP generation:', error);
+    });
+};
+
 export interface UploadResult {
   success: boolean;
   storagePaths?: string[];
@@ -171,6 +188,9 @@ export const uploadDICOMAndCreateCase = async (
     }
     
     console.log('Case created successfully:', caseData);
+    
+    // Trigger ZIP generation in background (don't await)
+    triggerBackgroundZipGeneration(caseData.id, uploadResult.storagePaths?.[0] || '');
     
     // Final progress update
     if (onProgress) {
