@@ -12,6 +12,7 @@ import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
+import ReportingPage from "./pages/ReportingPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/invoices" element={<Invoices />} />
             <Route path="/admin/reporter" element={<ReporterDashboard />} />
+            <Route path="/admin/reporter/case/:caseId" element={<ReportingPage />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

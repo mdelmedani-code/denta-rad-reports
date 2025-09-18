@@ -288,41 +288,8 @@ const ReporterDashboard = () => {
   };
 
 
-  const startReporting = async (caseData: Case) => {
-    setSelectedCase(caseData);
-    
-    // Load existing report if available
-    const { data: existingReport } = await supabase
-      .from('reports')
-      .select('report_text')
-      .eq('case_id', caseData.id)
-      .single();
-    
-    setReportText(existingReport?.report_text || '');
-    
-    // Update case status to in_progress only if not already completed
-    if (caseData.status !== 'report_ready') {
-      try {
-        const { error } = await supabase
-          .from('cases')
-          .update({ status: 'in_progress' })
-          .eq('id', caseData.id);
-
-        if (error) throw error;
-        
-        // Refresh cases list
-        fetchCases();
-        
-      } catch (error) {
-        console.error('Error updating case status:', error);
-        toast({
-          title: "Error",
-          description: "Failed to start reporting session",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+  const startReporting = (caseData: Case) => {
+    navigate(`/admin/reporter/case/${caseData.id}`);
   };
 
   const toggleRecording = () => {
