@@ -79,12 +79,14 @@ export type Database = {
           patient_id: string | null
           patient_internal_id: string | null
           patient_name: string
+          pregenerated_zip_path: string | null
           report_path: string | null
           status: Database["public"]["Enums"]["case_status"]
           study_instance_uid: string | null
           updated_at: string | null
           upload_date: string | null
           urgency: Database["public"]["Enums"]["urgency_level"]
+          zip_generation_status: string | null
         }
         Insert: {
           clinic_id: string
@@ -102,12 +104,14 @@ export type Database = {
           patient_id?: string | null
           patient_internal_id?: string | null
           patient_name: string
+          pregenerated_zip_path?: string | null
           report_path?: string | null
           status?: Database["public"]["Enums"]["case_status"]
           study_instance_uid?: string | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
+          zip_generation_status?: string | null
         }
         Update: {
           clinic_id?: string
@@ -125,12 +129,14 @@ export type Database = {
           patient_id?: string | null
           patient_internal_id?: string | null
           patient_name?: string
+          pregenerated_zip_path?: string | null
           report_path?: string | null
           status?: Database["public"]["Enums"]["case_status"]
           study_instance_uid?: string | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
+          zip_generation_status?: string | null
         }
         Relationships: [
           {

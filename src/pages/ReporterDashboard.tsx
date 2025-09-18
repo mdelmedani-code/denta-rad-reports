@@ -44,6 +44,8 @@ interface Case {
   file_path: string | null;
   patient_dob: string | null;
   patient_internal_id: string | null;
+  pregenerated_zip_path?: string | null;
+  zip_generation_status?: string | null;
   clinics: {
     name: string;
     contact_email: string;
@@ -226,7 +228,7 @@ const ReporterDashboard = () => {
     }
   };
 
-  const downloadImages = async (caseData: Case) => {
+  const downloadImages = async (caseData: Case & { pregenerated_zip_path?: string; zip_generation_status?: string }) => {
     if (!caseData.file_path) {
       toast({
         title: "No files available",
@@ -237,7 +239,51 @@ const ReporterDashboard = () => {
     }
 
     try {
-      // Extract folder path from the file_path (e.g., "temp_1758214187029_lyd2fnijt/file.dcm" -> "temp_1758214187029_lyd2fnijt")
+      // Check if pre-generated ZIP exists and is completed
+      if (caseData.pregenerated_zip_path && caseData.zip_generation_status === 'completed') {
+        console.log('Using pre-generated ZIP for instant download');
+        
+        // Generate signed URL for pre-generated ZIP
+        const { data: zipData, error: zipError } = await supabase.storage
+          .from('cbct-scans')
+          .createSignedUrl(caseData.pregenerated_zip_path, 3600);
+
+        if (zipError) throw zipError;
+
+        // Instant download
+        const link = document.createElement('a');
+        link.href = zipData.signedUrl;
+        link.download = `${caseData.patient_name}_${caseData.id}_DICOM_files.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Download Started",
+          description: "Pre-generated ZIP file download started instantly!",
+        });
+        return;
+      }
+
+      // If no pre-generated ZIP or it's still processing, show status and fall back to on-demand generation
+      if (caseData.zip_generation_status === 'processing') {
+        toast({
+          title: "ZIP Being Generated",
+          description: "A ZIP file is being prepared in the background. Using on-demand generation for now.",
+        });
+      } else if (caseData.zip_generation_status === 'pending') {
+        // Trigger background ZIP generation for future downloads
+        triggerZipPregeneration(caseData);
+        toast({
+          title: "Background Processing Started",
+          description: "ZIP file will be pre-generated for faster future downloads.",
+        });
+      }
+
+      // Fall back to on-demand ZIP creation
+      console.log('Creating ZIP on-demand');
+      
+      // Extract folder path from the file_path
       const folderPath = caseData.file_path.split('/')[0];
       
       // List all files in the case folder
@@ -347,6 +393,19 @@ const ReporterDashboard = () => {
         description: "Please try again or contact support.",
         variant: "destructive",
       });
+    }
+  };
+
+  const triggerZipPregeneration = async (caseData: Case) => {
+    try {
+      await supabase.functions.invoke('pregenerate-case-zip', {
+        body: { 
+          caseId: caseData.id, 
+          filePath: caseData.file_path 
+        }
+      });
+    } catch (error) {
+      console.error('Error triggering ZIP pre-generation:', error);
     }
   };
 
@@ -773,8 +832,59 @@ const ReporterDashboard = () => {
                             className="flex items-center gap-2"
                           >
                             <Download className="w-4 h-4" />
-                            Download Images
+                            {case_.zip_generation_status === 'completed' ? 'Download ZIP (Instant)' : 
+                             case_.zip_generation_status === 'processing' ? 'Download ZIP (Generating...)' :
+                             'Download Images'}
                           </Button>
+                          
+                          {/* ZIP Pre-generation Status/Button */}
+                          {case_.zip_generation_status === 'pending' && (
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerZipPregeneration(case_);
+                                toast({
+                                  title: "ZIP Generation Started",
+                                  description: "Pre-generating ZIP file in background for faster future downloads.",
+                                });
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              className="flex items-center gap-2 text-blue-600"
+                            >
+                              <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                              Pre-generate ZIP
+                            </Button>
+                          )}
+                          
+                          {case_.zip_generation_status === 'processing' && (
+                            <div className="flex items-center gap-2 text-blue-600 text-sm">
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                              ZIP Generating...
+                            </div>
+                          )}
+                          
+                          {case_.zip_generation_status === 'completed' && (
+                            <div className="flex items-center gap-2 text-green-600 text-sm">
+                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                              ZIP Ready
+                            </div>
+                          )}
+                          
+                          {case_.zip_generation_status === 'failed' && (
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerZipPregeneration(case_);
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              className="flex items-center gap-2 text-red-600"
+                            >
+                              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                              Retry ZIP
+                            </Button>
+                          )}
                         </div>
                       )}
                       
