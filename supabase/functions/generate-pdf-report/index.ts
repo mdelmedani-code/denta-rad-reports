@@ -416,6 +416,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
     // Helpers
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
     const { width, height } = page.getSize();
 
