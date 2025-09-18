@@ -215,7 +215,7 @@ const ReporterDashboard = () => {
     }
   };
 
-  const openInHoros = async (caseData: Case) => {
+  const downloadImages = async (caseData: Case) => {
     if (!caseData.file_path) {
       toast({
         title: "No files available",
@@ -233,55 +233,23 @@ const ReporterDashboard = () => {
 
       if (error) throw error;
 
-      // Try to open in Horos using custom URL scheme
-      const horosUrl = `horos://import?url=${encodeURIComponent(data.signedUrl)}`;
-      window.location.href = horosUrl;
+      // Create a temporary download link
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.download = `${caseData.patient_name}_${caseData.id}_images.dcm`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
       toast({
-        title: "Opening in Horos",
-        description: "If Horos doesn't open automatically, please check that it's installed.",
+        title: "Download Started",
+        description: "DICOM images are being downloaded to your computer.",
       });
     } catch (error) {
-      console.error('Error opening in Horos:', error);
+      console.error('Error downloading images:', error);
       toast({
-        title: "Error opening in Horos",
-        description: "Please try again or download the file manually.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openInOsirix = async (caseData: Case) => {
-    if (!caseData.file_path) {
-      toast({
-        title: "No files available",
-        description: "This case doesn't have any uploaded files.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Generate signed URL for the file
-      const { data, error } = await supabase.storage
-        .from('cbct-scans')
-        .createSignedUrl(caseData.file_path, 3600); // 1 hour expiry
-
-      if (error) throw error;
-
-      // Try to open in OsiriX using custom URL scheme
-      const osirixUrl = `osirix://import?url=${encodeURIComponent(data.signedUrl)}`;
-      window.location.href = osirixUrl;
-      
-      toast({
-        title: "Opening in OsiriX",
-        description: "If OsiriX doesn't open automatically, please check that it's installed.",
-      });
-    } catch (error) {
-      console.error('Error opening in OsiriX:', error);
-      toast({
-        title: "Error opening in OsiriX",
-        description: "Please try again or download the file manually.",
+        title: "Error downloading images",
+        description: "Please try again or contact support.",
         variant: "destructive",
       });
     }
@@ -697,32 +665,20 @@ const ReporterDashboard = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {/* DICOM Viewer Options */}
+                      {/* Download Images Option */}
                       {case_.file_path && (
                         <div className="flex gap-2 mr-4">
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
-                              openInHoros(case_);
+                              downloadImages(case_);
                             }}
                             variant="outline"
                             size="sm"
                             className="flex items-center gap-2"
                           >
-                            <ImageIcon className="w-4 h-4" />
-                            Open in Horos
-                          </Button>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openInOsirix(case_);
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2"
-                          >
-                            <ImageIcon className="w-4 h-4" />
-                            Open in OsiriX
+                            <Download className="w-4 h-4" />
+                            Download Images
                           </Button>
                         </div>
                       )}
