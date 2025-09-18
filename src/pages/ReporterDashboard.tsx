@@ -267,9 +267,11 @@ const ReporterDashboard = () => {
       const zip = new JSZip();
       const totalFiles = fileList.length;
       
-      // Download each file and add to ZIP
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+      // Download files in parallel (batches of 5 for optimal performance)
+      const batchSize = 5;
+      let completedFiles = 0;
+
+      const downloadFile = async (file: any, index: number) => {
         const filePath = `${folderPath}/${file.name}`;
         
         try {
@@ -284,20 +286,44 @@ const ReporterDashboard = () => {
           const response = await fetch(data.signedUrl);
           const blob = await response.blob();
           
-          // Add file to ZIP
-          zip.file(file.name, blob);
+          return { name: file.name, blob, index };
+        } catch (fileError) {
+          console.error(`Error downloading file ${file.name}:`, fileError);
+          return null;
+        }
+      };
+
+      // Process files in batches for parallel downloads
+      for (let i = 0; i < fileList.length; i += batchSize) {
+        const batch = fileList.slice(i, i + batchSize);
+        const batchPromises = batch.map((file, batchIndex) => 
+          downloadFile(file, i + batchIndex)
+        );
+        
+        const results = await Promise.allSettled(batchPromises);
+        
+        // Add successful downloads to ZIP
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value) {
+            zip.file(result.value.name, result.value.blob);
+          }
+          completedFiles++;
           
           // Update progress
-          const progress = Math.round(((i + 1) / totalFiles) * 100);
+          const progress = Math.round((completedFiles / totalFiles) * 100);
           setDownloadProgress(progress);
-          setDownloadedFileCount(i + 1);
-        } catch (fileError) {
-          console.error(`Error adding file ${file.name} to ZIP:`, fileError);
-        }
+          setDownloadedFileCount(completedFiles);
+        });
       }
       
-      // Generate ZIP file and download
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      // Generate ZIP file with optimized compression settings
+      const zipBlob = await zip.generateAsync({ 
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 1  // Fast compression (1-9, where 1 is fastest)
+        }
+      });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(zipBlob);
       link.download = `${caseData.patient_name}_${caseData.id}_DICOM_files.zip`;
