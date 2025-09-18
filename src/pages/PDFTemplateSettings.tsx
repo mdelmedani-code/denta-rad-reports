@@ -34,6 +34,7 @@ const PDFTemplateSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   useEffect(() => {
     fetchTemplate();
@@ -141,7 +142,13 @@ const PDFTemplateSettings = () => {
   const generatePreview = async () => {
     if (!template) return;
 
+    setPreviewing(true);
     try {
+      toast({
+        title: "Generating preview...",
+        description: "Please wait while we create your PDF preview",
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-pdf-report', {
         body: {
           reportId: 'preview',
@@ -160,15 +167,40 @@ const PDFTemplateSettings = () => {
       if (error) throw error;
 
       if (data?.pdfUrl) {
-        window.open(data.pdfUrl, '_blank');
+        // Try to open in new window, fallback to direct download
+        const newWindow = window.open(data.pdfUrl, '_blank');
+        
+        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+          // Pop-up blocked, create download link instead
+          const link = document.createElement('a');
+          link.href = data.pdfUrl;
+          link.download = `template-preview-${new Date().getTime()}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Preview downloaded",
+            description: "The PDF preview has been downloaded to your computer since pop-ups are blocked",
+          });
+        } else {
+          toast({
+            title: "Preview generated",
+            description: "The PDF preview has opened in a new tab",
+          });
+        }
+      } else {
+        throw new Error('No PDF URL received');
       }
     } catch (error: any) {
       console.error('Error generating preview:', error);
       toast({
         title: "Error",
-        description: "Failed to generate preview",
+        description: error.message || "Failed to generate preview",
         variant: "destructive",
       });
+    } finally {
+      setPreviewing(false);
     }
   };
 
@@ -367,9 +399,14 @@ const PDFTemplateSettings = () => {
           <Button
             variant="outline"
             onClick={generatePreview}
+            disabled={previewing}
           >
-            <Eye className="w-4 h-4 mr-2" />
-            Preview Template
+            {previewing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Eye className="w-4 h-4 mr-2" />
+            )}
+            {previewing ? 'Generating...' : 'Preview Template'}
           </Button>
 
           <Button
