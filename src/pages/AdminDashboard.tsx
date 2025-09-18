@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,7 @@ const AdminDashboard = () => {
   const [reportText, setReportText] = useState("");
   const [weeklyStats, setWeeklyStats] = useState<IncomeStats | null>(null);
   const [monthlyStats, setMonthlyStats] = useState<IncomeStats | null>(null);
+  const [selectedCases, setSelectedCases] = useState<string[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -199,6 +201,54 @@ const AdminDashboard = () => {
         description: "Failed to delete case: " + error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const deleteSelectedCases = async () => {
+    if (selectedCases.length === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedCases.length} cases? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('cases')
+        .delete()
+        .in('id', selectedCases);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cases deleted",
+        description: `${selectedCases.length} cases have been permanently deleted`,
+      });
+
+      setSelectedCases([]);
+      fetchCases();
+      fetchIncomeStats();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete cases: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleCaseSelection = (caseId: string) => {
+    setSelectedCases(prev => 
+      prev.includes(caseId) 
+        ? prev.filter(id => id !== caseId)
+        : [...prev, caseId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCases.length === filteredCases.length) {
+      setSelectedCases([]);
+    } else {
+      setSelectedCases(filteredCases.map(c => c.id));
     }
   };
 
@@ -496,10 +546,24 @@ const AdminDashboard = () => {
         {/* Cases Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Cases ({filteredCases.length})</CardTitle>
-            <CardDescription>
-              Manage CBCT scan submissions from all clinics
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Cases ({filteredCases.length})</CardTitle>
+                <CardDescription>
+                  Manage CBCT scan submissions from all clinics
+                </CardDescription>
+              </div>
+              {selectedCases.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  onClick={deleteSelectedCases}
+                  className="ml-4"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Selected ({selectedCases.length})
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -517,6 +581,12 @@ const AdminDashboard = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-left py-2 w-12">
+                        <Checkbox
+                          checked={selectedCases.length === filteredCases.length && filteredCases.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left py-2">Clinic</th>
                       <th className="text-left py-2">Patient</th>
                       <th className="text-left py-2">Upload Date</th>
@@ -530,6 +600,12 @@ const AdminDashboard = () => {
                   <tbody>
                     {filteredCases.map((case_) => (
                       <tr key={case_.id} className="border-b">
+                        <td className="py-2">
+                          <Checkbox
+                            checked={selectedCases.includes(case_.id)}
+                            onCheckedChange={() => toggleCaseSelection(case_.id)}
+                          />
+                        </td>
                         <td className="py-2">
                           <div>
                             <p className="font-medium">{case_.clinics.name}</p>
