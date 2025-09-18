@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Settings } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Settings, Download, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -74,6 +75,64 @@ const Dashboard = () => {
 
   const handleReupload = (caseId: string) => {
     navigate(`/upload-case?reupload=${caseId}`);
+  };
+
+  const generatePdfReport = async (caseData: Case) => {
+    setGeneratingPdf(caseData.id);
+    try {
+      // Get the report data for this case
+      const { data: reportData, error: reportError } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('case_id', caseData.id)
+        .single();
+
+      if (reportError) throw reportError;
+
+      if (!reportData?.report_text) {
+        toast({
+          title: "Error",
+          description: "No report text found for this case",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Call the PDF generation edge function
+      const { data, error } = await supabase.functions.invoke('generate-pdf-report', {
+        body: {
+          reportId: reportData.id,
+          caseData: {
+            patient_name: caseData.patient_name,
+            field_of_view: caseData.field_of_view,
+            urgency: caseData.urgency,
+            clinical_question: caseData.clinical_question,
+            upload_date: caseData.upload_date
+          },
+          reportText: reportData.report_text
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.pdfUrl) {
+        // Open the PDF in a new tab for download
+        window.open(data.pdfUrl, '_blank');
+        toast({
+          title: "PDF Generated",
+          description: "Your report PDF has been generated and opened in a new tab",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF report: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingPdf(null);
+    }
   };
 
 
@@ -206,8 +265,18 @@ const Dashboard = () => {
                                 </Button>
                               )}
                               {case_.status === 'report_ready' && (
-                                <Button variant="outline" size="sm">
-                                  Download Report
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => generatePdfReport(case_)}
+                                  disabled={generatingPdf === case_.id}
+                                >
+                                  {generatingPdf === case_.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4 mr-2" />
+                                  )}
+                                  {generatingPdf === case_.id ? 'Generating...' : 'Download Report'}
                                 </Button>
                               )}
                             </div>
@@ -271,8 +340,19 @@ const Dashboard = () => {
                               </Button>
                             )}
                             {case_.status === 'report_ready' && (
-                              <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                                Download Report
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full sm:w-auto"
+                                onClick={() => generatePdfReport(case_)}
+                                disabled={generatingPdf === case_.id}
+                              >
+                                {generatingPdf === case_.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 mr-2" />
+                                )}
+                                {generatingPdf === case_.id ? 'Generating...' : 'Download Report'}
                               </Button>
                             )}
                           </div>
