@@ -1,5 +1,4 @@
 import { useParams } from "react-router-dom";
-import { OHIFViewer } from "@/components/OHIFViewer";
 
 const ViewerPage = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -16,11 +15,12 @@ const ViewerPage = () => {
   }
 
   return (
-    <div className="w-full h-screen">
-      <OHIFViewer 
-        caseId={caseId}
-        className="w-full h-full"
-      />
+    <div className="w-full h-screen flex items-center justify-center bg-background">
+      <div className="text-center max-w-md">
+        <h1 className="text-2xl font-bold mb-4">Viewer Page</h1>
+        <p className="text-muted-foreground mb-4">Case ID: {caseId}</p>
+        <p className="text-sm text-muted-foreground">Image viewer functionality is currently unavailable.</p>
+      </div>
     </div>
   );
 };

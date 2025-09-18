@@ -15,20 +15,8 @@ verify_jwt = false
 [functions.generate-diagnostic-report]
 verify_jwt = true
 
-[functions.process-dicom-upload]
+[functions.generate-pdf-report]
 verify_jwt = true
 
-[functions.direct-dicom-upload]
-verify_jwt = true
-
-[functions.get-pacs-study]
-verify_jwt = true
-
-[functions.orthanc-proxy]
-verify_jwt = true
-
-[functions.list-pacs-studies]
-verify_jwt = true
-
-[functions.test-orthanc-connection]
+[functions.extract-dicom-zip]
 verify_jwt = true
