@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import JSZip from 'jszip';
 import { 
   FileText, 
@@ -71,6 +72,10 @@ const ReporterDashboard = () => {
   const [concurrentUsers, setConcurrentUsers] = useState<string[]>([]);
   const [showConcurrentWarning, setShowConcurrentWarning] = useState(false);
   const [pdfTemplate, setPdfTemplate] = useState<any>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showDownloadComplete, setShowDownloadComplete] = useState(false);
+  const [downloadedFileCount, setDownloadedFileCount] = useState(0);
 
   useEffect(() => {
     fetchCases();
@@ -254,16 +259,17 @@ const ReporterDashboard = () => {
         return;
       }
 
-      toast({
-        title: "Download Starting",
-        description: `Preparing to download ${fileList.length} DICOM files as ZIP...`,
-      });
+      setIsDownloading(true);
+      setDownloadProgress(0);
+      setDownloadedFileCount(0);
 
       // Create a ZIP file
       const zip = new JSZip();
+      const totalFiles = fileList.length;
       
       // Download each file and add to ZIP
-      for (const file of fileList) {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
         const filePath = `${folderPath}/${file.name}`;
         
         try {
@@ -280,6 +286,11 @@ const ReporterDashboard = () => {
           
           // Add file to ZIP
           zip.file(file.name, blob);
+          
+          // Update progress
+          const progress = Math.round(((i + 1) / totalFiles) * 100);
+          setDownloadProgress(progress);
+          setDownloadedFileCount(i + 1);
         } catch (fileError) {
           console.error(`Error adding file ${file.name} to ZIP:`, fileError);
         }
@@ -295,12 +306,16 @@ const ReporterDashboard = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
       
+      setIsDownloading(false);
+      setShowDownloadComplete(true);
+      
       toast({
         title: "Download Complete",
         description: `${fileList.length} DICOM files downloaded as ZIP file.`,
       });
     } catch (error) {
       console.error('Error downloading images:', error);
+      setIsDownloading(false);
       toast({
         title: "Error downloading images",
         description: "Please try again or contact support.",
@@ -989,6 +1004,67 @@ const ReporterDashboard = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Progress Dialog */}
+      <Dialog open={isDownloading} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Downloading DICOM Files</DialogTitle>
+            <DialogDescription>
+              Please wait while we prepare your files...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Progress</span>
+                <span>{downloadedFileCount} files processed</span>
+              </div>
+              <Progress value={downloadProgress} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                {downloadProgress}% complete
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Complete Dialog */}
+      <Dialog open={showDownloadComplete} onOpenChange={setShowDownloadComplete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Download Complete! 🎉</DialogTitle>
+            <DialogDescription>
+              Your DICOM files have been successfully downloaded as a ZIP archive.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                <svg
+                  className="h-6 w-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {downloadedFileCount} DICOM files downloaded successfully
+              </p>
+            </div>
+            <Button onClick={() => setShowDownloadComplete(false)} className="w-full">
+              OK
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
