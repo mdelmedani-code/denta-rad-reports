@@ -36,10 +36,17 @@ const PDFTemplateSettings = () => {
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTemplate();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
+    };
+  }, [previewBlobUrl]);
 
   const fetchTemplate = async () => {
     try {
@@ -410,14 +417,33 @@ const PDFTemplateSettings = () => {
           <div className="mt-4 p-3 border border-border rounded bg-muted/30">
             <p className="mb-2 text-sm text-muted-foreground">Preview ready:</p>
             <div className="flex flex-wrap gap-2 items-center">
-              <a
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline text-primary hover:text-primary/80"
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(previewUrl);
+                    const blob = await res.blob();
+                    if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
+                    const url = URL.createObjectURL(blob);
+                    setPreviewBlobUrl(url);
+                    toast({ title: 'Inline preview loaded' });
+                  } catch (e: any) {
+                    toast({ title: 'Error', description: e.message || 'Unable to load inline preview', variant: 'destructive' });
+                  }
+                }}
               >
-                Open Preview in new tab
-              </a>
+                View Inline
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.location.href = previewUrl; // open in same tab (not a popup)
+                }}
+              >
+                Open Here
+              </Button>
+
               <Button
                 variant="outline"
                 onClick={() => {
@@ -431,6 +457,7 @@ const PDFTemplateSettings = () => {
               >
                 Download PDF
               </Button>
+
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -441,6 +468,16 @@ const PDFTemplateSettings = () => {
                 Copy Link
               </Button>
             </div>
+
+            {previewBlobUrl && (
+              <div className="mt-3 border rounded">
+                <iframe
+                  src={previewBlobUrl}
+                  title="PDF Preview"
+                  className="w-full h-[70vh] rounded"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
