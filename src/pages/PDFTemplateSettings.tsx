@@ -35,6 +35,7 @@ const PDFTemplateSettings = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTemplate();
@@ -167,30 +168,10 @@ const PDFTemplateSettings = () => {
       if (error) throw error;
 
       if (data?.pdfUrl) {
-        // Always use download method to avoid pop-up blockers
-        const link = document.createElement('a');
-        link.href = data.pdfUrl;
-        link.target = '_blank';
-        link.download = `template-preview-${new Date().getTime()}.pdf`;
-        
-        // Temporarily add to DOM, click, then remove
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
+        setPreviewUrl(data.pdfUrl);
         toast({
           title: "Preview ready",
-          description: "The PDF preview is downloading. You can also click the link below to view it.",
-          action: (
-            <a 
-              href={data.pdfUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="underline text-primary hover:text-primary/80"
-            >
-              Open PDF
-            </a>
-          ),
+          description: "Click 'Open Preview' below to view or download the PDF.",
         });
       } else {
         throw new Error('No PDF URL received');
@@ -424,6 +405,44 @@ const PDFTemplateSettings = () => {
             {saving ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
+
+        {previewUrl && (
+          <div className="mt-4 p-3 border border-border rounded bg-muted/30">
+            <p className="mb-2 text-sm text-muted-foreground">Preview ready:</p>
+            <div className="flex flex-wrap gap-2 items-center">
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-primary hover:text-primary/80"
+              >
+                Open Preview in new tab
+              </a>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = previewUrl;
+                  link.download = `template-preview-${Date.now()}.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+              >
+                Download PDF
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  navigator.clipboard.writeText(previewUrl);
+                  toast({ title: 'Link copied', description: 'PDF preview link copied to clipboard' });
+                }}
+              >
+                Copy Link
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
