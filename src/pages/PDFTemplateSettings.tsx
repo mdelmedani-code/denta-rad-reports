@@ -167,28 +167,31 @@ const PDFTemplateSettings = () => {
       if (error) throw error;
 
       if (data?.pdfUrl) {
-        // Try to open in new window, fallback to direct download
-        const newWindow = window.open(data.pdfUrl, '_blank');
+        // Always use download method to avoid pop-up blockers
+        const link = document.createElement('a');
+        link.href = data.pdfUrl;
+        link.target = '_blank';
+        link.download = `template-preview-${new Date().getTime()}.pdf`;
         
-        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-          // Pop-up blocked, create download link instead
-          const link = document.createElement('a');
-          link.href = data.pdfUrl;
-          link.download = `template-preview-${new Date().getTime()}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          toast({
-            title: "Preview downloaded",
-            description: "The PDF preview has been downloaded to your computer since pop-ups are blocked",
-          });
-        } else {
-          toast({
-            title: "Preview generated",
-            description: "The PDF preview has opened in a new tab",
-          });
-        }
+        // Temporarily add to DOM, click, then remove
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Preview ready",
+          description: "The PDF preview is downloading. You can also click the link below to view it.",
+          action: (
+            <a 
+              href={data.pdfUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80"
+            >
+              Open PDF
+            </a>
+          ),
+        });
       } else {
         throw new Error('No PDF URL received');
       }
