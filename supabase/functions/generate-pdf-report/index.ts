@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +37,7 @@ interface PDFTemplate {
   footer_text: string;
 }
 
-// Enhanced HTML generation with customizable template styling
+// Enhanced HTML generation with print-optimized styling
 function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
   const currentDate = new Date().toLocaleDateString();
   
@@ -50,6 +49,11 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Diagnostic Report - ${data.caseData.patient_name}</title>
       <style>
+        @page {
+          size: A4;
+          margin: 0.5in;
+        }
+        
         * {
           margin: 0;
           padding: 0;
@@ -58,102 +62,62 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
         
         body {
           font-family: ${template.font_family};
-          line-height: 1.6;
-          color: #2c3e50;
-          background: linear-gradient(135deg, ${template.secondary_color} 0%, #e9ecef 100%);
-          padding: 20px;
+          font-size: 12px;
+          line-height: 1.4;
+          color: #333;
+          background: white;
         }
         
         .container {
-          max-width: 800px;
-          margin: 0 auto;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-          overflow: hidden;
+          width: 100%;
+          max-width: none;
         }
         
         .header {
-          background: linear-gradient(135deg, ${template.primary_color} 0%, ${template.primary_color}dd 100%);
+          background: ${template.primary_color};
           color: white;
-          padding: 40px;
-          text-align: center;
-          position: relative;
-        }
-        
-        .header::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
-          opacity: 0.3;
-        }
-        
-        .header > * {
-          position: relative;
-          z-index: 1;
-        }
-        
-        .logo-container {
+          padding: 20px;
+          margin-bottom: 20px;
           display: flex;
           align-items: center;
-          justify-content: center;
-          margin-bottom: 20px;
+          justify-content: space-between;
+        }
+        
+        .header-content {
+          display: flex;
+          align-items: center;
+          gap: 15px;
         }
         
         .logo-img {
-          max-height: 60px;
-          max-width: 200px;
-          margin-right: 15px;
+          max-height: 50px;
+          max-width: 150px;
         }
         
-        .logo {
-          font-size: 2.5em;
-          font-weight: 700;
-          margin-bottom: 10px;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        .company-info h1 {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 5px;
         }
         
-        .subtitle {
-          font-size: 1.2em;
+        .company-info p {
+          font-size: 14px;
           opacity: 0.9;
-          font-weight: 300;
-        }
-        
-        .content {
-          padding: 40px;
-        }
-        
-        .section {
-          margin-bottom: 35px;
-          border-left: 4px solid ${template.primary_color};
-          padding-left: 20px;
-        }
-        
-        .section-title {
-          font-size: 1.4em;
-          font-weight: 600;
-          margin-bottom: 15px;
-          color: ${template.primary_color};
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
         
         .patient-info {
-          background: linear-gradient(135deg, ${template.secondary_color} 0%, ${template.secondary_color}dd 100%);
-          padding: 25px;
-          border-radius: 8px;
-          margin-bottom: 30px;
-          border: 1px solid ${template.primary_color}33;
+          background: ${template.secondary_color};
+          padding: 15px;
+          border-radius: 5px;
+          margin-bottom: 20px;
+          border-left: 4px solid ${template.primary_color};
         }
         
         .info-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          margin-bottom: 15px;
         }
         
         .info-item {
@@ -162,28 +126,25 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
         }
         
         .info-label {
-          font-weight: 600;
-          color: #495057;
-          font-size: 0.9em;
+          font-weight: bold;
+          color: ${template.primary_color};
+          font-size: 10px;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 5px;
+          margin-bottom: 2px;
         }
         
         .info-value {
-          font-size: 1.1em;
-          color: #2c3e50;
-          font-weight: 500;
+          font-size: 12px;
+          color: #333;
         }
         
         .urgency-badge {
           display: inline-block;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.85em;
-          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 10px;
+          font-weight: bold;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
         
         .urgency-standard {
@@ -196,158 +157,204 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
           color: #c62828;
         }
         
+        .clinical-question {
+          background: #fff3cd;
+          border: 1px solid #ffeaa7;
+          padding: 15px;
+          border-radius: 5px;
+          margin-bottom: 20px;
+          font-style: italic;
+        }
+        
+        .section {
+          margin-bottom: 20px;
+        }
+        
+        .section-title {
+          font-size: 16px;
+          font-weight: bold;
+          color: ${template.primary_color};
+          margin-bottom: 10px;
+          border-bottom: 2px solid ${template.primary_color};
+          padding-bottom: 5px;
+        }
+        
         .report-content {
-          background: #ffffff;
-          padding: 30px;
-          border-radius: 8px;
-          border: 1px solid #e9ecef;
+          line-height: 1.6;
           white-space: pre-wrap;
-          line-height: 1.8;
-          font-size: 1.05em;
+          padding: 15px;
+          background: #fafafa;
+          border-radius: 5px;
         }
         
         .footer {
+          margin-top: 30px;
+          padding: 15px;
           background: ${template.secondary_color};
-          padding: 25px 40px;
           text-align: center;
-          border-top: 1px solid #e9ecef;
-          font-size: 0.9em;
-          color: #6c757d;
+          font-size: 10px;
+          color: #666;
+          border-top: 1px solid #ddd;
         }
         
         .footer-logo {
-          font-weight: 600;
+          font-weight: bold;
           color: ${template.primary_color};
           margin-bottom: 5px;
         }
         
-        .company-address {
-          margin-bottom: 10px;
-          font-size: 0.85em;
-          color: #666;
-        }
-        
-        .clinical-question {
-          background: #fff3cd;
-          border: 1px solid #ffeaa7;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 25px;
-          font-style: italic;
-        }
-        
-        .divider {
-          height: 2px;
-          background: linear-gradient(to right, ${template.primary_color}, transparent);
-          margin: 30px 0;
-          border-radius: 1px;
+        .page-break {
+          page-break-before: always;
         }
         
         @media print {
-          body {
-            background: white;
-            padding: 0;
-          }
-          .container {
-            box-shadow: none;
-            border-radius: 0;
-          }
+          body { -webkit-print-color-adjust: exact; }
+          .header { break-inside: avoid; }
+          .patient-info { break-inside: avoid; }
+          .section { break-inside: avoid; }
         }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo-container">
+          <div class="header-content">
             ${template.logo_url ? `<img src="${template.logo_url}" alt="Company Logo" class="logo-img">` : ''}
-            <div class="logo">${template.company_name}</div>
+            <div class="company-info">
+              <h1>${template.company_name}</h1>
+              <p>${template.header_text}</p>
+            </div>
           </div>
-          <div class="subtitle">${template.header_text}</div>
         </div>
         
-        <div class="content">
-          <div class="patient-info">
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Patient Name</div>
-                <div class="info-value">${data.caseData.patient_name}</div>
+        <div class="patient-info">
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Patient Name</div>
+              <div class="info-value">${data.caseData.patient_name}</div>
+            </div>
+            ${data.caseData.patient_dob ? `
+            <div class="info-item">
+              <div class="info-label">Date of Birth</div>
+              <div class="info-value">${new Date(data.caseData.patient_dob).toLocaleDateString()}</div>
+            </div>
+            ` : ''}
+            ${data.caseData.patient_internal_id ? `
+            <div class="info-item">
+              <div class="info-label">Patient ID</div>
+              <div class="info-value">${data.caseData.patient_internal_id}</div>
+            </div>
+            ` : ''}
+            <div class="info-item">
+              <div class="info-label">Field of View</div>
+              <div class="info-value">${data.caseData.field_of_view.replace('_', ' ').toUpperCase()}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Urgency</div>
+              <div class="info-value">
+                <span class="urgency-badge urgency-${data.caseData.urgency}">
+                  ${data.caseData.urgency.toUpperCase()}
+                </span>
               </div>
-              ${data.caseData.patient_dob ? `
-              <div class="info-item">
-                <div class="info-label">Date of Birth</div>
-                <div class="info-value">${new Date(data.caseData.patient_dob).toLocaleDateString()}</div>
-              </div>
-              ` : ''}
-              ${data.caseData.patient_internal_id ? `
-              <div class="info-item">
-                <div class="info-label">Patient ID</div>
-                <div class="info-value">${data.caseData.patient_internal_id}</div>
-              </div>
-              ` : ''}
-              <div class="info-item">
-                <div class="info-label">Field of View</div>
-                <div class="info-value">${data.caseData.field_of_view.replace('_', ' ').toUpperCase()}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Urgency</div>
-                <div class="info-value">
-                  <span class="urgency-badge urgency-${data.caseData.urgency}">
-                    ${data.caseData.urgency.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Report Date</div>
-                <div class="info-value">${new Date(data.caseData.upload_date).toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric'
-                })}</div>
-              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Report Date</div>
+              <div class="info-value">${new Date(data.caseData.upload_date).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+              })}</div>
             </div>
           </div>
           
           ${data.caseData.clinic_name ? `
-          <div class="patient-info">
-            <div class="section-title">Referring Clinic</div>
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Clinic Name</div>
-                <div class="info-value">${data.caseData.clinic_name}</div>
-              </div>
-              ${data.caseData.clinic_contact_email ? `
-              <div class="info-item">
-                <div class="info-label">Contact Email</div>
-                <div class="info-value">${data.caseData.clinic_contact_email}</div>
-              </div>
-              ` : ''}
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Referring Clinic</div>
+              <div class="info-value">${data.caseData.clinic_name}</div>
             </div>
+            ${data.caseData.clinic_contact_email ? `
+            <div class="info-item">
+              <div class="info-label">Contact Email</div>
+              <div class="info-value">${data.caseData.clinic_contact_email}</div>
+            </div>
+            ` : ''}
           </div>
           ` : ''}
-          
-          <div class="clinical-question">
-            <strong>Clinical Question:</strong><br>
-            ${data.caseData.clinical_question}
-          </div>
-          
-          <div class="divider"></div>
-          
-          <div class="section">
-            <div class="section-title">Diagnostic Findings</div>
-            <div class="report-content">${data.reportText}</div>
-          </div>
+        </div>
+        
+        <div class="clinical-question">
+          <strong>Clinical Question:</strong><br>
+          ${data.caseData.clinical_question}
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Diagnostic Findings</div>
+          <div class="report-content">${data.reportText}</div>
         </div>
         
         <div class="footer">
           <div class="footer-logo">${template.company_name}</div>
-          ${template.company_address ? `<div class="company-address">${template.company_address}</div>` : ''}
+          ${template.company_address ? `<div>${template.company_address}</div>` : ''}
           <div>${template.footer_text}</div>
-          <div style="margin-top: 10px; font-size: 0.8em;">Report ID: ${data.reportId} | Generated: ${currentDate}</div>
+          <div style="margin-top: 10px;">Report ID: ${data.reportId} | Generated: ${currentDate}</div>
         </div>
       </div>
     </body>
     </html>
   `;
+}
+
+// PDF generation using HTML to PDF conversion service
+async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
+  try {
+    // Use htmlcsstoimage.com API for reliable HTML to PDF conversion
+    const response = await fetch('https://hcti.io/v1/image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + btoa(Deno.env.get('HTMLCSS_USER_ID') + ':' + Deno.env.get('HTMLCSS_API_KEY'))
+      },
+      body: JSON.stringify({
+        html: htmlContent,
+        css: '',
+        google_fonts: "Open Sans",
+        format: 'pdf',
+        viewport_width: 1024,
+        viewport_height: 768,
+        device_scale: 1
+      })
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      const pdfResponse = await fetch(result.url);
+      return new Uint8Array(await pdfResponse.arrayBuffer());
+    }
+  } catch (error) {
+    console.warn('External PDF service failed, falling back to jsPDF:', error);
+  }
+
+  // Fallback to jsPDF for basic PDF generation
+  try {
+    const jsPDF = (await import("https://esm.sh/jspdf@2.5.1")).jsPDF;
+    const doc = new jsPDF();
+    
+    // Extract text content from HTML for basic PDF
+    const textContent = htmlContent
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Add content to PDF with word wrapping
+    const lines = doc.splitTextToSize(textContent, 180);
+    doc.text(lines, 10, 10);
+    
+    return new Uint8Array(doc.output('arraybuffer'));
+  } catch (error) {
+    console.error('All PDF generation methods failed:', error);
+    throw new Error(`PDF generation failed: ${error.message}`);
+  }
 }
 
 const serve_handler = async (req: Request): Promise<Response> => {
@@ -410,110 +417,12 @@ const serve_handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Generate a real PDF using pdf-lib
-    const pdfDoc = await PDFDocument.create();
+    // Generate HTML content optimized for PDF
+    const htmlContent = generatePDFHTML({ reportId, caseData, reportText, templateId }, template);
+    console.log('Generated HTML content for PDF');
 
-    // Helpers
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
-    const { width, height } = page.getSize();
-
-    const hexToRgb = (hex: string) => {
-      const clean = hex.replace('#', '');
-      const bigint = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
-      const r = ((bigint >> 16) & 255) / 255;
-      const g = ((bigint >> 8) & 255) / 255;
-      const b = (bigint & 255) / 255;
-      return { r, g, b };
-    };
-
-    const drawWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number, fontRef: any, fontSize: number) => {
-      const words = text.split(/\s+/);
-      let line = '';
-      let cursorY = y;
-      for (const word of words) {
-        const testLine = line ? line + ' ' + word : word;
-        const testWidth = fontRef.widthOfTextAtSize(testLine, fontSize);
-        if (testWidth > maxWidth && line) {
-          page.drawText(line, { x, y: cursorY, size: fontSize, font: fontRef, color: rgb(0,0,0) });
-          line = word;
-          cursorY -= lineHeight;
-        } else {
-          line = testLine;
-        }
-      }
-      if (line) {
-        page.drawText(line, { x, y: cursorY, size: fontSize, font: fontRef, color: rgb(0,0,0) });
-        cursorY -= lineHeight;
-      }
-      return cursorY;
-    };
-
-    // Colors
-    const primary = hexToRgb(template.primary_color || '#0066cc');
-
-    // Header band
-    page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: rgb(primary.r, primary.g, primary.b) });
-
-    // Optional logo
-    let logoRightEdge = 40;
-    if (template.logo_url) {
-      try {
-        const resp = await fetch(template.logo_url);
-        const bytes = new Uint8Array(await resp.arrayBuffer());
-        const contentType = resp.headers.get('content-type') || '';
-        const img = contentType.includes('png')
-          ? await pdfDoc.embedPng(bytes)
-          : await pdfDoc.embedJpg(bytes);
-        const imgDims = img.scale(0.2);
-        page.drawImage(img, { x: 40, y: height - 100, width: imgDims.width, height: imgDims.height });
-        logoRightEdge = 40 + imgDims.width + 16;
-      } catch (e) {
-        console.warn('Failed to embed logo:', e);
-      }
-    }
-
-    // Header text
-    page.drawText(template.company_name || 'DentaRad', {
-      x: logoRightEdge, y: height - 60, size: 20, font: fontBold, color: rgb(1,1,1)
-    });
-    page.drawText(template.header_text || 'Diagnostic Report', {
-      x: logoRightEdge, y: height - 84, size: 12, font, color: rgb(1,1,1)
-    });
-
-    // Patient/Case info block
-    let cursorY = height - 150;
-    cursorY = drawWrappedText(`Patient: ${caseData.patient_name}`, 40, cursorY, width - 80, 18, fontBold, 12) - 6;
-    if (caseData.patient_dob) {
-      cursorY = drawWrappedText(`DOB: ${new Date(caseData.patient_dob).toLocaleDateString()}`, 40, cursorY, width - 80, 18, font, 11) - 4;
-    }
-    cursorY = drawWrappedText(`Field of View: ${caseData.field_of_view}`, 40, cursorY, width - 80, 18, font, 11) - 4;
-    cursorY = drawWrappedText(`Urgency: ${caseData.urgency.toUpperCase()}`, 40, cursorY, width - 80, 18, font, 11) - 4;
-    cursorY = drawWrappedText(`Report Date: ${new Date(caseData.upload_date).toLocaleDateString()}`, 40, cursorY, width - 80, 18, font, 11) - 4;
-    if (caseData.clinic_name) {
-      cursorY = drawWrappedText(`Clinic: ${caseData.clinic_name}${caseData.clinic_contact_email ? ` • ${caseData.clinic_contact_email}` : ''}`, 40, cursorY, width - 80, 18, font, 11) - 4;
-    }
-
-    // Divider
-    cursorY -= 8;
-    page.drawRectangle({ x: 40, y: cursorY, width: width - 80, height: 1, color: rgb(primary.r, primary.g, primary.b) });
-    cursorY -= 18;
-
-    // Clinical question
-    cursorY = drawWrappedText(`Clinical question: ${caseData.clinical_question}`, 40, cursorY, width - 80, 16, fontItalic ?? font, 11) - 8;
-
-    // Findings
-    cursorY = drawWrappedText('Diagnostic Findings:', 40, cursorY, width - 80, 18, fontBold, 12) - 6;
-    cursorY = drawWrappedText(reportText || 'No findings provided.', 40, cursorY, width - 80, 16, font, 11);
-
-    // Footer
-    const footerY = 40;
-    page.drawRectangle({ x: 0, y: 0, width, height: 40, color: rgb(0.96, 0.97, 0.98) });
-    page.drawText(template.footer_text || '', { x: 40, y: footerY + 14, size: 9, font, color: rgb(0.2,0.2,0.2) });
-
-    const pdfBytes = await pdfDoc.save();
+    // Generate PDF from HTML
+    const pdfBytes = await generatePDFFromHTML(htmlContent);
 
     // Upload to Supabase Storage
     const fileName = `report-${reportId}-${Date.now()}.pdf`;
