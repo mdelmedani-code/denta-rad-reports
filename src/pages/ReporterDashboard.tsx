@@ -231,24 +231,66 @@ const ReporterDashboard = () => {
     }
 
     try {
-      // Generate signed URL for the file
-      const { data, error } = await supabase.storage
+      // Extract folder path from the file_path (e.g., "temp_1758214187029_lyd2fnijt/file.dcm" -> "temp_1758214187029_lyd2fnijt")
+      const folderPath = caseData.file_path.split('/')[0];
+      
+      // List all files in the case folder
+      const { data: fileList, error: listError } = await supabase.storage
         .from('cbct-scans')
-        .createSignedUrl(caseData.file_path, 3600); // 1 hour expiry
+        .list(folderPath, {
+          limit: 1000,
+          sortBy: { column: 'name', order: 'asc' }
+        });
 
-      if (error) throw error;
+      if (listError) throw listError;
 
-      // Create a temporary download link
-      const link = document.createElement('a');
-      link.href = data.signedUrl;
-      link.download = `${caseData.patient_name}_${caseData.id}_images.dcm`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (!fileList || fileList.length === 0) {
+        toast({
+          title: "No files found",
+          description: "No DICOM files found for this case.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Download Starting",
+        description: `Preparing to download ${fileList.length} DICOM files...`,
+      });
+
+      // Download each file
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const filePath = `${folderPath}/${file.name}`;
+        
+        try {
+          // Generate signed URL for each file
+          const { data, error } = await supabase.storage
+            .from('cbct-scans')
+            .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+          if (error) throw error;
+
+          // Create a temporary download link
+          const link = document.createElement('a');
+          link.href = data.signedUrl;
+          link.download = file.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Small delay between downloads to prevent browser blocking
+          if (i < fileList.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (fileError) {
+          console.error(`Error downloading file ${file.name}:`, fileError);
+        }
+      }
       
       toast({
-        title: "Download Started",
-        description: "Medical images are being downloaded to your computer.",
+        title: "Download Complete",
+        description: `${fileList.length} DICOM files have been downloaded to your computer.`,
       });
     } catch (error) {
       console.error('Error downloading images:', error);
