@@ -685,12 +685,6 @@ const ReportingPage = () => {
                       </PDFDownloadButton>
                     )}
                   </div>
-                      ) : (
-                        <Wand2 className="w-4 h-4 mr-2" />
-                      )}
-                      AI Enhance
-                    </Button>
-                  </div>
 
                   <div className="flex gap-2">
                     <Button
