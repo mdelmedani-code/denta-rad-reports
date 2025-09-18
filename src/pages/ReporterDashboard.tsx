@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import JSZip from 'jszip';
 import { 
   FileText, 
   Search, 
@@ -255,42 +256,48 @@ const ReporterDashboard = () => {
 
       toast({
         title: "Download Starting",
-        description: `Preparing to download ${fileList.length} DICOM files...`,
+        description: `Preparing to download ${fileList.length} DICOM files as ZIP...`,
       });
 
-      // Download each file
-      for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
+      // Create a ZIP file
+      const zip = new JSZip();
+      
+      // Download each file and add to ZIP
+      for (const file of fileList) {
         const filePath = `${folderPath}/${file.name}`;
         
         try {
           // Generate signed URL for each file
           const { data, error } = await supabase.storage
             .from('cbct-scans')
-            .createSignedUrl(filePath, 3600); // 1 hour expiry
+            .createSignedUrl(filePath, 3600);
 
           if (error) throw error;
 
-          // Create a temporary download link
-          const link = document.createElement('a');
-          link.href = data.signedUrl;
-          link.download = file.name;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          // Fetch the file blob
+          const response = await fetch(data.signedUrl);
+          const blob = await response.blob();
           
-          // Small delay between downloads to prevent browser blocking
-          if (i < fileList.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+          // Add file to ZIP
+          zip.file(file.name, blob);
         } catch (fileError) {
-          console.error(`Error downloading file ${file.name}:`, fileError);
+          console.error(`Error adding file ${file.name} to ZIP:`, fileError);
         }
       }
       
+      // Generate ZIP file and download
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `${caseData.patient_name}_${caseData.id}_DICOM_files.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
       toast({
         title: "Download Complete",
-        description: `${fileList.length} DICOM files have been downloaded to your computer.`,
+        description: `${fileList.length} DICOM files downloaded as ZIP file.`,
       });
     } catch (error) {
       console.error('Error downloading images:', error);
