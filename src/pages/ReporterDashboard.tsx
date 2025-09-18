@@ -41,8 +41,6 @@ interface Case {
   file_path: string | null;
   patient_dob: string | null;
   patient_internal_id: string | null;
-  orthanc_study_id: string | null;
-  orthanc_series_id: string | null;
   clinics: {
     name: string;
     contact_email: string;
@@ -135,8 +133,6 @@ const ReporterDashboard = () => {
           file_path: "sample/case-001/scan.dcm",
           patient_dob: "1985-03-15",
           patient_internal_id: "PT-2024-001",
-          orthanc_study_id: null,
-          orthanc_series_id: null,
           clinics: {
             name: "Downtown Dental Clinic",
             contact_email: "info@downtowndental.com"
@@ -155,8 +151,6 @@ const ReporterDashboard = () => {
           file_path: "sample/case-002/scan.dcm",
           patient_dob: "1978-11-22",
           patient_internal_id: "PT-2024-002",
-          orthanc_study_id: null,
-          orthanc_series_id: null,
           clinics: {
             name: "Smile Center Orthodontics",
             contact_email: "contact@smilecenter.co.uk"
@@ -243,7 +237,7 @@ const ReporterDashboard = () => {
       
       toast({
         title: "Download Started",
-        description: "DICOM images are being downloaded to your computer.",
+        description: "Medical images are being downloaded to your computer.",
       });
     } catch (error) {
       console.error('Error downloading images:', error);
@@ -760,7 +754,7 @@ const ReporterDashboard = () => {
           <DialogHeader>
             <DialogTitle>Report for {selectedCase?.patient_name}</DialogTitle>
             <DialogDescription>
-              Review the DICOM images and create a diagnostic report for this case.
+              Review the medical images and create a diagnostic report for this case.
             </DialogDescription>
           </DialogHeader>
           
@@ -778,15 +772,15 @@ const ReporterDashboard = () => {
                        If you save your report, it may overwrite their work if they haven't finalized it yet.
                      </AlertDescription>
                    </Alert>
-                 )}
-                 
-                    <div className="h-[600px] border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                      <div className="text-center text-muted-foreground max-w-md">
-                        <p className="text-lg font-medium mb-2">Image viewer temporarily unavailable</p>
-                        <p className="text-sm">We’re migrating PACS. You can continue reporting without the embedded viewer.</p>
-                      </div>
-                    </div>
-               </div>
+                  )}
+                  
+                     <div className="h-[600px] border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                       <div className="text-center text-muted-foreground max-w-md">
+                         <p className="text-lg font-medium mb-2">Image viewer temporarily unavailable</p>
+                         <p className="text-sm">You can continue reporting without the embedded viewer.</p>
+                       </div>
+                     </div>
+                </div>
 
               {/* Right Column - Reporting Interface */}
               <div className="space-y-4">
