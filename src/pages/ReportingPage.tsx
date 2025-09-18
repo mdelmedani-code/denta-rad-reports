@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   ArrowLeft,
   Save,
@@ -13,11 +15,15 @@ import {
   Loader2,
   Users,
   AlertTriangle,
-  Download
+  Download,
+  ImageIcon,
+  Upload,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { ImageAnnotator } from "@/components/ImageAnnotator";
 
 interface Case {
   id: string;
@@ -40,6 +46,11 @@ interface Case {
     pdf_url: string | null;
     report_text: string | null;
   }[];
+  annotations?: {
+    id: string;
+    image_url: string;
+    annotation_data: any;
+  }[];
 }
 
 const ReportingPage = () => {
@@ -55,6 +66,9 @@ const ReportingPage = () => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [concurrentUsers, setConcurrentUsers] = useState<string[]>([]);
   const [showConcurrentWarning, setShowConcurrentWarning] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<{url: string, name: string, id: string}[]>([]);
+  const [showImageAnnotator, setShowImageAnnotator] = useState(false);
+  const [currentImageForAnnotation, setCurrentImageForAnnotation] = useState<{url: string, name: string} | null>(null);
 
   useEffect(() => {
     if (caseId) {
@@ -290,6 +304,127 @@ const ReportingPage = () => {
     }
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || !caseData) return;
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file",
+          description: "Please upload only image files",
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${caseData.id}_${Date.now()}.${fileExt}`;
+
+        const { data, error } = await supabase.storage
+          .from('reports')
+          .upload(`case_images/${fileName}`, file);
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+          .from('reports')
+          .getPublicUrl(`case_images/${fileName}`);
+
+        const newImage = {
+          id: Date.now().toString(),
+          url: urlData.publicUrl,
+          name: file.name
+        };
+
+        setUploadedImages(prev => [...prev, newImage]);
+        
+        toast({
+          title: "Image uploaded",
+          description: "You can now annotate this image",
+        });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleAnnotatedImageSave = async (annotatedBlob: Blob, originalFileName: string) => {
+    if (!caseData) return;
+
+    try {
+      const fileName = `annotated_${caseData.id}_${Date.now()}.png`;
+
+      const { data, error } = await supabase.storage
+        .from('reports')
+        .upload(`case_images/${fileName}`, annotatedBlob);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('reports')
+        .getPublicUrl(`case_images/${fileName}`);
+
+      // Save annotation to database
+      const user = await supabase.auth.getUser();
+      const { error: dbError } = await supabase
+        .from('case_annotations')
+        .insert({
+          case_id: caseData.id,
+          created_by: user.data.user?.id || '',
+          annotation_type: 'image',
+          annotation_data: {
+            original_name: originalFileName,
+            image_url: urlData.publicUrl,
+            annotated_at: new Date().toISOString()
+          }
+        });
+
+      if (dbError) throw dbError;
+
+      const newAnnotatedImage = {
+        id: Date.now().toString(),
+        url: urlData.publicUrl,
+        name: `annotated_${originalFileName}`
+      };
+
+      setUploadedImages(prev => [...prev, newAnnotatedImage]);
+      setShowImageAnnotator(false);
+      setCurrentImageForAnnotation(null);
+
+      toast({
+        title: "Annotated image saved",
+        description: "The annotated image has been added to your report",
+      });
+    } catch (error) {
+      console.error('Error saving annotated image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save annotated image",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeImage = (imageId: string) => {
+    setUploadedImages(prev => prev.filter(img => img.id !== imageId));
+    toast({
+      title: "Image removed",
+      description: "Image has been removed from the report",
+    });
+  };
+
+  const openImageAnnotator = (imageUrl: string, imageName: string) => {
+    setCurrentImageForAnnotation({ url: imageUrl, name: imageName });
+    setShowImageAnnotator(true);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'uploaded': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -423,6 +558,68 @@ const ReportingPage = () => {
                   <VoiceRecorder onTranscription={(text) => setReportText(prev => prev + ' ' + text)} />
                 </div>
 
+                {/* Image Upload Section */}
+                <div className="border rounded-lg p-4 bg-slate-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium">Report Images & Screenshots</h4>
+                    <div className="flex gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Images
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {uploadedImages.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                      {uploadedImages.map((image) => (
+                        <div key={image.id} className="relative group">
+                          <img
+                            src={image.url}
+                            alt={image.name}
+                            className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => openImageAnnotator(image.url, image.name)}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded transition-all flex items-center justify-center">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => openImageAnnotator(image.url, image.name)}
+                            >
+                              <ImageIcon className="w-4 h-4 mr-1" />
+                              Annotate
+                            </Button>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                            onClick={() => removeImage(image.id)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs p-1 rounded-b">
+                            {image.name.length > 20 ? `${image.name.substring(0, 17)}...` : image.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Report Text Area */}
                 <Textarea
                   value={reportText}
@@ -480,6 +677,26 @@ const ReportingPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Annotation Dialog */}
+      <Dialog open={showImageAnnotator} onOpenChange={setShowImageAnnotator}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Annotate Image</DialogTitle>
+            <DialogDescription>
+              Add annotations, drawings, and text to your image
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentImageForAnnotation && (
+            <ImageAnnotator
+              imageUrl={currentImageForAnnotation.url}
+              fileName={currentImageForAnnotation.name}
+              onSave={handleAnnotatedImageSave}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
