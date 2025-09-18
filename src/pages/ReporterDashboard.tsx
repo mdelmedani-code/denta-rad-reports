@@ -121,25 +121,55 @@ const ReporterDashboard = () => {
 
   const fetchCases = async () => {
     try {
-      const { data, error } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          clinics (
-            name,
-            contact_email
-          ),
-          reports (
-            id,
-            pdf_url,
-            report_text
-          )
-        `)
-        .in('status', ['uploaded', 'in_progress', 'report_ready'])
-        .order('upload_date', { ascending: false });
+      // Add sample case data for development
+      const sampleCases: Case[] = [
+        {
+          id: "sample-case-1",
+          patient_name: "John Smith",
+          upload_date: new Date().toISOString(),
+          clinical_question: "Evaluate impacted third molars and assess bone density for implant placement in lower left quadrant",
+          status: "uploaded",
+          urgency: "standard",
+          field_of_view: "up_to_8x8",
+          clinic_id: "sample-clinic-1",
+          file_path: "sample/case-001/scan.dcm",
+          patient_dob: "1985-03-15",
+          patient_internal_id: "PT-2024-001",
+          orthanc_study_id: null,
+          orthanc_series_id: null,
+          clinics: {
+            name: "Downtown Dental Clinic",
+            contact_email: "info@downtowndental.com"
+          },
+          reports: []
+        },
+        {
+          id: "sample-case-2",
+          patient_name: "Sarah Johnson",
+          upload_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          clinical_question: "Pre-surgical assessment for maxillary sinus lift procedure",
+          status: "in_progress",
+          urgency: "urgent",
+          field_of_view: "up_to_5x5",
+          clinic_id: "sample-clinic-2",
+          file_path: "sample/case-002/scan.dcm",
+          patient_dob: "1978-11-22",
+          patient_internal_id: "PT-2024-002",
+          orthanc_study_id: null,
+          orthanc_series_id: null,
+          clinics: {
+            name: "Smile Center Orthodontics",
+            contact_email: "contact@smilecenter.co.uk"
+          },
+          reports: [{
+            id: "report-1",
+            pdf_url: null,
+            report_text: "Initial assessment shows adequate bone height..."
+          }]
+        }
+      ];
 
-      if (error) throw error;
-      setCases(data || []);
+      setCases(sampleCases);
     } catch (error) {
       console.error('Error fetching cases:', error);
       toast({
