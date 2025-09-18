@@ -9,6 +9,7 @@ import { ArrowLeft, Save, Loader2, Palette, Upload, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import PDFViewer from "@/components/PDFViewer";
 
 interface PDFTemplate {
   id: string;
@@ -37,6 +38,7 @@ const PDFTemplateSettings = () => {
   const [previewing, setPreviewing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [showInline, setShowInline] = useState(false);
 
   useEffect(() => {
     fetchTemplate();
@@ -419,17 +421,9 @@ const PDFTemplateSettings = () => {
             <div className="flex flex-wrap gap-2 items-center">
               <Button
                 variant="secondary"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(previewUrl);
-                    const blob = await res.blob();
-                    if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
-                    const url = URL.createObjectURL(blob);
-                    setPreviewBlobUrl(url);
-                    toast({ title: 'Inline preview loaded' });
-                  } catch (e: any) {
-                    toast({ title: 'Error', description: e.message || 'Unable to load inline preview', variant: 'destructive' });
-                  }
+                onClick={() => {
+                  setShowInline(true);
+                  toast({ title: 'Inline preview', description: 'Loading viewer...' });
                 }}
               >
                 View Inline

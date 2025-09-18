@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -409,18 +410,115 @@ const serve_handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Generate HTML content with template
-    const htmlContent = generatePDFHTML({ reportId, caseData, reportText }, template);
+    // Generate a real PDF using pdf-lib
+    const pdfDoc = await PDFDocument.create();
 
-    // For development, we'll create a mock PDF response
-    // In production, you would integrate with a proper PDF generation service
-    const mockPdfBuffer = new TextEncoder().encode(`Mock PDF content for report ${reportId} using template ${template.name}`);
-    
+    // Helpers
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+    const { width, height } = page.getSize();
+
+    const hexToRgb = (hex: string) => {
+      const clean = hex.replace('#', '');
+      const bigint = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
+      const r = ((bigint >> 16) & 255) / 255;
+      const g = ((bigint >> 8) & 255) / 255;
+      const b = (bigint & 255) / 255;
+      return { r, g, b };
+    };
+
+    const drawWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number, fontRef: any, fontSize: number) => {
+      const words = text.split(/\s+/);
+      let line = '';
+      let cursorY = y;
+      for (const word of words) {
+        const testLine = line ? line + ' ' + word : word;
+        const testWidth = fontRef.widthOfTextAtSize(testLine, fontSize);
+        if (testWidth > maxWidth && line) {
+          page.drawText(line, { x, y: cursorY, size: fontSize, font: fontRef, color: rgb(0,0,0) });
+          line = word;
+          cursorY -= lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line) {
+        page.drawText(line, { x, y: cursorY, size: fontSize, font: fontRef, color: rgb(0,0,0) });
+        cursorY -= lineHeight;
+      }
+      return cursorY;
+    };
+
+    // Colors
+    const primary = hexToRgb(template.primary_color || '#0066cc');
+
+    // Header band
+    page.drawRectangle({ x: 0, y: height - 120, width, height: 120, color: rgb(primary.r, primary.g, primary.b) });
+
+    // Optional logo
+    let logoRightEdge = 40;
+    if (template.logo_url) {
+      try {
+        const resp = await fetch(template.logo_url);
+        const bytes = new Uint8Array(await resp.arrayBuffer());
+        const contentType = resp.headers.get('content-type') || '';
+        const img = contentType.includes('png')
+          ? await pdfDoc.embedPng(bytes)
+          : await pdfDoc.embedJpg(bytes);
+        const imgDims = img.scale(0.2);
+        page.drawImage(img, { x: 40, y: height - 100, width: imgDims.width, height: imgDims.height });
+        logoRightEdge = 40 + imgDims.width + 16;
+      } catch (e) {
+        console.warn('Failed to embed logo:', e);
+      }
+    }
+
+    // Header text
+    page.drawText(template.company_name || 'DentaRad', {
+      x: logoRightEdge, y: height - 60, size: 20, font: fontBold, color: rgb(1,1,1)
+    });
+    page.drawText(template.header_text || 'Diagnostic Report', {
+      x: logoRightEdge, y: height - 84, size: 12, font, color: rgb(1,1,1)
+    });
+
+    // Patient/Case info block
+    let cursorY = height - 150;
+    cursorY = drawWrappedText(`Patient: ${caseData.patient_name}`, 40, cursorY, width - 80, 18, fontBold, 12) - 6;
+    if (caseData.patient_dob) {
+      cursorY = drawWrappedText(`DOB: ${new Date(caseData.patient_dob).toLocaleDateString()}`, 40, cursorY, width - 80, 18, font, 11) - 4;
+    }
+    cursorY = drawWrappedText(`Field of View: ${caseData.field_of_view}`, 40, cursorY, width - 80, 18, font, 11) - 4;
+    cursorY = drawWrappedText(`Urgency: ${caseData.urgency.toUpperCase()}`, 40, cursorY, width - 80, 18, font, 11) - 4;
+    cursorY = drawWrappedText(`Report Date: ${new Date(caseData.upload_date).toLocaleDateString()}`, 40, cursorY, width - 80, 18, font, 11) - 4;
+    if (caseData.clinic_name) {
+      cursorY = drawWrappedText(`Clinic: ${caseData.clinic_name}${caseData.clinic_contact_email ? ` • ${caseData.clinic_contact_email}` : ''}`, 40, cursorY, width - 80, 18, font, 11) - 4;
+    }
+
+    // Divider
+    cursorY -= 8;
+    page.drawRectangle({ x: 40, y: cursorY, width: width - 80, height: 1, color: rgb(primary.r, primary.g, primary.b) });
+    cursorY -= 18;
+
+    // Clinical question
+    cursorY = drawWrappedText(`Clinical question: ${caseData.clinical_question}`, 40, cursorY, width - 80, 16, fontItalic ?? font, 11) - 8;
+
+    // Findings
+    cursorY = drawWrappedText('Diagnostic Findings:', 40, cursorY, width - 80, 18, fontBold, 12) - 6;
+    cursorY = drawWrappedText(reportText || 'No findings provided.', 40, cursorY, width - 80, 16, font, 11);
+
+    // Footer
+    const footerY = 40;
+    page.drawRectangle({ x: 0, y: 0, width, height: 40, color: rgb(0.96, 0.97, 0.98) });
+    page.drawText(template.footer_text || '', { x: 40, y: footerY + 14, size: 9, font, color: rgb(0.2,0.2,0.2) });
+
+    const pdfBytes = await pdfDoc.save();
+
     // Upload to Supabase Storage
     const fileName = `report-${reportId}-${Date.now()}.pdf`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('reports')
-      .upload(fileName, mockPdfBuffer, {
+      .upload(fileName, pdfBytes, {
         contentType: 'application/pdf',
         cacheControl: '3600',
         upsert: true
