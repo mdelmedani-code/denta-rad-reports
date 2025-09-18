@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -305,6 +305,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_templates: {
+        Row: {
+          company_address: string | null
+          company_name: string | null
+          created_at: string
+          font_family: string | null
+          footer_text: string | null
+          header_text: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_name?: string | null
+          created_at?: string
+          font_family?: string | null
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string | null
+          company_name?: string | null
+          created_at?: string
+          font_family?: string | null
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           clinic_id: string | null
@@ -498,9 +546,9 @@ export type Database = {
     Functions: {
       calculate_case_price: {
         Args: {
+          p_addons?: string[]
           p_field_of_view: Database["public"]["Enums"]["field_of_view"]
           p_urgency: Database["public"]["Enums"]["urgency_level"]
-          p_addons?: string[]
         }
         Returns: number
       }
@@ -519,10 +567,10 @@ export type Database = {
       generate_monthly_invoices: {
         Args: Record<PropertyKey, never>
         Returns: {
+          case_count: number
           clinic_id: string
           invoice_id: string
           total_amount: number
-          case_count: number
         }[]
       }
       get_current_user_clinic: {
@@ -536,19 +584,19 @@ export type Database = {
       get_monthly_income_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          projected_income: number
           income_so_far: number
-          total_cases: number
+          projected_income: number
           reported_cases: number
+          total_cases: number
         }[]
       }
       get_weekly_income_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          projected_income: number
           income_so_far: number
-          total_cases: number
+          projected_income: number
           reported_cases: number
+          total_cases: number
         }[]
       }
     }

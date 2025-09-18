@@ -259,6 +259,10 @@ const AdminDashboard = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 Reporter Dashboard
               </Button>
+              <Button variant="outline" onClick={() => navigate("/admin/pdf-templates")}>
+                <FileText className="w-4 h-4 mr-2" />
+                PDF Templates
+              </Button>
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out

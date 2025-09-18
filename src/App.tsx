@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
 import ReportingPage from "./pages/ReportingPage";
+import PDFTemplateSettings from "./pages/PDFTemplateSettings";
 
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/admin/invoices" element={<Invoices />} />
             <Route path="/admin/reporter" element={<ReporterDashboard />} />
             <Route path="/admin/reporter/case/:caseId" element={<ReportingPage />} />
+            <Route path="/admin/pdf-templates" element={<PDFTemplateSettings />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
