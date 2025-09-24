@@ -95,7 +95,7 @@ const Dashboard = () => {
       // Get the report data for this case
       const { data: reportData, error: reportError } = await supabase
         .from('reports')
-        .select('*')
+        .select('*, signed_off_by, signed_off_at, signatory_name, signatory_title, signatory_credentials, signature_statement')
         .eq('case_id', caseData.id)
         .single();
 
@@ -108,6 +108,18 @@ const Dashboard = () => {
           variant: "destructive",
         });
         return;
+      }
+
+      // Prepare signature data if report is signed off
+      let signatureData = null;
+      if (reportData.signed_off_by) {
+        signatureData = {
+          signatory_name: reportData.signatory_name,
+          signatory_title: reportData.signatory_title,
+          signatory_credentials: reportData.signatory_credentials,
+          signature_statement: reportData.signature_statement,
+          signed_off_at: reportData.signed_off_at
+        };
       }
 
       // Call the PDF generation edge function
@@ -125,7 +137,8 @@ const Dashboard = () => {
             clinic_name: caseData.clinics?.name,
             clinic_contact_email: caseData.clinics?.contact_email
           },
-          reportText: reportData.report_text
+          reportText: reportData.report_text,
+          signatureData
         }
       });
 

@@ -363,28 +363,37 @@ export type Database = {
         Row: {
           clinic_id: string | null
           created_at: string | null
+          credentials: string | null
           email: string
           id: string
           notification_preferences: Json | null
+          professional_title: string | null
           role: Database["public"]["Enums"]["user_role"]
+          signature_statement: string | null
           updated_at: string | null
         }
         Insert: {
           clinic_id?: string | null
           created_at?: string | null
+          credentials?: string | null
           email: string
           id: string
           notification_preferences?: Json | null
+          professional_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          signature_statement?: string | null
           updated_at?: string | null
         }
         Update: {
           clinic_id?: string | null
           created_at?: string | null
+          credentials?: string | null
           email?: string
           id?: string
           notification_preferences?: Json | null
+          professional_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          signature_statement?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -440,6 +449,12 @@ export type Database = {
           id: string
           pdf_url: string | null
           report_text: string | null
+          signatory_credentials: string | null
+          signatory_name: string | null
+          signatory_title: string | null
+          signature_statement: string | null
+          signed_off_at: string | null
+          signed_off_by: string | null
         }
         Insert: {
           author_id?: string | null
@@ -450,6 +465,12 @@ export type Database = {
           id?: string
           pdf_url?: string | null
           report_text?: string | null
+          signatory_credentials?: string | null
+          signatory_name?: string | null
+          signatory_title?: string | null
+          signature_statement?: string | null
+          signed_off_at?: string | null
+          signed_off_by?: string | null
         }
         Update: {
           author_id?: string | null
@@ -460,6 +481,12 @@ export type Database = {
           id?: string
           pdf_url?: string | null
           report_text?: string | null
+          signatory_credentials?: string | null
+          signatory_name?: string | null
+          signatory_title?: string | null
+          signature_statement?: string | null
+          signed_off_at?: string | null
+          signed_off_by?: string | null
         }
         Relationships: [
           {
@@ -604,6 +631,16 @@ export type Database = {
           reported_cases: number
           total_cases: number
         }[]
+      }
+      sign_off_report: {
+        Args: {
+          p_report_id: string
+          p_signatory_credentials: string
+          p_signatory_name: string
+          p_signatory_title: string
+          p_signature_statement?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

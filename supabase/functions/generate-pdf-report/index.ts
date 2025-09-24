@@ -22,6 +22,13 @@ interface PDFRequest {
   };
   reportText: string;
   templateId?: string;
+  signatureData?: {
+    signatory_name: string;
+    signatory_title: string;
+    signatory_credentials: string;
+    signature_statement: string;
+    signed_off_at: string;
+  };
 }
 
 interface PDFTemplate {
@@ -228,6 +235,39 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
           text-align: center;
         }
         
+        .signature-section {
+          margin: 20px 0;
+          padding: 15px;
+          background: #f8f9fa;
+          border-left: 3px solid ${template.primary_color};
+          border-radius: 5px;
+        }
+        
+        .signature-title {
+          font-size: 14px;
+          font-weight: bold;
+          color: ${template.primary_color};
+          margin-bottom: 8px;
+        }
+        
+        .signature-content {
+          font-size: 11px;
+          line-height: 1.4;
+          margin-bottom: 8px;
+        }
+        
+        .signature-name {
+          font-size: 12px;
+          font-weight: bold;
+          margin-bottom: 2px;
+        }
+        
+        .signature-details {
+          font-size: 10px;
+          color: #666666;
+          margin-bottom: 2px;
+        }
+        
         .page-break {
           page-break-before: always;
         }
@@ -335,6 +375,23 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
             </div>
           </div>
         </div>
+        
+        ${data.signatureData ? `
+        <div class="signature-section">
+          <div class="signature-title">Digitally Signed Report</div>
+          <div class="signature-content">${data.signatureData.signature_statement}</div>
+          <div class="signature-name">${data.signatureData.signatory_name}</div>
+          <div class="signature-details">${data.signatureData.signatory_title}</div>
+          <div class="signature-details">${data.signatureData.signatory_credentials}</div>
+          <div class="signature-details">Digitally signed on: ${new Date(data.signatureData.signed_off_at).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</div>
+        </div>
+        ` : ''}
         
         <div class="footer">
           <div class="footer-logo">${template.company_name}</div>

@@ -74,6 +74,35 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     fontSize: 11,
   },
+  signature: {
+    marginTop: 20,
+    marginBottom: 10,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderLeft: '3pt solid #0066cc',
+    borderRadius: 5,
+  },
+  signatureTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0066cc',
+    marginBottom: 8,
+  },
+  signatureContent: {
+    fontSize: 11,
+    lineHeight: 1.4,
+  },
+  signatureName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  signatureDetails: {
+    fontSize: 10,
+    color: '#666666',
+    marginBottom: 2,
+  },
   imagesSection: {
     marginTop: 20,
     marginBottom: 20,
@@ -137,6 +166,13 @@ interface PDFReportProps {
       clinic_contact_email?: string;
     };
     reportText: string;
+    signatureData?: {
+      signatory_name: string;
+      signatory_title: string;
+      signatory_credentials: string;
+      signature_statement: string;
+      signed_off_at: string;
+    };
   };
   template: {
     company_name: string;
@@ -265,6 +301,36 @@ const PDFReport: React.FC<PDFReportProps> = ({ reportData, template }) => {
             </View>
           </View>
         </View>
+
+        {/* Digital Signature Section */}
+        {reportData.signatureData && (
+          <View style={styles.signature}>
+            <Text style={[styles.signatureTitle, { color: template.primary_color }]}>
+              Digitally Signed Report
+            </Text>
+            <Text style={styles.signatureContent}>
+              {reportData.signatureData.signature_statement}
+            </Text>
+            <Text style={styles.signatureName}>
+              {reportData.signatureData.signatory_name}
+            </Text>
+            <Text style={styles.signatureDetails}>
+              {reportData.signatureData.signatory_title}
+            </Text>
+            <Text style={styles.signatureDetails}>
+              {reportData.signatureData.signatory_credentials}
+            </Text>
+            <Text style={styles.signatureDetails}>
+              Digitally signed on: {new Date(reportData.signatureData.signed_off_at).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </Text>
+          </View>
+        )}
 
         {/* Footer */}
         <View style={[styles.footer, { backgroundColor: template.secondary_color }]}>

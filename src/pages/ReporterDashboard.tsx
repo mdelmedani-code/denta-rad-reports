@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Download,
   Share2,
-  FileType
+  FileType,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,12 @@ interface Case {
     id: string;
     pdf_url: string | null;
     report_text: string | null;
+    signed_off_by: string | null;
+    signed_off_at: string | null;
+    signatory_name: string | null;
+    signatory_title: string | null;
+    signatory_credentials: string | null;
+    signature_statement: string | null;
   }[];
 }
 
@@ -78,10 +85,14 @@ const ReporterDashboard = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDownloadComplete, setShowDownloadComplete] = useState(false);
   const [downloadedFileCount, setDownloadedFileCount] = useState(0);
+  const [isSigningOff, setIsSigningOff] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     fetchCases();
     fetchPDFTemplate();
+    fetchUserProfile();
   }, []);
 
   // Real-time presence tracking for concurrent editing
@@ -162,6 +173,25 @@ const ReporterDashboard = () => {
     }
   };
 
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role, professional_title, credentials, signature_statement')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        setUserRole(profile?.role);
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
   const fetchCases = async () => {
     try {
       const { data, error } = await supabase
@@ -175,7 +205,13 @@ const ReporterDashboard = () => {
           reports (
             id,
             report_text,
-            pdf_url
+            pdf_url,
+            signed_off_by,
+            signed_off_at,
+            signatory_name,
+            signatory_title,
+            signatory_credentials,
+            signature_statement
           )
         `)
         .order('upload_date', { ascending: false });
@@ -483,6 +519,24 @@ const ReporterDashboard = () => {
 
     setIsGeneratingPDF(true);
     try {
+      // Check if report is signed off and get signature data
+      const { data: reportData, error: reportError } = await supabase
+        .from('reports')
+        .select('signed_off_by, signed_off_at, signatory_name, signatory_title, signatory_credentials, signature_statement')
+        .eq('id', reportId)
+        .single();
+
+      let signatureData = null;
+      if (reportData?.signed_off_by) {
+        signatureData = {
+          signatory_name: reportData.signatory_name,
+          signatory_title: reportData.signatory_title,
+          signatory_credentials: reportData.signatory_credentials,
+          signature_statement: reportData.signature_statement,
+          signed_off_at: reportData.signed_off_at
+        };
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-pdf-report', {
         body: {
           reportId,
@@ -498,6 +552,7 @@ const ReporterDashboard = () => {
             clinic_contact_email: selectedCase.clinics.contact_email,
           },
           reportText,
+          signatureData
         },
       });
 
@@ -505,7 +560,7 @@ const ReporterDashboard = () => {
 
       toast({
         title: "PDF generated successfully",
-        description: "The PDF report has been generated and is ready for download.",
+        description: signatureData ? "The digitally signed PDF report has been generated." : "The PDF report has been generated and is ready for download.",
       });
 
       // Refresh the data to get the updated PDF URL
@@ -666,6 +721,46 @@ const ReporterDashboard = () => {
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const signOffReport = async () => {
+    if (!selectedCase?.reports?.[0]?.id || !userProfile) return;
+
+    setIsSigningOff(true);
+    try {
+      const { data, error } = await supabase.rpc('sign_off_report', {
+        p_report_id: selectedCase.reports[0].id,
+        p_signatory_name: 'Dr Mohamed Elmedani',
+        p_signatory_title: userProfile.professional_title || 'Consultant Radiologist',
+        p_signatory_credentials: userProfile.credentials || 'GMC 7514964',
+        p_signature_statement: userProfile.signature_statement
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Report Signed Off",
+        description: "The report has been digitally signed and marked as complete.",
+      });
+
+      // Regenerate PDF with signature
+      await generatePDF(selectedCase.reports[0].id);
+      
+      // Refresh the data
+      fetchCases();
+      setSelectedCase(null);
+      setReportText("");
+      
+    } catch (error) {
+      console.error('Error signing off report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign off report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSigningOff(false);
     }
   };
 
@@ -1127,6 +1222,20 @@ const ReporterDashboard = () => {
                     <Save className="w-4 h-4" />
                     {isSaving ? 'Saving...' : 'Save Draft'}
                   </Button>
+                  
+                  {userRole === 'admin' && selectedCase?.reports?.[0] && !selectedCase.reports[0].signed_off_by && selectedCase.status === 'report_ready' && (
+                    <Button 
+                      onClick={signOffReport}
+                      disabled={isSigningOff || isGeneratingPDF}
+                      variant="secondary"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Shield className="w-4 h-4" />
+                      {isSigningOff ? 'Signing Off...' : 'Sign Off Report'}
+                    </Button>
+                  )}
+                  
                   <Button 
                     onClick={saveReport}
                     disabled={isSaving || isGeneratingPDF || !reportText.trim()}

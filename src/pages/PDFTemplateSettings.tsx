@@ -209,6 +209,13 @@ RECOMMENDATIONS:
 Based on the imaging findings, the proposed implant placement appears favorable with adequate bone volume and quality. The impacted third molar may require extraction prior to implant placement to optimize treatment outcomes.
 
 This report was generated using AI-assisted analysis of the CBCT imaging data and should be correlated with clinical examination findings.`,
+          signatureData: {
+            signatory_name: 'Dr Mohamed Elmedani',
+            signatory_title: 'Consultant Radiologist',
+            signatory_credentials: 'GMC 7514964',
+            signature_statement: 'I have reviewed this diagnostic report and confirm the findings are accurate based on the CBCT imaging analysis performed using AI-assisted diagnostic tools.',
+            signed_off_at: new Date().toISOString()
+          },
           templateId: template.id
         }
       });
