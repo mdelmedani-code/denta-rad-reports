@@ -135,52 +135,29 @@ const ReportingPage = () => {
 
   const fetchCaseData = async () => {
     try {
-      // For now, use sample data - replace with actual database fetch later
-      const sampleCases: Case[] = [
-        {
-          id: "sample-case-1",
-          patient_name: "John Smith",
-          upload_date: new Date().toISOString(),
-          clinical_question: "Evaluate impacted third molars and assess bone density for implant placement in lower left quadrant",
-          status: "uploaded",
-          urgency: "standard",
-          field_of_view: "up_to_8x8",
-          clinic_id: "sample-clinic-1",
-          file_path: "sample/case-001/scan.dcm",
-          patient_dob: "1985-03-15",
-          patient_internal_id: "PT-2024-001",
-          clinics: {
-            name: "Downtown Dental Clinic",
-            contact_email: "info@downtowndental.com"
-          },
-          reports: []
-        },
-        {
-          id: "sample-case-2",
-          patient_name: "Sarah Johnson",
-          upload_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          clinical_question: "Pre-surgical assessment for maxillary sinus lift procedure",
-          status: "in_progress",
-          urgency: "urgent",
-          field_of_view: "up_to_5x5",
-          clinic_id: "sample-clinic-2",
-          file_path: "sample/case-002/scan.dcm",
-          patient_dob: "1978-11-22",
-          patient_internal_id: "PT-2024-002",
-          clinics: {
-            name: "Smile Center Orthodontics",
-            contact_email: "contact@smilecenter.co.uk"
-          },
-          reports: [{
-            id: "report-1",
-            pdf_url: null,
-            report_text: "Initial assessment shows adequate bone height..."
-          }]
-        }
-      ];
+      // Fetch case data from database with clinic information
+      const { data: caseData, error: caseError } = await supabase
+        .from('cases')
+        .select(`
+          *,
+          clinics (
+            name,
+            contact_email
+          ),
+          reports (
+            id,
+            pdf_url,
+            report_text
+          )
+        `)
+        .eq('id', caseId)
+        .maybeSingle();
 
-      const foundCase = sampleCases.find(c => c.id === caseId);
-      if (!foundCase) {
+      if (caseError) {
+        throw new Error(`Database error: ${caseError.message}`);
+      }
+
+      if (!caseData) {
         toast({
           title: "Case not found",
           description: "The requested case could not be found.",
@@ -190,16 +167,22 @@ const ReportingPage = () => {
         return;
       }
 
-      setCaseData(foundCase);
+      setCaseData(caseData as Case);
       
       // Load existing report if available
-      const existingReport = foundCase.reports?.[0];
+      const existingReport = caseData.reports?.[0];
       setReportText(existingReport?.report_text || '');
 
       // Update case status to in_progress if not already completed
-      if (foundCase.status !== 'report_ready') {
-        // This would be a database update in real implementation
-        console.log('Updating case status to in_progress');
+      if (caseData.status !== 'report_ready' && caseData.status !== 'awaiting_payment') {
+        const { error: updateError } = await supabase
+          .from('cases')
+          .update({ status: 'in_progress' })
+          .eq('id', caseId);
+
+        if (updateError) {
+          console.error('Error updating case status:', updateError);
+        }
       }
     } catch (error) {
       console.error('Error fetching case data:', error);
