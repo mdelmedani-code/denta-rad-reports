@@ -13,11 +13,17 @@ import { NotificationPreferences } from "@/components/NotificationPreferences";
 interface Case {
   id: string;
   patient_name: string;
+  patient_dob?: string;
+  patient_internal_id?: string;
   upload_date: string;
   clinical_question: string;
   status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
   urgency: 'standard' | 'urgent';
   field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
+  clinics?: {
+    name: string;
+    contact_email: string;
+  };
 }
 
 const Dashboard = () => {
@@ -36,7 +42,13 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from('cases')
-        .select('*')
+        .select(`
+          *,
+          clinics (
+            name,
+            contact_email
+          )
+        `)
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
@@ -104,10 +116,14 @@ const Dashboard = () => {
           reportId: reportData.id,
           caseData: {
             patient_name: caseData.patient_name,
+            patient_dob: caseData.patient_dob,
+            patient_internal_id: caseData.patient_internal_id,
             field_of_view: caseData.field_of_view,
             urgency: caseData.urgency,
             clinical_question: caseData.clinical_question,
-            upload_date: caseData.upload_date
+            upload_date: caseData.upload_date,
+            clinic_name: caseData.clinics?.name,
+            clinic_contact_email: caseData.clinics?.contact_email
           },
           reportText: reportData.report_text
         }
