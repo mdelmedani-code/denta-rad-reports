@@ -135,6 +135,12 @@ const ReportingPage = () => {
 
   const fetchCaseData = async () => {
     try {
+      console.log('Fetching case data for caseId:', caseId);
+      
+      if (!caseId) {
+        throw new Error('Case ID is missing');
+      }
+
       // Fetch case data from database with clinic information
       const { data: caseData, error: caseError } = await supabase
         .from('cases')
@@ -247,8 +253,32 @@ const ReportingPage = () => {
 
     setIsSaving(true);
     try {
-      // In real implementation, this would save to database
-      console.log('Saving draft for case:', caseData.id);
+      // Check if report already exists
+      const existingReport = caseData.reports?.[0];
+      
+      if (existingReport) {
+        // Update existing report
+        const { error } = await supabase
+          .from('reports')
+          .update({ 
+            report_text: reportText,
+            author_id: (await supabase.auth.getUser()).data.user?.id 
+          })
+          .eq('id', existingReport.id);
+
+        if (error) throw error;
+      } else {
+        // Create new report
+        const { error } = await supabase
+          .from('reports')
+          .insert({
+            case_id: caseData.id,
+            report_text: reportText,
+            author_id: (await supabase.auth.getUser()).data.user?.id
+          });
+
+        if (error) throw error;
+      }
       
       toast({
         title: "Draft saved successfully",
@@ -278,8 +308,42 @@ const ReportingPage = () => {
 
     setIsSaving(true);
     try {
-      // In real implementation, this would save to database and update case status
-      console.log('Finalizing report for case:', caseData.id);
+      const user = await supabase.auth.getUser();
+      
+      // Check if report already exists
+      const existingReport = caseData.reports?.[0];
+      
+      if (existingReport) {
+        // Update existing report
+        const { error } = await supabase
+          .from('reports')
+          .update({ 
+            report_text: reportText,
+            author_id: user.data.user?.id 
+          })
+          .eq('id', existingReport.id);
+
+        if (error) throw error;
+      } else {
+        // Create new report
+        const { error } = await supabase
+          .from('reports')
+          .insert({
+            case_id: caseData.id,
+            report_text: reportText,
+            author_id: user.data.user?.id
+          });
+
+        if (error) throw error;
+      }
+
+      // Update case status to report_ready
+      const { error: statusError } = await supabase
+        .from('cases')
+        .update({ status: 'report_ready' })
+        .eq('id', caseData.id);
+
+      if (statusError) throw statusError;
       
       toast({
         title: "Report finalized successfully",
