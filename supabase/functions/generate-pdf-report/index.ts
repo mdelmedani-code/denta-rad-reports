@@ -203,6 +203,31 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
           margin-bottom: 5px;
         }
         
+        .images-section {
+          margin: 20px 0;
+        }
+        
+        .images-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 15px;
+          margin-top: 15px;
+        }
+        
+        .image-placeholder {
+          width: 100%;
+          height: 150px;
+          background: #f0f0f0;
+          border: 2px dashed #cccccc;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 5px;
+          color: #999999;
+          font-size: 11px;
+          text-align: center;
+        }
+        
         .page-break {
           page-break-before: always;
         }
@@ -291,6 +316,24 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
         <div class="section">
           <div class="section-title">Diagnostic Findings</div>
           <div class="report-content">${data.reportText}</div>
+        </div>
+        
+        <div class="images-section">
+          <div class="section-title">Clinical Images</div>
+          <div class="images-grid">
+            <div class="image-placeholder">
+              Image 1<br>[To be added]
+            </div>
+            <div class="image-placeholder">
+              Image 2<br>[To be added]
+            </div>
+            <div class="image-placeholder">
+              Image 3<br>[To be added]
+            </div>
+            <div class="image-placeholder">
+              Image 4<br>[To be added]
+            </div>
+          </div>
         </div>
         
         <div class="footer">

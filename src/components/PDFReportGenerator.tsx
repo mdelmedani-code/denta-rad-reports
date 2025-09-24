@@ -74,6 +74,31 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     fontSize: 11,
   },
+  imagesSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  imagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  imagePlaceholder: {
+    width: '45%',
+    height: 120,
+    backgroundColor: '#f0f0f0',
+    border: '1pt dashed #cccccc',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  imagePlaceholderText: {
+    fontSize: 10,
+    color: '#999999',
+    textAlign: 'center',
+  },
   footer: {
     marginTop: 30,
     padding: 15,
@@ -217,6 +242,27 @@ const PDFReport: React.FC<PDFReportProps> = ({ reportData, template }) => {
           </Text>
           <View style={styles.reportContent}>
             <Text>{reportData.reportText}</Text>
+          </View>
+        </View>
+
+        {/* Clinical Images Section */}
+        <View style={styles.imagesSection}>
+          <Text style={[styles.sectionTitle, { color: template.primary_color }]}>
+            Clinical Images
+          </Text>
+          <View style={styles.imagesGrid}>
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>Image 1{'\n'}[To be added]</Text>
+            </View>
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>Image 2{'\n'}[To be added]</Text>
+            </View>
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>Image 3{'\n'}[To be added]</Text>
+            </View>
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>Image 4{'\n'}[To be added]</Text>
+            </View>
           </View>
         </View>
 
