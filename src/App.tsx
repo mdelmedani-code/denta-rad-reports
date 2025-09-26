@@ -14,7 +14,8 @@ import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
 import ReportingPage from "./pages/ReportingPage";
 import PDFTemplateSettings from "./pages/PDFTemplateSettings";
-
+import TemplateManagement from "./pages/TemplateManagement";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,11 +33,36 @@ const App = () => (
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upload-case" element={<UploadCase />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/invoices" element={<Invoices />} />
-            <Route path="/admin/reporter" element={<ReporterDashboard />} />
-            <Route path="/admin/reporter/case/:caseId" element={<ReportingPage />} />
-            <Route path="/admin/pdf-templates" element={<PDFTemplateSettings />} />
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/invoices" element={
+              <ProtectedRoute requiredRole="admin">
+                <Invoices />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/reporter" element={
+              <ProtectedRoute requiredRole="admin">
+                <ReporterDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/reporter/case/:caseId" element={
+              <ProtectedRoute requiredRole="admin">
+                <ReportingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/pdf-templates" element={
+              <ProtectedRoute requiredRole="admin">
+                <PDFTemplateSettings />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/template-management" element={
+              <ProtectedRoute requiredRole="admin">
+                <TemplateManagement />
+              </ProtectedRoute>
+            } />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
