@@ -320,6 +320,7 @@ export type Database = {
           footer_text: string | null
           header_text: string | null
           id: string
+          indication_type: string | null
           is_active: boolean | null
           logo_url: string | null
           name: string
@@ -335,6 +336,7 @@ export type Database = {
           footer_text?: string | null
           header_text?: string | null
           id?: string
+          indication_type?: string | null
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
@@ -350,6 +352,7 @@ export type Database = {
           footer_text?: string | null
           header_text?: string | null
           id?: string
+          indication_type?: string | null
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
@@ -541,6 +544,44 @@ export type Database = {
         }
         Relationships: []
       }
+      template_indications: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          indication_name: string
+          keywords: string[] | null
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          indication_name: string
+          keywords?: string[] | null
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          indication_name?: string
+          keywords?: string[] | null
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_indications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       case_studies: {
@@ -589,6 +630,10 @@ export type Database = {
         Args: { p_report_id: string }
         Returns: string
       }
+      detect_indication_from_clinical_question: {
+        Args: { clinical_question: string }
+        Returns: string
+      }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -622,6 +667,10 @@ export type Database = {
           reported_cases: number
           total_cases: number
         }[]
+      }
+      get_template_for_indication: {
+        Args: { indication_name: string }
+        Returns: string
       }
       get_weekly_income_stats: {
         Args: Record<PropertyKey, never>
