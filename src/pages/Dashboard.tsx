@@ -97,7 +97,7 @@ const Dashboard = () => {
         .from('reports')
         .select('*')
         .eq('case_id', caseData.id)
-        .single();
+        .maybeSingle();
 
       if (reportError) throw reportError;
 
@@ -110,15 +110,30 @@ const Dashboard = () => {
         return;
       }
 
-      // If PDF already exists, just open it
+      // If PDF already exists, try direct download; if it fails, regenerate
       if (reportData.pdf_url) {
-        window.open(reportData.pdf_url, '_blank');
-        toast({
-          title: "Report Opened",
-          description: "Your report PDF has been opened in a new tab",
-        });
-        setGeneratingPdf(null);
-        return;
+        try {
+          const resp = await fetch(reportData.pdf_url, { cache: 'no-store' });
+          if (!resp.ok) throw new Error(`PDF not accessible (status ${resp.status})`);
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `report-${reportData.id}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast({
+            title: "Download started",
+            description: "Your report PDF is downloading now.",
+          });
+          setGeneratingPdf(null);
+          return;
+        } catch (e) {
+          console.warn('Existing PDF unavailable, regenerating...', e);
+          // Fall through to regeneration below
+        }
       }
 
       // If no PDF exists, generate one
