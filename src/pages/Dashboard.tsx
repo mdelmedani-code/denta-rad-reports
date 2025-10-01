@@ -93,11 +93,15 @@ const Dashboard = () => {
     setGeneratingPdf(caseData.id);
     try {
       // Get the report data for this case
-      const { data: reportData, error: reportError } = await supabase
+      const { data: reports, error: reportError } = await supabase
         .from('reports')
         .select('*')
         .eq('case_id', caseData.id)
-        .maybeSingle();
+        .order('signed_off_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const reportData = reports?.[0] || null;
 
       if (reportError) throw reportError;
 
