@@ -95,7 +95,7 @@ const Dashboard = () => {
       // Get the report data for this case
       const { data: reportData, error: reportError } = await supabase
         .from('reports')
-        .select('*, signed_off_by, signed_off_at, signatory_name, signatory_title, signatory_credentials, signature_statement')
+        .select('*')
         .eq('case_id', caseData.id)
         .single();
 
@@ -110,6 +110,34 @@ const Dashboard = () => {
         return;
       }
 
+      // If PDF already exists, just open it
+      if (reportData.pdf_url) {
+        window.open(reportData.pdf_url, '_blank');
+        toast({
+          title: "Report Opened",
+          description: "Your report PDF has been opened in a new tab",
+        });
+        setGeneratingPdf(null);
+        return;
+      }
+
+      // If no PDF exists, generate one
+      // Get uploaded images for this case
+      const { data: annotations } = await supabase
+        .from('case_annotations')
+        .select('annotation_data')
+        .eq('case_id', caseData.id)
+        .eq('annotation_type', 'image');
+
+      const images = annotations?.map(ann => {
+        const data = ann.annotation_data as any;
+        return {
+          url: data.image_url,
+          name: data.original_name,
+          id: data.image_url
+        };
+      }) || [];
+
       // Prepare signature data if report is signed off
       let signatureData = null;
       if (reportData.signed_off_by) {
@@ -121,6 +149,12 @@ const Dashboard = () => {
           signed_off_at: reportData.signed_off_at
         };
       }
+
+      // Get the appropriate template
+      const { data: templateId } = await supabase.rpc(
+        'get_template_for_indication',
+        { p_indication_name: 'general' }
+      );
 
       // Call the PDF generation edge function
       const { data, error } = await supabase.functions.invoke('generate-pdf-report', {
@@ -138,7 +172,9 @@ const Dashboard = () => {
             clinic_contact_email: caseData.clinics?.contact_email
           },
           reportText: reportData.report_text,
-          signatureData
+          images: images,
+          signatureData,
+          templateId: templateId || undefined
         }
       });
 
