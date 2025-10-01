@@ -110,11 +110,14 @@ const Dashboard = () => {
         return;
       }
 
-      // If PDF already exists, try direct download; if it fails, regenerate
+      // If PDF already exists, try direct download; if it fails or not a PDF, regenerate
       if (reportData.pdf_url) {
         try {
-          const resp = await fetch(reportData.pdf_url, { cache: 'no-store' });
-          if (!resp.ok) throw new Error(`PDF not accessible (status ${resp.status})`);
+          const resp = await fetch(reportData.pdf_url, { method: 'GET', cache: 'no-store' });
+          const ct = (resp.headers.get('content-type') || '').toLowerCase();
+          if (!resp.ok || !ct.includes('pdf')) {
+            throw new Error(`Invalid PDF response (status ${resp.status}, content-type ${ct})`);
+          }
           const blob = await resp.blob();
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -131,7 +134,7 @@ const Dashboard = () => {
           setGeneratingPdf(null);
           return;
         } catch (e) {
-          console.warn('Existing PDF unavailable, regenerating...', e);
+          console.warn('Existing PDF unavailable or invalid, regenerating...', e);
           // Fall through to regeneration below
         }
       }
@@ -196,12 +199,33 @@ const Dashboard = () => {
       if (error) throw error;
 
       if (data?.pdfUrl) {
-        // Open the PDF in a new tab for download
-        window.open(data.pdfUrl, '_blank');
-        toast({
-          title: "PDF Generated",
-          description: "Your report PDF has been generated and opened in a new tab",
-        });
+        try {
+          const resp = await fetch(data.pdfUrl, { method: 'GET', cache: 'no-store' });
+          const ct = (resp.headers.get('content-type') || '').toLowerCase();
+          if (!resp.ok || !ct.includes('pdf')) {
+            throw new Error(`Generated file is not a PDF (status ${resp.status}, content-type ${ct})`);
+          }
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `report-${reportData.id}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast({
+            title: "PDF Generated",
+            description: "Your report PDF has been generated and is downloading.",
+          });
+        } catch (e: any) {
+          console.error('Downloaded file invalid:', e);
+          toast({
+            title: "PDF Error",
+            description: "The generated file was not a valid PDF.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error: any) {
       console.error('Error generating PDF:', error);
