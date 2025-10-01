@@ -67,9 +67,11 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
       canvas.backgroundImage = fabricImg;
       canvas.renderAll();
 
-      // Initialize the freeDrawingBrush
-      canvas.freeDrawingBrush.color = activeColor;
-      canvas.freeDrawingBrush.width = brushWidth;
+      // Initialize the freeDrawingBrush properly
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = activeColor;
+        canvas.freeDrawingBrush.width = brushWidth;
+      }
 
       setFabricCanvas(canvas);
       toast({
@@ -99,11 +101,16 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
   useEffect(() => {
     if (!fabricCanvas) return;
 
+    // Enable drawing mode first
     fabricCanvas.isDrawingMode = activeTool === "draw";
     
-    if (activeTool === "draw" && fabricCanvas.freeDrawingBrush) {
-      fabricCanvas.freeDrawingBrush.color = activeColor;
-      fabricCanvas.freeDrawingBrush.width = brushWidth;
+    // Then configure the brush if in drawing mode
+    if (activeTool === "draw") {
+      // Ensure the brush is available
+      if (fabricCanvas.freeDrawingBrush) {
+        fabricCanvas.freeDrawingBrush.color = activeColor;
+        fabricCanvas.freeDrawingBrush.width = brushWidth;
+      }
     }
   }, [activeTool, activeColor, brushWidth, fabricCanvas]);
 
