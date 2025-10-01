@@ -617,7 +617,7 @@ export type Database = {
         }[]
       }
       get_template_for_indication: {
-        Args: { indication_name: string }
+        Args: { p_indication_name: string }
         Returns: string
       }
       get_weekly_income_stats: {

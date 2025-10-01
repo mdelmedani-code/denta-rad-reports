@@ -143,7 +143,7 @@ const ReportingPage = () => {
       // Get appropriate template for this indication
       const { data: templateId } = await supabase.rpc(
         'get_template_for_indication',
-        { indication_name: indication || 'general' }
+        { p_indication_name: indication || 'general' }
       );
       
       if (templateId) {
@@ -764,7 +764,8 @@ const ReportingPage = () => {
                             clinic_name: caseData.clinics.name,
                             clinic_contact_email: caseData.clinics.contact_email
                           },
-                          reportText: reportText
+                          reportText: reportText,
+                          images: uploadedImages
                         }}
                         template={pdfTemplate}
                         fileName={`${caseData.patient_name}_Report_${caseData.id}.pdf`}

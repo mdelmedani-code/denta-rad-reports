@@ -166,6 +166,7 @@ interface PDFReportProps {
       clinic_contact_email?: string;
     };
     reportText: string;
+    images?: { url: string; name: string; id: string }[];
     signatureData?: {
       signatory_name: string;
       signatory_title: string;
@@ -282,25 +283,22 @@ const PDFReport: React.FC<PDFReportProps> = ({ reportData, template }) => {
         </View>
 
         {/* Clinical Images Section */}
-        <View style={styles.imagesSection}>
-          <Text style={[styles.sectionTitle, { color: template.primary_color }]}>
-            Clinical Images
-          </Text>
-          <View style={styles.imagesGrid}>
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderText}>Image 1{'\n'}[To be added]</Text>
-            </View>
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderText}>Image 2{'\n'}[To be added]</Text>
-            </View>
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderText}>Image 3{'\n'}[To be added]</Text>
-            </View>
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderText}>Image 4{'\n'}[To be added]</Text>
+        {reportData.images && reportData.images.length > 0 && (
+          <View style={styles.imagesSection}>
+            <Text style={[styles.sectionTitle, { color: template.primary_color }]}>
+              Clinical Images
+            </Text>
+            <View style={styles.imagesGrid}>
+              {reportData.images.map((image, index) => (
+                <View key={image.id} style={styles.imagePlaceholder}>
+                  <Text style={styles.imagePlaceholderText}>
+                    {image.name || `Image ${index + 1}`}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
+        )}
 
         {/* Digital Signature Section */}
         {reportData.signatureData && (
