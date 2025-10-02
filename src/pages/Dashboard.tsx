@@ -536,7 +536,7 @@ const Dashboard = () => {
                               </Button>
                             )}
                             {case_.status === 'report_ready' && (
-                              {pdfTemplate && case_.reports?.[0]?.report_text ? (
+                              pdfTemplate && case_.reports?.[0]?.report_text ? (
                                 <PDFDownloadButton
                                   reportData={{
                                     reportId: case_.reports[0].id,
