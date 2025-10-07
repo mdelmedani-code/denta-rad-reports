@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useRequireTerms } from "@/hooks/useRequireTerms";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -14,6 +15,9 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // Enforce terms acceptance for authenticated users
+  useRequireTerms();
 
   useEffect(() => {
     const checkUserRole = async () => {

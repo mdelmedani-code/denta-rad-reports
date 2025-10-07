@@ -53,8 +53,8 @@ const Footer = () => {
               © 2024 DentaRad - Radelm Ltd. All rights reserved.
             </div>
             <div className="flex space-x-6 text-white/60 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link to="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
               <a href="#" className="hover:text-white transition-colors">Clinical Governance</a>
               <Link to="/admin/login" className="hover:text-white transition-colors opacity-50 text-xs">Admin</Link>
             </div>

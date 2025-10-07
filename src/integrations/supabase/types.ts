@@ -382,6 +382,8 @@ export type Database = {
           professional_title: string | null
           role: Database["public"]["Enums"]["user_role"]
           signature_statement: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string | null
         }
         Insert: {
@@ -394,6 +396,8 @@ export type Database = {
           professional_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           signature_statement?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -406,6 +410,8 @@ export type Database = {
           professional_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           signature_statement?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string | null
         }
         Relationships: [

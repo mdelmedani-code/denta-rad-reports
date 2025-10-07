@@ -20,6 +20,8 @@ import PDFTemplateSettings from "./pages/PDFTemplateSettings";
 import TemplateManagement from "./pages/TemplateManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyNotice from "./pages/PrivacyNotice";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,15 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/privacy" element={<PrivacyNotice />} />
+            
+            {/* Terms of Service - requires auth but not terms acceptance */}
+            <Route path="/terms-of-service" element={
+              <ProtectedRoute>
+                <TermsOfService />
+              </ProtectedRoute>
+            } />
+            
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upload-case" element={<UploadCase />} />
             
