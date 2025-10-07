@@ -525,7 +525,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
     const pdfBytes = await generatePDFFromHTML(htmlContent);
 
     // Upload to Supabase Storage
-    const fileName = `report-${reportId}-${Date.now()}.pdf`;
+    const fileName = `pdfs/report-${reportId}-${Date.now()}.pdf`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('reports')
       .upload(fileName, pdfBytes, {

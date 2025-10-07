@@ -349,6 +349,7 @@ const ReportingPage = () => {
       
       // Check if report already exists
       const existingReport = caseData.reports?.[0];
+      let reportId = existingReport?.id;
       
       if (existingReport) {
         // Update existing report
@@ -363,15 +364,57 @@ const ReportingPage = () => {
         if (error) throw error;
       } else {
         // Create new report
-        const { error } = await supabase
+        const { data: newReport, error } = await supabase
           .from('reports')
           .insert({
             case_id: caseData.id,
             report_text: reportText,
             author_id: user.data.user?.id
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+        reportId = newReport.id;
+      }
+
+      // Generate PDF using edge function
+      try {
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-pdf-report', {
+          body: {
+            reportId: reportId,
+            caseData: {
+              patient_name: caseData.patient_name,
+              patient_dob: caseData.patient_dob,
+              patient_internal_id: caseData.patient_internal_id,
+              clinical_question: caseData.clinical_question,
+              field_of_view: caseData.field_of_view,
+              urgency: caseData.urgency,
+              upload_date: caseData.upload_date,
+              clinic_name: caseData.clinics.name,
+              clinic_contact_email: caseData.clinics.contact_email
+            },
+            reportText: reportText,
+            templateId: pdfTemplate?.id
+          }
+        });
+
+        if (pdfError) {
+          console.error('PDF generation error:', pdfError);
+          toast({
+            title: "Warning",
+            description: "Report saved but PDF generation failed. You can regenerate it later.",
+            variant: "destructive",
+          });
+        } else if (pdfData?.pdfUrl) {
+          // Update report with PDF URL
+          await supabase
+            .from('reports')
+            .update({ pdf_url: pdfData.pdfUrl })
+            .eq('id', reportId);
+        }
+      } catch (pdfError) {
+        console.error('PDF generation failed:', pdfError);
       }
 
       // Update case status to report_ready
@@ -381,10 +424,35 @@ const ReportingPage = () => {
         .eq('id', caseData.id);
 
       if (statusError) throw statusError;
+
+      // Generate invoice automatically
+      try {
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            case_id: caseData.id,
+            clinic_id: caseData.clinic_id,
+            amount: calculateCasePrice(caseData.field_of_view, caseData.urgency),
+            invoice_number: await generateInvoiceNumber(),
+            line_items: [{
+              description: `CBCT Scan Analysis - ${caseData.patient_name}`,
+              quantity: 1,
+              unit_price: calculateCasePrice(caseData.field_of_view, caseData.urgency),
+              total: calculateCasePrice(caseData.field_of_view, caseData.urgency)
+            }],
+            status: 'pending'
+          });
+
+        if (invoiceError && !invoiceError.message.includes('duplicate')) {
+          console.error('Invoice generation error:', invoiceError);
+        }
+      } catch (invoiceError) {
+        console.error('Failed to generate invoice:', invoiceError);
+      }
       
       toast({
         title: "Report finalized successfully",
-        description: "The diagnostic report has been finalized and the case marked as complete.",
+        description: "Report saved, PDF generated, and invoice created.",
       });
       
       // Navigate back to dashboard
@@ -399,6 +467,29 @@ const ReportingPage = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Helper function to calculate invoice amount based on FOV and urgency
+  const calculateCasePrice = (fov: string, urgency: string): number => {
+    const basePrice = {
+      'up_to_5x5': 125,
+      'up_to_8x5': 145,
+      'up_to_8x8': 165,
+      'over_8x8': 185
+    }[fov] || 125;
+
+    const urgencySurcharge = urgency === 'urgent' ? 50 : 0;
+    return basePrice + urgencySurcharge;
+  };
+
+  // Helper function to generate unique invoice number
+  const generateInvoiceNumber = async (): Promise<string> => {
+    const { count } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true });
+    
+    const nextNumber = (count || 0) + 1;
+    return `INV-${String(nextNumber).padStart(6, '0')}`;
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
