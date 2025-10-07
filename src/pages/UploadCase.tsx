@@ -5,18 +5,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
-import { Upload, ArrowLeft, Cloud } from "lucide-react";
+import { ArrowLeft, FileArchive, Files, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { uploadDICOMAndCreateCase, UploadProgress } from "@/services/dicomUploadService";
+import JSZip from "jszip";
+
+type UploadMode = 'zip' | 'individual';
 
 const UploadCase = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  const [uploadMode, setUploadMode] = useState<UploadMode>('zip');
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [dicomFiles, setDicomFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [processingFiles, setProcessingFiles] = useState(false);
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -26,130 +33,211 @@ const UploadCase = () => {
     fieldOfView: "up_to_5x5" as "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8",
     urgency: "standard" as "standard" | "urgent"
   });
-  
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
-  const [currentStep, setCurrentStep] = useState("");
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('Files selected:', e.target.files);
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      console.log('Converting to array:', files.length, 'files');
-      setSelectedFiles(files);
+  const handleZipSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      toast({ 
+        title: 'Invalid File', 
+        description: 'Please select a ZIP file', 
+        variant: 'destructive' 
+      });
+      return;
     }
+    
+    if (file.size > 500 * 1024 * 1024) {
+      toast({ 
+        title: 'File Too Large', 
+        description: 'ZIP must be less than 500MB', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    setZipFile(file);
   };
 
-  const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('Folder selected:', e.target.files);
-    if (e.target.files && e.target.files.length > 0) {
-      // Filter for DICOM files
-      const allFiles = Array.from(e.target.files);
-      const dicomFiles = allFiles.filter(file => 
-        file.name.toLowerCase().endsWith('.dcm') || 
-        file.type === 'application/dicom' ||
-        file.name.toLowerCase().includes('dicom')
-      );
-      console.log('DICOM files found:', dicomFiles.length, 'out of', allFiles.length);
-      setSelectedFiles(dicomFiles);
+  const handleDicomFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    const validFiles = files.filter(file => {
+      const name = file.name.toLowerCase();
+      return name.endsWith('.dcm') || name.endsWith('.dicom') || !name.includes('.');
+    });
+    
+    if (validFiles.length === 0) {
+      toast({ 
+        title: 'No Valid Files', 
+        description: 'Please select DICOM files (.dcm or .dicom)', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    const totalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > 500 * 1024 * 1024) {
+      toast({ 
+        title: 'Files Too Large', 
+        description: 'Total file size must be less than 500MB', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    setDicomFiles(validFiles);
+  };
+
+  const createZipFromFiles = async (files: File[]): Promise<Blob> => {
+    setProcessingFiles(true);
+    try {
+      const zip = new JSZip();
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const filename = file.name.split('/').pop() || `slice_${i}.dcm`;
+        zip.file(filename, file);
+      }
+      
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+      
+      return zipBlob;
+    } finally {
+      setProcessingFiles(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('=== STARTING UPLOAD ===');
-    console.log('User:', user?.id);
-    console.log('Files:', selectedFiles.length);
-    console.log('Form data:', formData);
-
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Please log in to upload files",
-        variant: "destructive",
+    
+    if (uploadMode === 'zip' && !zipFile) {
+      toast({ 
+        title: 'No File', 
+        description: 'Please select a ZIP file', 
+        variant: 'destructive' 
       });
       return;
     }
-
-    if (selectedFiles.length === 0) {
-      toast({
-        title: "Error", 
-        description: "Please select files to upload",
-        variant: "destructive",
+    
+    if (uploadMode === 'individual' && dicomFiles.length === 0) {
+      toast({ 
+        title: 'No Files', 
+        description: 'Please select DICOM files', 
+        variant: 'destructive' 
       });
       return;
     }
-
+    
     if (!formData.patientName || !formData.clinicalQuestion) {
       toast({
-        title: "Error",
-        description: "Please fill in Patient Name and Clinical Question",
-        variant: "destructive",
+        title: 'Missing Information',
+        description: 'Please fill in Patient Name and Clinical Question',
+        variant: 'destructive'
       });
       return;
     }
-
-    setUploading(true);
-    setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 0, stage: 'uploading' });
-    setCurrentStep("Preparing upload...");
-
+    
     try {
-      // Get user's clinic ID
+      setUploading(true);
+      
+      // 1. Get user and clinic
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        throw new Error('Not authenticated');
+      }
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('clinic_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        throw new Error(`Database error: ${profileError.message}`);
-      }
+        .eq('id', authUser.id)
+        .single();
       
-      if (!profile?.clinic_id) {
-        throw new Error('Unable to determine clinic association. Please contact support.');
-      }
-
-      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 10, stage: 'uploading' });
-      setCurrentStep(`Uploading ${selectedFiles.length} files...`);
-      console.log('=== UPLOADING USING NEW SERVICE ===');
+      if (profileError) throw profileError;
+      if (!profile?.clinic_id) throw new Error('No clinic associated with your account');
       
-      // Upload using new service
-      const result = await uploadDICOMAndCreateCase(
-        selectedFiles,
-        {
-          patientName: formData.patientName,
-          patientInternalId: formData.patientInternalId,
-          patientDob: formData.patientDob,
-          clinicalQuestion: formData.clinicalQuestion,
-          fieldOfView: formData.fieldOfView,
+      // 2. Create case record
+      const { data: newCase, error: caseError } = await supabase
+        .from('cases')
+        .insert({
+          clinic_id: profile.clinic_id,
+          patient_name: formData.patientName,
+          patient_internal_id: formData.patientInternalId || null,
+          patient_dob: formData.patientDob || null,
+          clinical_question: formData.clinicalQuestion,
+          field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
-          clinicId: profile.clinic_id
-        },
-        (progress) => {
-          setUploadProgress(progress);
-          setCurrentStep(
-            progress.stage === 'uploading' ? 'Uploading files...' :
-            progress.stage === 'processing' ? 'Processing files...' :
-            progress.stage === 'complete' ? 'Upload complete!' :
-            'Upload failed'
-          );
-        }
-      );
+          status: 'uploaded'
+        })
+        .select()
+        .single();
       
-      if (!result.uploadResult.success) {
-        throw new Error(`Upload failed: ${result.uploadResult.error}`);
+      if (caseError) throw caseError;
+      
+      // 3. Prepare ZIP
+      let finalZipFile: File | Blob;
+      let zipFilename: string;
+      
+      if (uploadMode === 'zip') {
+        finalZipFile = zipFile!;
+        zipFilename = zipFile!.name;
+      } else {
+        toast({ 
+          title: 'Creating ZIP', 
+          description: `Compressing ${dicomFiles.length} DICOM files...` 
+        });
+        const zipBlob = await createZipFromFiles(dicomFiles);
+        finalZipFile = zipBlob;
+        zipFilename = `case_${newCase.id}_dicom.zip`;
       }
-
-      console.log('Upload and case creation completed successfully:', result);
       
-      setCurrentStep("Upload completed successfully!");
-
-      toast({
-        title: "Success!",
-        description: `Case uploaded successfully. ${selectedFiles.length} files processed.`,
+      // 4. Upload to storage
+      const zipPath = `${profile.clinic_id}/${newCase.id}/${zipFilename}`;
+      const { error: uploadError } = await supabase.storage
+        .from('cbct-scans')
+        .upload(zipPath, finalZipFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        await supabase.from('cases').delete().eq('id', newCase.id);
+        throw uploadError;
+      }
+      
+      // 5. Update case with ZIP path
+      const { error: updateError } = await supabase
+        .from('cases')
+        .update({
+          file_path: zipPath
+        })
+        .eq('id', newCase.id);
+      
+      if (updateError) throw updateError;
+      
+      // 6. Trigger edge function to extract metadata
+      const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
+        body: {
+          caseId: newCase.id,
+          zipPath: zipPath
+        }
       });
-
+      
+      if (functionError) {
+        console.error('Edge function error:', functionError);
+        // Don't fail - metadata extraction can be retried
+      }
+      
+      toast({
+        title: 'Upload Successful',
+        description: 'DICOM files are being processed. You will be notified when ready.'
+      });
+      
       // Reset form
       setFormData({
         patientName: "",
@@ -159,40 +247,32 @@ const UploadCase = () => {
         fieldOfView: "up_to_5x5",
         urgency: "standard"
       });
-      setSelectedFiles([]);
+      setZipFile(null);
+      setDicomFiles([]);
       
-      // Navigate to dashboard after short delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
-
-    } catch (error: any) {
+      navigate('/dashboard');
+      
+    } catch (error) {
       console.error('Upload failed:', error);
-      setUploadProgress({ bytesUploaded: 0, bytesTotal: 0, percentage: 0, stage: 'error' });
-      setCurrentStep("Upload failed");
       toast({
-        title: "Upload Failed",
-        description: error.message || "An error occurred during upload",
-        variant: "destructive",
+        title: 'Upload Failed',
+        description: error instanceof Error ? error.message : 'Upload failed',
+        variant: 'destructive'
       });
     } finally {
       setUploading(false);
-      setTimeout(() => {
-        setUploadProgress(null);
-        setCurrentStep("");
-      }, 3000);
     }
   };
 
   const canSubmit = !uploading && 
-    selectedFiles.length > 0 && 
+    !processingFiles &&
     formData.patientName.trim() !== '' && 
-    formData.clinicalQuestion.trim() !== '';
+    formData.clinicalQuestion.trim() !== '' &&
+    (uploadMode === 'zip' ? zipFile !== null : dicomFiles.length > 0);
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8">
           <Button
             variant="ghost"
@@ -207,6 +287,45 @@ const UploadCase = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Upload Mode Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Method</CardTitle>
+              <CardDescription>Choose how you want to upload DICOM files</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('zip')}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    uploadMode === 'zip' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <FileArchive className="w-8 h-8 mb-2 mx-auto text-primary" />
+                  <div className="font-semibold">Upload ZIP</div>
+                  <div className="text-sm text-muted-foreground">Pre-packaged DICOM files</div>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('individual')}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    uploadMode === 'individual' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Files className="w-8 h-8 mb-2 mx-auto text-primary" />
+                  <div className="font-semibold">Select Files</div>
+                  <div className="text-sm text-muted-foreground">Auto-zip individual DICOMs</div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Patient Information */}
           <Card>
             <CardHeader>
@@ -304,114 +423,80 @@ const UploadCase = () => {
           {/* File Upload */}
           <Card>
             <CardHeader>
-              <CardTitle>File Upload</CardTitle>
-              <CardDescription>Select DICOM files to upload</CardDescription>
+              <CardTitle>DICOM Files</CardTitle>
+              <CardDescription>
+                {uploadMode === 'zip' 
+                  ? 'Select a ZIP file containing DICOM files' 
+                  : 'Select individual DICOM files (will be auto-zipped)'}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="space-y-4">
+              {uploadMode === 'zip' ? (
                 <div>
-                  <label htmlFor="file-upload" className="block text-sm font-medium text-foreground mb-2">
-                    Select DICOM Files or Folder
-                  </label>
-                  <div className="flex flex-col space-y-2">
-                    <input
-                      id="file-upload"
-                      type="file"
-                      multiple
-                      accept=".dcm,application/dicom"
-                      onChange={handleFileChange}
-                      className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Select individual DICOM files (Ctrl/Cmd+click for multiple)
-                    </p>
-                    
-                    <div className="relative">
-                      <input
-                        id="folder-upload"
-                        type="file"
-                        {...({ webkitdirectory: "", directory: "" } as any)}
-                        multiple
-                        onChange={handleFolderChange}
-                        className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
-                        style={{
-                          WebkitAppearance: 'none',
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Choose Folder - Select an entire folder containing DICOM files
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {selectedFiles.length > 0 && (
+                  <Input
+                    type="file"
+                    accept=".zip"
+                    onChange={handleZipSelect}
+                    className="cursor-pointer"
+                  />
+                  {zipFile && (
                     <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <h4 className="font-medium text-foreground mb-2">
-                        Selected Files ({selectedFiles.length})
-                      </h4>
-                      <div className="max-h-32 overflow-y-auto">
-                        {selectedFiles.slice(0, 10).map((file, index) => (
-                          <p key={index} className="text-sm text-muted-foreground">
-                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                          </p>
-                        ))}
-                        {selectedFiles.length > 10 && (
-                          <p className="text-sm text-muted-foreground font-medium">
-                            ...and {selectedFiles.length - 10} more files
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium text-foreground mt-2">
-                        Total size: {(selectedFiles.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
+                      <p className="font-medium">{zipFile.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(zipFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
                   )}
                 </div>
+              ) : (
+                <div>
+                  <Input
+                    type="file"
+                    multiple
+                    accept=".dcm,.dicom"
+                    onChange={handleDicomFilesSelect}
+                    className="cursor-pointer"
+                  />
+                  {dicomFiles.length > 0 && (
+                    <div className="mt-4 p-4 bg-muted rounded-lg">
+                      <h4 className="font-medium mb-2">
+                        Selected Files ({dicomFiles.length})
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {dicomFiles.slice(0, 5).map((file, index) => (
+                          <p key={index} className="text-sm text-muted-foreground">
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </p>
+                        ))}
+                        {dicomFiles.length > 5 && (
+                          <p className="text-sm text-muted-foreground font-medium">
+                            ...and {dicomFiles.length - 5} more files
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium mt-2">
+                        Total: {(dicomFiles.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-900 dark:text-blue-100">
+                    <p className="font-medium mb-1">File Requirements:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Maximum file size: 500MB</li>
+                      <li>Accepted formats: .dcm, .dicom, or ZIP archives</li>
+                      <li>Individual files will be automatically compressed into a ZIP</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Upload Progress */}
-          {uploading && uploadProgress && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Cloud className={`w-6 h-6 ${uploadProgress.stage === 'uploading' ? 'animate-pulse' : ''}`} />
-                      <div>
-                        <div className="text-lg font-medium">Upload in Progress</div>
-                        <div className="text-sm text-muted-foreground">{currentStep}</div>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setUploading(false);
-                        setUploadProgress(null);
-                        setCurrentStep("");
-                      }}
-                      className="ml-4"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span>{uploadProgress.percentage}%</span>
-                    </div>
-                    <Progress value={uploadProgress.percentage} className="w-full" />
-                    {uploadProgress.bytesTotal > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        {(uploadProgress.bytesUploaded / 1024 / 1024).toFixed(1)} MB / {(uploadProgress.bytesTotal / 1024 / 1024).toFixed(1)} MB
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Submit Button */}
           <div className="flex justify-center">
@@ -420,11 +505,9 @@ const UploadCase = () => {
               disabled={!canSubmit}
               className="w-full md:w-auto px-8"
             >
-              <Cloud className="w-4 h-4 mr-2" />
-              {uploading ? `Uploading... ${uploadProgress?.percentage || 0}%` : "Upload Case"}
+              {processingFiles ? 'Creating ZIP...' : uploading ? 'Uploading...' : 'Upload Case'}
             </Button>
           </div>
-
         </form>
       </div>
     </div>
