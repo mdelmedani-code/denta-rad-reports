@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireTerms } from "@/hooks/useRequireTerms";
+import { useRequireMFA } from "@/hooks/useRequireMFA";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -16,20 +18,23 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const [roleLoading, setRoleLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Enforce terms acceptance for authenticated users
+  // Enforce security requirements for authenticated users
+  useRequireMFA();
   useRequireTerms();
+  useSessionTimeout();
 
   useEffect(() => {
     const checkUserRole = async () => {
       if (user) {
         try {
-          const { data: profile } = await supabase
-            .from('profiles')
+          // Use new user_roles table instead of profiles.role
+          const { data: roleData } = await supabase
+            .from('user_roles')
             .select('role')
-            .eq('id', user.id)
+            .eq('user_id', user.id)
             .single();
           
-          setUserRole(profile?.role || null);
+          setUserRole(roleData?.role || null);
         } catch (error) {
           console.error('Error fetching user role:', error);
           setUserRole(null);

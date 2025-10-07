@@ -19,9 +19,12 @@ import ViewerPage from "./pages/ViewerPage";
 import PDFTemplateSettings from "./pages/PDFTemplateSettings";
 import TemplateManagement from "./pages/TemplateManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyNotice from "./pages/PrivacyNotice";
+import MFASetup from "./pages/MFASetup";
+import AuditLogs from "./pages/AuditLogs";
 
 const queryClient = new QueryClient();
 
@@ -38,15 +41,29 @@ const App = () => (
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
             
+            {/* MFA Setup - requires auth but before MFA enforcement */}
+            <Route path="/mfa-setup" element={
+              <RequireAuth>
+                <MFASetup />
+              </RequireAuth>
+            } />
+            
             {/* Terms of Service - requires auth but not terms acceptance */}
             <Route path="/terms-of-service" element={
-              <ProtectedRoute>
+              <RequireAuth>
                 <TermsOfService />
-              </ProtectedRoute>
+              </RequireAuth>
             } />
             
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upload-case" element={<UploadCase />} />
+            
+            {/* Audit Logs - admin only */}
+            <Route path="/admin/audit-logs" element={
+              <ProtectedRoute requiredRole="admin">
+                <AuditLogs />
+              </ProtectedRoute>
+            } />
             
             {/* Unified dashboard for reporter/admin */}
             <Route path="/reporter" element={

@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import JSZip from "jszip";
+import { validateFile, checkUploadRateLimit, recordUpload } from "@/services/fileValidationService";
 
 type UploadMode = 'zip' | 'individual';
 
@@ -34,23 +35,16 @@ const UploadCase = () => {
     urgency: "standard" as "standard" | "urgent"
   });
 
-  const handleZipSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleZipSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (!file.name.toLowerCase().endsWith('.zip')) {
+    // Validate file using new validation service
+    const validation = await validateFile(file);
+    if (!validation.valid) {
       toast({ 
         title: 'Invalid File', 
-        description: 'Please select a ZIP file', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    
-    if (file.size > 500 * 1024 * 1024) {
-      toast({ 
-        title: 'File Too Large', 
-        description: 'ZIP must be less than 500MB', 
+        description: validation.error, 
         variant: 'destructive' 
       });
       return;
@@ -179,6 +173,17 @@ const UploadCase = () => {
       return;
     }
     
+    // Check upload rate limit (20 uploads per 24 hours)
+    const rateLimit = await checkUploadRateLimit();
+    if (!rateLimit.allowed) {
+      toast({
+        title: 'Upload Limit Reached',
+        description: rateLimit.error || 'You can upload 20 cases per 24 hours',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     try {
       setUploading(true);
       
@@ -256,7 +261,13 @@ const UploadCase = () => {
       
       if (updateError) throw updateError;
       
-      // 6. Trigger edge function to extract metadata
+      // 6. Record upload for rate limiting
+      await recordUpload(
+        finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
+        'application/zip'
+      );
+      
+      // 7. Trigger edge function to extract metadata
       const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
         body: {
           caseId: newCase.id,
