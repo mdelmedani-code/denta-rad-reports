@@ -1,77 +1,241 @@
+import JSZip from 'jszip';
 import { supabase } from '@/integrations/supabase/client';
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-const ALLOWED_EXTENSIONS = ['.zip', '.dcm', '.dicom'];
-
-// Magic bytes for file type validation
-const FILE_SIGNATURES: Record<string, number[]> = {
-  zip: [0x50, 0x4B, 0x03, 0x04], // PK..
-  zip_empty: [0x50, 0x4B, 0x05, 0x06], // PK.. (empty archive)
-  zip_spanned: [0x50, 0x4B, 0x07, 0x08], // PK.. (spanned archive)
-};
-
-async function readFileHeader(file: File): Promise<number[]> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const arr = new Uint8Array(e.target?.result as ArrayBuffer);
-      resolve(Array.from(arr.slice(0, 4)));
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file.slice(0, 4));
-  });
-}
-
-function matchesSignature(header: number[], signature: number[]): boolean {
-  return signature.every((byte, i) => header[i] === byte);
-}
-
-export async function validateFile(file: File): Promise<{
+export interface FileValidationResult {
   valid: boolean;
   error?: string;
-}> {
-  // Check file size
-  if (file.size > MAX_FILE_SIZE) {
-    return {
-      valid: false,
-      error: `File size exceeds 500MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB`,
-    };
-  }
-
-  // Check file extension
-  const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
-  if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
-    return {
-      valid: false,
-      error: `Invalid file type. Allowed types: ${ALLOWED_EXTENSIONS.join(', ')}`,
-    };
-  }
-
-  // Check magic bytes for ZIP files
-  if (extension === '.zip') {
-    try {
-      const header = await readFileHeader(file);
-      const isValidZip = Object.values(FILE_SIGNATURES).some(sig => 
-        matchesSignature(header, sig)
-      );
-      
-      if (!isValidZip) {
-        return {
-          valid: false,
-          error: 'File appears to be corrupted or not a valid ZIP archive',
-        };
-      }
-    } catch (error) {
-      return {
-        valid: false,
-        error: 'Unable to validate file format',
-      };
-    }
-  }
-
-  return { valid: true };
+  warnings?: string[];
+  stats?: {
+    totalFiles: number;
+    dicomFiles: number;
+    compressionRatio: number;
+  };
 }
 
+const MAX_SIZE = 500 * 1024 * 1024; // 500MB
+const MIN_SIZE = 1 * 1024 * 1024; // 1MB
+const MAX_COMPRESSION_RATIO = 100; // Prevent zip bombs
+const MAX_FILES_IN_ZIP = 10000; // Prevent resource exhaustion
+
+export async function validateDICOMZip(file: File): Promise<FileValidationResult> {
+  const warnings: string[] = [];
+  
+  // 1. Check file extension
+  if (!file.name.toLowerCase().endsWith('.zip')) {
+    return {
+      valid: false,
+      error: 'Only ZIP files are allowed. Please upload a ZIP archive containing DICOM files.'
+    };
+  }
+  
+  // 2. Check file size limits
+  if (file.size > MAX_SIZE) {
+    return {
+      valid: false,
+      error: `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds 500MB limit.`
+    };
+  }
+  
+  if (file.size < MIN_SIZE) {
+    return {
+      valid: false,
+      error: 'File is suspiciously small for a DICOM scan. Minimum size is 1MB.'
+    };
+  }
+  
+  // 3. Check ZIP magic bytes
+  try {
+    const buffer = await file.slice(0, 4).arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    
+    // ZIP files start with "PK" (0x50 0x4B)
+    if (bytes[0] !== 0x50 || bytes[1] !== 0x4B) {
+      return {
+        valid: false,
+        error: 'File is not a valid ZIP archive. Please ensure you are uploading a ZIP file.'
+      };
+    }
+  } catch (error) {
+    return {
+      valid: false,
+      error: 'Failed to read file. Please try again.'
+    };
+  }
+  
+  // 4. Validate ZIP contents
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const entries = Object.values(zip.files);
+    
+    // Check number of files
+    if (entries.length > MAX_FILES_IN_ZIP) {
+      return {
+        valid: false,
+        error: `ZIP contains too many files (${entries.length}). Maximum allowed is ${MAX_FILES_IN_ZIP}.`
+      };
+    }
+    
+    if (entries.length === 0) {
+      return {
+        valid: false,
+        error: 'ZIP file is empty.'
+      };
+    }
+    
+    // Calculate total uncompressed size (zip bomb detection)
+    let totalUncompressed = 0;
+    let totalFiles = 0;
+    
+    for (const entry of entries) {
+      if (!entry.dir) {
+        totalFiles++;
+        // Access internal data safely
+        const entryData = (entry as any)._data;
+        totalUncompressed += entryData?.uncompressedSize || 0;
+      }
+    }
+    
+    // Check compression ratio
+    const compressionRatio = totalUncompressed / file.size;
+    if (compressionRatio > MAX_COMPRESSION_RATIO) {
+      return {
+        valid: false,
+        error: `Suspicious compression ratio (${compressionRatio.toFixed(1)}:1) detected. Possible zip bomb attack.`
+      };
+    }
+    
+    // Check for path traversal
+    for (const entry of entries) {
+      const name = entry.name;
+      
+      if (name.includes('..') || name.startsWith('/') || name.includes('\\..\\')) {
+        return {
+          valid: false,
+          error: `Invalid file path detected: ${name}. Path traversal attempts are not allowed.`
+        };
+      }
+      
+      // Check for absolute paths (Windows)
+      if (/^[A-Za-z]:/.test(name)) {
+        return {
+          valid: false,
+          error: `Absolute file paths are not allowed: ${name}`
+        };
+      }
+    }
+    
+    // Check for forbidden file types
+    const forbiddenExtensions = [
+      '.exe', '.sh', '.bat', '.cmd', '.scr', '.com',
+      '.js', '.vbs', '.jar', '.app', '.dmg', '.deb',
+      '.rpm', '.msi', '.dll', '.so', '.dylib'
+    ];
+    
+    for (const entry of entries) {
+      if (entry.dir) continue;
+      
+      const lower = entry.name.toLowerCase();
+      for (const ext of forbiddenExtensions) {
+        if (lower.endsWith(ext)) {
+          return {
+            valid: false,
+            error: `Forbidden file type detected: ${entry.name}. Executable files are not allowed.`
+          };
+        }
+      }
+    }
+    
+    // 5. Validate DICOM content
+    let dicomFileCount = 0;
+    const maxFilesToCheck = Math.min(20, totalFiles); // Check up to 20 files
+    let filesChecked = 0;
+    
+    for (const entry of entries) {
+      if (entry.dir) continue;
+      if (filesChecked >= maxFilesToCheck) break;
+      
+      const name = entry.name.toLowerCase();
+      
+      // DICOM files typically have .dcm extension or no extension
+      const isDicomCandidate = 
+        name.endsWith('.dcm') || 
+        (!name.includes('.') && name.length > 0);
+      
+      if (isDicomCandidate) {
+        filesChecked++;
+        
+        try {
+          const content = await entry.async('uint8array');
+          
+          // Check DICOM magic bytes
+          // DICOM Part 10 files have "DICM" at offset 128
+          if (content.length > 132) {
+            const dicm = String.fromCharCode(
+              content[128], content[129], content[130], content[131]
+            );
+            
+            if (dicm === 'DICM') {
+              dicomFileCount++;
+              
+              // Additional DICOM validation
+              // Check for File Meta Information Group Length (0002,0000)
+              const hasMetaInfo = 
+                content[132] === 0x02 && content[133] === 0x00 &&
+                content[134] === 0x00 && content[135] === 0x00;
+              
+              if (!hasMetaInfo) {
+                warnings.push(`File ${entry.name} has DICM header but invalid meta information`);
+              }
+            }
+          }
+        } catch (error) {
+          warnings.push(`Could not read file: ${entry.name}`);
+        }
+      }
+    }
+    
+    // Must contain at least one valid DICOM file
+    if (dicomFileCount === 0) {
+      return {
+        valid: false,
+        error: 'No valid DICOM files found in ZIP archive. Please ensure your ZIP contains DICOM scan files.'
+      };
+    }
+    
+    // Success
+    return {
+      valid: true,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      stats: {
+        totalFiles,
+        dicomFiles: dicomFileCount,
+        compressionRatio: Math.round(compressionRatio * 10) / 10
+      }
+    };
+    
+  } catch (error) {
+    console.error('ZIP validation error:', error);
+    return {
+      valid: false,
+      error: 'Failed to validate ZIP contents. The file may be corrupted or invalid.'
+    };
+  }
+}
+
+// Helper function to get readable file size
+export function getReadableFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+// Validate individual file before processing
+export function isValidDICOMExtension(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return lower.endsWith('.zip');
+}
+
+// Rate limiting functions
 export async function checkUploadRateLimit(): Promise<{
   allowed: boolean;
   remaining: number;

@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import JSZip from "jszip";
-import { validateFile, checkUploadRateLimit, recordUpload } from "@/services/fileValidationService";
+import { validateDICOMZip, getReadableFileSize, checkUploadRateLimit, recordUpload } from "@/services/fileValidationService";
 
 type UploadMode = 'zip' | 'individual';
 
@@ -35,22 +35,66 @@ const UploadCase = () => {
     urgency: "standard" as "standard" | "urgent"
   });
 
+  const [validating, setValidating] = useState(false);
+
   const handleZipSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validate file using new validation service
-    const validation = await validateFile(file);
-    if (!validation.valid) {
-      toast({ 
-        title: 'Invalid File', 
-        description: validation.error, 
-        variant: 'destructive' 
+    setValidating(true);
+    try {
+      // Validate file comprehensively
+      const validation = await validateDICOMZip(file);
+      
+      if (!validation.valid) {
+        toast({
+          title: 'Invalid File',
+          description: validation.error,
+          variant: 'destructive',
+          duration: 8000
+        });
+        
+        // Clear the file input
+        e.target.value = '';
+        setZipFile(null);
+        return;
+      }
+
+      // Show warnings if any
+      if (validation.warnings && validation.warnings.length > 0) {
+        toast({
+          title: 'File Validation Warnings',
+          description: validation.warnings.join('. '),
+          variant: 'default',
+          duration: 6000
+        });
+      }
+
+      // File is valid
+      setZipFile(file);
+      
+      const statsMessage = validation.stats 
+        ? `Contains ${validation.stats.dicomFiles} DICOM files (${validation.stats.totalFiles} total files)`
+        : '';
+      
+      toast({
+        title: 'File Validated Successfully',
+        description: `${file.name} (${getReadableFileSize(file.size)}) is ready to upload. ${statsMessage}`,
       });
-      return;
+      
+    } catch (error) {
+      console.error('File validation error:', error);
+      toast({
+        title: 'Validation Error',
+        description: 'Failed to validate file. Please try again.',
+        variant: 'destructive'
+      });
+      
+      e.target.value = '';
+      setZipFile(null);
+    } finally {
+      setValidating(false);
     }
-    
-    setZipFile(file);
   };
 
   const handleDicomFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -484,8 +528,14 @@ const UploadCase = () => {
                     type="file"
                     accept=".zip"
                     onChange={handleZipSelect}
+                    disabled={uploading || validating}
                     className="cursor-pointer"
                   />
+                  {validating && (
+                    <p className="text-sm text-blue-600 mt-2">
+                      Validating file contents...
+                    </p>
+                  )}
                   {zipFile && (
                     <div className="mt-4 p-4 bg-muted rounded-lg">
                       <p className="font-medium">{zipFile.name}</p>

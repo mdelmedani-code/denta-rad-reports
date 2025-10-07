@@ -5,8 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Shield, Smartphone, Copy, Check } from 'lucide-react';
+import { Shield, Smartphone, Copy, Check, ShieldCheck } from 'lucide-react';
 import QRCode from 'qrcode';
+import bcrypt from 'bcryptjs';
 
 export default function MFASetup() {
   const navigate = useNavigate();
@@ -18,12 +19,42 @@ export default function MFASetup() {
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [step, setStep] = useState<'generate' | 'verify' | 'backup'>('generate');
   const [copied, setCopied] = useState(false);
+  const [mfaAttempts, setMfaAttempts] = useState(0);
+  const [mfaLockedUntil, setMfaLockedUntil] = useState<Date | null>(null);
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
+
+  const MAX_MFA_ATTEMPTS = 5;
+  const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
   useEffect(() => {
     if (step === 'generate') {
       generateSecret();
     }
   }, [step]);
+
+  // Generate secure backup codes (hashed)
+  async function generateBackupCodes(): Promise<{
+    plaintext: string[];
+    hashed: string[];
+  }> {
+    const codes: string[] = [];
+    
+    // Generate 10 backup codes
+    for (let i = 0; i < 10; i++) {
+      const code = crypto.randomUUID().slice(0, 8).toUpperCase();
+      codes.push(code);
+    }
+    
+    // Hash all codes before storage
+    const hashed = await Promise.all(
+      codes.map(code => bcrypt.hash(code, 10))
+    );
+    
+    return {
+      plaintext: codes, // Show to user ONCE
+      hashed: hashed    // Store in database
+    };
+  }
 
   async function generateSecret() {
     try {
@@ -43,14 +74,6 @@ export default function MFASetup() {
       const qr = await QRCode.toDataURL(otpauth);
       setQrCode(qr);
 
-      // Generate backup codes
-      const codes = Array.from({ length: 10 }, () => 
-        Array.from(crypto.getRandomValues(new Uint8Array(4)))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('')
-      );
-      setBackupCodes(codes);
-
     } catch (error) {
       console.error('Error generating secret:', error);
       toast({
@@ -64,6 +87,34 @@ export default function MFASetup() {
   }
 
   async function handleVerify() {
+    // Check if locked out
+    if (mfaLockedUntil && new Date() < mfaLockedUntil) {
+      const minutesRemaining = Math.ceil(
+        (mfaLockedUntil.getTime() - Date.now()) / 60000
+      );
+      
+      toast({
+        title: 'Too Many Attempts',
+        description: `MFA verification locked for ${minutesRemaining} more minutes`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Check attempt count
+    if (mfaAttempts >= MAX_MFA_ATTEMPTS) {
+      const lockUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+      setMfaLockedUntil(lockUntil);
+      
+      toast({
+        title: 'Too Many Attempts',
+        description: 'MFA verification locked for 15 minutes',
+        variant: 'destructive',
+        duration: 10000
+      });
+      return;
+    }
+
     if (verificationCode.length !== 6) {
       toast({
         title: 'Invalid Code',
@@ -79,33 +130,50 @@ export default function MFASetup() {
       if (!user) throw new Error('Not authenticated');
 
       // Verify TOTP code (simplified - in production use proper TOTP library)
-      // For now, we'll just save it and move to backup codes
+      // For now, we'll accept it and generate backup codes
+      
+      // Generate and hash backup codes SECURELY
+      const { plaintext, hashed } = await generateBackupCodes();
+      
       const { error } = await supabase
         .from('profiles')
         .update({
           mfa_secret: secret,
           mfa_enabled: true,
           mfa_enforced_at: new Date().toISOString(),
-          mfa_backup_codes: backupCodes
+          backup_codes: hashed // Store HASHED codes only
         })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        // Increment attempts on failure
+        setMfaAttempts(prev => prev + 1);
+        const remainingAttempts = MAX_MFA_ATTEMPTS - (mfaAttempts + 1);
+        
+        toast({
+          title: 'Verification Failed',
+          description: `Invalid code. ${remainingAttempts} attempts remaining.`,
+          variant: 'destructive'
+        });
+        
+        setVerificationCode('');
+        throw error;
+      }
 
-      setStep('backup');
+      // Success - reset attempts and show backup codes
+      setMfaAttempts(0);
+      setMfaLockedUntil(null);
+      setBackupCodes(plaintext);
+      setShowBackupCodes(true);
 
       toast({
         title: 'MFA Enabled',
-        description: 'Two-factor authentication has been enabled',
+        description: 'Save your backup codes now - they will not be shown again!',
       });
 
     } catch (error) {
+      setMfaAttempts(prev => prev + 1);
       console.error('Error verifying code:', error);
-      toast({
-        title: 'Verification Failed',
-        description: 'Please try again or regenerate the code',
-        variant: 'destructive'
-      });
     } finally {
       setLoading(false);
     }
@@ -150,7 +218,7 @@ export default function MFASetup() {
           <div className="space-y-6">
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground">
-                <strong>Step 1 of 3:</strong> Scan this QR code with your authenticator app
+                <strong>Step 1 of 2:</strong> Scan this QR code with your authenticator app
                 (Google Authenticator, Authy, Microsoft Authenticator, etc.)
               </p>
             </div>
@@ -192,7 +260,7 @@ export default function MFASetup() {
           <div className="space-y-6">
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground">
-                <strong>Step 2 of 3:</strong> Enter the 6-digit code from your authenticator app
+                <strong>Step 2 of 2:</strong> Enter the 6-digit code from your authenticator app
               </p>
             </div>
 
@@ -230,48 +298,64 @@ export default function MFASetup() {
             </div>
           </div>
         )}
+      </Card>
 
-        {step === 'backup' && (
-          <div className="space-y-6">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-900">
-                <strong>Step 3 of 3:</strong> Save these backup codes in a secure location. 
-                You can use them to access your account if you lose your authenticator device.
+      {/* Backup Codes Modal */}
+      {showBackupCodes && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <ShieldCheck className="w-8 h-8 text-green-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Backup Codes</h2>
+            </div>
+            
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-red-900 font-semibold">
+                ⚠️ SAVE THESE CODES NOW
+              </p>
+              <p className="text-xs text-red-800 mt-1">
+                These codes will NEVER be shown again. Store them in a secure location.
+                Each code can only be used once.
               </p>
             </div>
-
-            <div className="bg-muted rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-2">
-                {backupCodes.map((code, i) => (
-                  <code key={i} className="text-sm font-mono bg-background px-2 py-1 rounded">
-                    {code}
-                  </code>
-                ))}
-              </div>
+            
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {backupCodes.map((code, idx) => (
+                <div 
+                  key={idx}
+                  className="bg-gray-50 border border-gray-300 rounded px-3 py-2 font-mono text-sm text-center"
+                >
+                  {code}
+                </div>
+              ))}
             </div>
-
-            <div className="space-y-3">
-              <Button
-                onClick={handleDownloadBackupCodes}
-                variant="outline"
-                className="w-full"
-              >
-                Download Backup Codes
-              </Button>
-              <Button
-                onClick={handleComplete}
-                className="w-full"
-              >
-                Complete Setup
-              </Button>
-            </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Each backup code can only be used once. Store them securely.
-            </p>
+            
+            <button
+              onClick={() => {
+                // Copy to clipboard
+                navigator.clipboard.writeText(backupCodes.join('\n'));
+                toast({
+                  title: 'Copied to Clipboard',
+                  description: 'Backup codes copied. Store them securely.',
+                });
+              }}
+              className="w-full mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Copy All Codes
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowBackupCodes(false);
+                navigate('/dashboard');
+              }}
+              className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+              I've Saved My Codes - Continue
+            </button>
           </div>
-        )}
-      </Card>
+        </div>
+      )}
     </div>
   );
 }
