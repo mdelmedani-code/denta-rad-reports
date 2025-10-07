@@ -404,6 +404,8 @@ export type Database = {
           clinic_id: string | null
           created_at: string | null
           credentials: string | null
+          csrf_token: string | null
+          csrf_token_expires_at: string | null
           email: string
           id: string
           mfa_backup_codes: string[] | null
@@ -423,6 +425,8 @@ export type Database = {
           clinic_id?: string | null
           created_at?: string | null
           credentials?: string | null
+          csrf_token?: string | null
+          csrf_token_expires_at?: string | null
           email: string
           id: string
           mfa_backup_codes?: string[] | null
@@ -442,6 +446,8 @@ export type Database = {
           clinic_id?: string | null
           created_at?: string | null
           credentials?: string | null
+          csrf_token?: string | null
+          csrf_token_expires_at?: string | null
           email?: string
           id?: string
           mfa_backup_codes?: string[] | null
