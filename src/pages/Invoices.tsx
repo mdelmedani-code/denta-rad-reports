@@ -82,6 +82,7 @@ const Invoices = () => {
     due_date: "",
     line_items: ""
   });
+  const [generatingMonthly, setGeneratingMonthly] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -272,6 +273,31 @@ const Invoices = () => {
     }
   };
 
+  const handleGenerateMonthlyInvoices = async () => {
+    setGeneratingMonthly(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-monthly-invoices');
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Generated ${data.invoices?.length || 0} monthly invoices for last month`,
+      });
+
+      // Refresh the monthly invoices
+      await fetchMonthlyInvoices();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to generate monthly invoices: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingMonthly(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -358,19 +384,30 @@ const Invoices = () => {
         {/* Tab Navigation */}
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex space-x-4">
-              <Button 
-                variant={activeTab === "individual" ? "default" : "outline"}
-                onClick={() => setActiveTab("individual")}
-              >
-                Individual Invoices
-              </Button>
-              <Button 
-                variant={activeTab === "monthly" ? "default" : "outline"}
-                onClick={() => setActiveTab("monthly")}
-              >
-                Monthly Invoices
-              </Button>
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-4">
+                <Button 
+                  variant={activeTab === "individual" ? "default" : "outline"}
+                  onClick={() => setActiveTab("individual")}
+                >
+                  Individual Invoices
+                </Button>
+                <Button 
+                  variant={activeTab === "monthly" ? "default" : "outline"}
+                  onClick={() => setActiveTab("monthly")}
+                >
+                  Monthly Invoices
+                </Button>
+              </div>
+              {activeTab === "monthly" && (
+                <Button 
+                  onClick={handleGenerateMonthlyInvoices}
+                  disabled={generatingMonthly}
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {generatingMonthly ? "Generating..." : "Generate Monthly Invoices"}
+                </Button>
+              )}
             </div>
           </CardHeader>
         </Card>
