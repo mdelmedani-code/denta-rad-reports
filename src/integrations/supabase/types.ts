@@ -294,6 +294,44 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_generation_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          report_id: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          report_id?: string | null
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          report_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_generation_logs_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdf_templates: {
         Row: {
           company_address: string | null
@@ -342,6 +380,36 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      pricing_rules: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          effective_from: string | null
+          effective_to: string | null
+          field_of_view: string
+          id: string
+          price: number
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          field_of_view: string
+          id?: string
+          price: number
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          field_of_view?: string
+          id?: string
+          price?: number
         }
         Relationships: []
       }
@@ -432,6 +500,7 @@ export type Database = {
           billed_date: string | null
           case_id: string
           created_at: string | null
+          finalized_at: string | null
           id: string
           pdf_url: string | null
           report_text: string | null
@@ -448,6 +517,7 @@ export type Database = {
           billed_date?: string | null
           case_id: string
           created_at?: string | null
+          finalized_at?: string | null
           id?: string
           pdf_url?: string | null
           report_text?: string | null
@@ -464,6 +534,7 @@ export type Database = {
           billed_date?: string | null
           case_id?: string
           created_at?: string | null
+          finalized_at?: string | null
           id?: string
           pdf_url?: string | null
           report_text?: string | null
@@ -571,6 +642,10 @@ export type Database = {
         }
         Returns: number
       }
+      calculate_report_price: {
+        Args: { p_case_id: string }
+        Returns: number
+      }
       create_report_share: {
         Args: { p_report_id: string }
         Returns: string
@@ -579,8 +654,17 @@ export type Database = {
         Args: { clinical_question: string }
         Returns: string
       }
+      finalize_report_transaction: {
+        Args: {
+          p_findings: string
+          p_impression: string
+          p_recommendations: string
+          p_report_id: string
+        }
+        Returns: Json
+      }
       generate_invoice_number: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { p_clinic_id: string }
         Returns: string
       }
       generate_monthly_invoice_number: {
