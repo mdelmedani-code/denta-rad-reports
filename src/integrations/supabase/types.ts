@@ -827,6 +827,15 @@ export type Database = {
         }
         Returns: string
       }
+      log_audit_event_secure: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_resource_id?: string
+          p_resource_type: string
+        }
+        Returns: undefined
+      }
       record_login_attempt: {
         Args: {
           p_email: string
