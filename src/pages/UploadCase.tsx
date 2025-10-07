@@ -90,6 +90,42 @@ const UploadCase = () => {
     setDicomFiles(validFiles);
   };
 
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    const validFiles = files.filter(file => {
+      const name = file.name.toLowerCase();
+      return name.endsWith('.dcm') || name.endsWith('.dicom') || !name.includes('.');
+    });
+    
+    if (validFiles.length === 0) {
+      toast({ 
+        title: 'No Valid DICOM Files', 
+        description: 'No DICOM files found in selected folder', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    const totalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > 500 * 1024 * 1024) {
+      toast({ 
+        title: 'Files Too Large', 
+        description: 'Total folder size must be less than 500MB', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    toast({
+      title: 'Folder Selected',
+      description: `Found ${validFiles.length} DICOM files in folder`
+    });
+    
+    setDicomFiles(validFiles);
+  };
+
   const createZipFromFiles = async (files: File[]): Promise<Blob> => {
     setProcessingFiles(true);
     try {
@@ -449,14 +485,50 @@ const UploadCase = () => {
                   )}
                 </div>
               ) : (
-                <div>
-                  <Input
-                    type="file"
-                    multiple
-                    accept=".dcm,.dicom"
-                    onChange={handleDicomFilesSelect}
-                    className="cursor-pointer"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="individual-files" className="text-sm font-medium">
+                      Select Individual Files
+                    </Label>
+                    <Input
+                      id="individual-files"
+                      type="file"
+                      multiple
+                      accept=".dcm,.dicom"
+                      onChange={handleDicomFilesSelect}
+                      className="cursor-pointer mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Hold Ctrl/Cmd to select multiple files
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="folder-input" className="text-sm font-medium">
+                      Select Entire Folder
+                    </Label>
+                    <Input
+                      id="folder-input"
+                      type="file"
+                      {...({ webkitdirectory: "", directory: "" } as any)}
+                      multiple
+                      onChange={handleFolderSelect}
+                      className="cursor-pointer mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Choose a folder containing DICOM files
+                    </p>
+                  </div>
+
                   {dicomFiles.length > 0 && (
                     <div className="mt-4 p-4 bg-muted rounded-lg">
                       <h4 className="font-medium mb-2">
