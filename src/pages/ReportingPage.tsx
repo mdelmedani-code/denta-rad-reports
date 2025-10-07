@@ -410,32 +410,21 @@ const ReportingPage = () => {
         reportId = newReport.id;
       }
 
-      // Call atomic transaction function to finalize report
-      const { data, error: transactionError } = await supabase.rpc(
-        'finalize_report_transaction',
-        {
-          p_report_id: reportId,
-          p_findings: reportText,
-          p_impression: '', // You may want to separate these in your UI
-          p_recommendations: ''
-        }
-      );
+      // Simply update the report - trigger will handle case status
+      const { error: updateError } = await supabase
+        .from('reports')
+        .update({
+          report_text: reportText,
+          finalized_at: new Date().toISOString()
+        })
+        .eq('id', reportId);
 
-      if (transactionError) {
-        throw transactionError;
-      }
+      if (updateError) throw updateError;
 
-      // Parse the JSON response
-      const result = data as { success: boolean; report_id: string; case_id: string; invoice_id: string; price: number } | null;
-      
-      if (!result || !result.success) {
-        throw new Error('Transaction failed');
-      }
-
-      // Success - report finalized, invoice created, case updated
+      // Success - report finalized, case status updated by trigger
       toast({
         title: 'Report Finalized',
-        description: `Report saved successfully. Invoice created.`
+        description: 'Report saved successfully'
       });
 
       // Queue PDF generation in background (non-blocking)

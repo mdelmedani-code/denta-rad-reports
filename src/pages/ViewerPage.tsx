@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { ReportPDF } from '@/components/ReportPDF';
 
 const ViewerPage = () => {
   const { caseId } = useParams<{ caseId: string }>();

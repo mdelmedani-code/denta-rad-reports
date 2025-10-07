@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -12,7 +12,10 @@ import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
+import UnifiedDashboard from "./pages/UnifiedDashboard";
+import BillingExport from "./pages/BillingExport";
 import ReportingPage from "./pages/ReportingPage";
+import ViewerPage from "./pages/ViewerPage";
 import PDFTemplateSettings from "./pages/PDFTemplateSettings";
 import TemplateManagement from "./pages/TemplateManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -33,19 +36,35 @@ const App = () => (
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upload-case" element={<UploadCase />} />
-            <Route path="/admin" element={
+            
+            {/* Unified dashboard for reporter/admin */}
+            <Route path="/reporter" element={
               <ProtectedRoute requiredRole="admin">
-                <AdminDashboard />
+                <UnifiedDashboard />
               </ProtectedRoute>
             } />
+            
+            {/* Billing export */}
+            <Route path="/billing-export" element={
+              <ProtectedRoute requiredRole="admin">
+                <BillingExport />
+              </ProtectedRoute>
+            } />
+            
+            {/* Viewer page */}
+            <Route path="/viewer/:caseId" element={
+              <ProtectedRoute requiredRole="admin">
+                <ViewerPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Legacy admin routes redirect to unified dashboard */}
+            <Route path="/admin" element={<Navigate to="/reporter" replace />} />
+            <Route path="/admin/reporter" element={<Navigate to="/reporter" replace />} />
+            
             <Route path="/admin/invoices" element={
               <ProtectedRoute requiredRole="admin">
                 <Invoices />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/reporter" element={
-              <ProtectedRoute requiredRole="admin">
-                <ReporterDashboard />
               </ProtectedRoute>
             } />
             <Route path="/admin/reporter/case/:caseId" element={

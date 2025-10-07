@@ -136,13 +136,6 @@ export type Database = {
             referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "cases_monthly_invoice_id_fkey"
-            columns: ["monthly_invoice_id"]
-            isOneToOne: false
-            referencedRelation: "monthly_invoices"
-            referencedColumns: ["id"]
-          },
         ]
       }
       clinics: {
@@ -176,12 +169,11 @@ export type Database = {
           clinic_id: string
           created_at: string
           currency: string
-          due_date: string
+          exported_at: string | null
           id: string
-          invoice_number: string
-          line_items: Json
           paid_at: string | null
           status: string
+          stripe_invoice_id: string | null
         }
         Insert: {
           amount: number
@@ -189,12 +181,11 @@ export type Database = {
           clinic_id: string
           created_at?: string
           currency?: string
-          due_date?: string
+          exported_at?: string | null
           id?: string
-          invoice_number: string
-          line_items?: Json
           paid_at?: string | null
           status?: string
+          stripe_invoice_id?: string | null
         }
         Update: {
           amount?: number
@@ -202,12 +193,11 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           currency?: string
-          due_date?: string
+          exported_at?: string | null
           id?: string
-          invoice_number?: string
-          line_items?: Json
           paid_at?: string | null
           status?: string
+          stripe_invoice_id?: string | null
         }
         Relationships: [
           {
@@ -218,45 +208,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      monthly_invoices: {
-        Row: {
-          case_count: number
-          clinic_id: string
-          created_at: string
-          due_date: string
-          id: string
-          invoice_number: string
-          month: number
-          status: string
-          total_amount: number
-          year: number
-        }
-        Insert: {
-          case_count?: number
-          clinic_id: string
-          created_at?: string
-          due_date?: string
-          id?: string
-          invoice_number: string
-          month: number
-          status?: string
-          total_amount?: number
-          year: number
-        }
-        Update: {
-          case_count?: number
-          clinic_id?: string
-          created_at?: string
-          due_date?: string
-          id?: string
-          invoice_number?: string
-          month?: number
-          status?: string
-          total_amount?: number
-          year?: number
-        }
-        Relationships: []
       }
       notifications: {
         Row: {
@@ -323,6 +274,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pdf_generation_logs_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
           {
             foreignKeyName: "pdf_generation_logs_report_id_fkey"
             columns: ["report_id"]
@@ -631,7 +589,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      billable_reports: {
+        Row: {
+          amount: number | null
+          case_date: string | null
+          case_id: string | null
+          clinic_email: string | null
+          clinic_id: string | null
+          clinic_name: string | null
+          field_of_view: string | null
+          has_invoice: boolean | null
+          patient_name: string | null
+          report_date: string | null
+          report_id: string | null
+          stripe_invoice_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_case_price: {
@@ -642,10 +631,6 @@ export type Database = {
         }
         Returns: number
       }
-      calculate_report_price: {
-        Args: { p_case_id: string }
-        Returns: number
-      }
       create_report_share: {
         Args: { p_report_id: string }
         Returns: string
@@ -654,31 +639,9 @@ export type Database = {
         Args: { clinical_question: string }
         Returns: string
       }
-      finalize_report_transaction: {
-        Args: {
-          p_findings: string
-          p_impression: string
-          p_recommendations: string
-          p_report_id: string
-        }
-        Returns: Json
-      }
       generate_invoice_number: {
-        Args: Record<PropertyKey, never> | { p_clinic_id: string }
-        Returns: string
-      }
-      generate_monthly_invoice_number: {
-        Args: { p_clinic_id: string; p_month: number; p_year: number }
-        Returns: string
-      }
-      generate_monthly_invoices: {
         Args: Record<PropertyKey, never>
-        Returns: {
-          case_count: number
-          clinic_id: string
-          invoice_id: string
-          total_amount: number
-        }[]
+        Returns: string
       }
       get_current_user_clinic: {
         Args: Record<PropertyKey, never>
@@ -700,6 +663,16 @@ export type Database = {
       get_template_for_indication: {
         Args: { p_indication_name: string }
         Returns: string
+      }
+      get_unbilled_reports: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          cases: Json
+          clinic_email: string
+          clinic_name: string
+          report_count: number
+          total_amount: number
+        }[]
       }
       get_weekly_income_stats: {
         Args: Record<PropertyKey, never>

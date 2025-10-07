@@ -124,29 +124,9 @@ const Invoices = () => {
   };
 
   const fetchMonthlyInvoices = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('monthly_invoices')
-        .select(`
-          *,
-          clinics (
-            name,
-            contact_email
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMonthlyInvoices((data as any) || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load monthly invoices: " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Monthly invoices feature removed - simplified billing
+    setMonthlyInvoices([]);
+    setLoading(false);
   };
 
   const filterInvoices = () => {
@@ -232,32 +212,20 @@ const Invoices = () => {
     if (!editingInvoice) return;
 
     try {
-      const table = activeTab === "individual" ? "invoices" : "monthly_invoices";
-      const amountField = activeTab === "individual" ? "amount" : "total_amount";
-      
+      // Simplified - only individual invoices now
       const updateData: any = {
-        [amountField]: editForm.amount,
-        status: editForm.status,
-        due_date: editForm.due_date
+        amount: editForm.amount,
+        status: editForm.status
       };
 
-      if (activeTab === "individual") {
-        updateData.line_items = JSON.parse(editForm.line_items);
-      }
-
       const { error } = await supabase
-        .from(table)
+        .from('invoices')
         .update(updateData)
         .eq('id', editingInvoice.id);
 
       if (error) throw error;
 
-      // Refresh data
-      if (activeTab === "individual") {
-        await fetchInvoices();
-      } else {
-        await fetchMonthlyInvoices();
-      }
+      await fetchInvoices();
 
       setEditingInvoice(null);
       toast({
