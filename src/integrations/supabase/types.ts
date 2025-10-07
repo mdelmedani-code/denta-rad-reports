@@ -209,6 +209,33 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          attempt_time: string | null
+          email: string
+          id: string
+          ip_address: unknown | null
+          successful: boolean | null
+          user_agent: string | null
+        }
+        Insert: {
+          attempt_time?: string | null
+          email: string
+          id?: string
+          ip_address?: unknown | null
+          successful?: boolean | null
+          user_agent?: string | null
+        }
+        Update: {
+          attempt_time?: string | null
+          email?: string
+          id?: string
+          ip_address?: unknown | null
+          successful?: boolean | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -373,6 +400,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          backup_codes: Json | null
           clinic_id: string | null
           created_at: string | null
           credentials: string | null
@@ -391,6 +419,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          backup_codes?: Json | null
           clinic_id?: string | null
           created_at?: string | null
           credentials?: string | null
@@ -409,6 +438,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          backup_codes?: Json | null
           clinic_id?: string | null
           created_at?: string | null
           credentials?: string | null
@@ -769,6 +799,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_account_locked: {
+        Args: { p_email: string }
+        Returns: {
+          attempts: number
+          locked: boolean
+          unlock_at: string
+        }[]
+      }
       log_audit_event: {
         Args: {
           p_action: string
@@ -782,6 +820,15 @@ export type Database = {
           p_user_agent?: string
         }
         Returns: string
+      }
+      record_login_attempt: {
+        Args: {
+          p_email: string
+          p_ip_address?: string
+          p_successful: boolean
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       sign_off_report: {
         Args: {
