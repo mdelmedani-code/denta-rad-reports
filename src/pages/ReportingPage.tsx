@@ -25,6 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { ImageAnnotator } from "@/components/ImageAnnotator";
+import { getCSRFToken, verifyCSRFToken } from "@/utils/csrf";
+import { sanitizeClinicalText } from "@/utils/sanitization";
+import { logReportCreation } from "@/lib/auditLog";
 
 interface Case {
   id: string;
@@ -388,6 +391,17 @@ const ReportingPage = () => {
     setIsSaving(true);
 
     try {
+      // Get and verify CSRF token
+      const csrfToken = await getCSRFToken();
+      const isValid = await verifyCSRFToken(csrfToken);
+      
+      if (!isValid) {
+        throw new Error('Security validation failed. Please refresh and try again.');
+      }
+      
+      // Sanitize report text
+      const sanitizedReportText = sanitizeClinicalText(reportText);
+      
       const user = await supabase.auth.getUser();
       
       // Check if report already exists
@@ -400,7 +414,7 @@ const ReportingPage = () => {
           .from('reports')
           .insert({
             case_id: caseData.id,
-            report_text: reportText,
+            report_text: sanitizedReportText,
             author_id: user.data.user?.id
           })
           .select()
@@ -414,12 +428,15 @@ const ReportingPage = () => {
       const { error: updateError } = await supabase
         .from('reports')
         .update({
-          report_text: reportText,
+          report_text: sanitizedReportText,
           finalized_at: new Date().toISOString()
         })
         .eq('id', reportId);
 
       if (updateError) throw updateError;
+      
+      // Log report creation
+      await logReportCreation(reportId, caseData.id);
 
       // Success - report finalized, case status updated by trigger
       toast({

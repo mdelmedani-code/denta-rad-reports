@@ -12,6 +12,9 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import JSZip from "jszip";
 import { validateDICOMZip, getReadableFileSize, checkUploadRateLimit, recordUpload } from "@/services/fileValidationService";
+import { getCSRFToken } from "@/utils/csrf";
+import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
+import { logCaseCreation } from "@/lib/auditLog";
 
 type UploadMode = 'zip' | 'individual';
 
@@ -208,10 +211,15 @@ const UploadCase = () => {
       return;
     }
     
-    if (!formData.patientName || !formData.clinicalQuestion) {
+    // Sanitize inputs before validation
+    const sanitizedPatientName = sanitizeText(formData.patientName);
+    const sanitizedPatientInternalId = formData.patientInternalId ? sanitizePatientRef(formData.patientInternalId) : '';
+    const sanitizedClinicalQuestion = sanitizeText(formData.clinicalQuestion);
+    
+    if (!sanitizedPatientName || !sanitizedClinicalQuestion) {
       toast({
-        title: 'Missing Information',
-        description: 'Please fill in Patient Name and Clinical Question',
+        title: 'Invalid Input',
+        description: 'Patient Name and Clinical Question contain invalid characters',
         variant: 'destructive'
       });
       return;
@@ -231,6 +239,9 @@ const UploadCase = () => {
     try {
       setUploading(true);
       
+      // Get CSRF token for security
+      const csrfToken = await getCSRFToken();
+      
       // 1. Get user and clinic
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       if (authError || !authUser) {
@@ -246,15 +257,15 @@ const UploadCase = () => {
       if (profileError) throw profileError;
       if (!profile?.clinic_id) throw new Error('No clinic associated with your account');
       
-      // 2. Create case record
+      // 2. Create case record with sanitized data
       const { data: newCase, error: caseError } = await supabase
         .from('cases')
         .insert({
           clinic_id: profile.clinic_id,
-          patient_name: formData.patientName,
-          patient_internal_id: formData.patientInternalId || null,
+          patient_name: sanitizedPatientName,
+          patient_internal_id: sanitizedPatientInternalId || null,
           patient_dob: formData.patientDob || null,
-          clinical_question: formData.clinicalQuestion,
+          clinical_question: sanitizedClinicalQuestion,
           field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
           status: 'uploaded'
@@ -281,13 +292,16 @@ const UploadCase = () => {
         zipFilename = `case_${newCase.id}_dicom.zip`;
       }
       
-      // 4. Upload to storage
+      // 4. Upload to storage with CSRF token in metadata
       const zipPath = `${profile.clinic_id}/${newCase.id}/${zipFilename}`;
       const { error: uploadError } = await supabase.storage
         .from('cbct-scans')
         .upload(zipPath, finalZipFile, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          metadata: {
+            'x-csrf-token': csrfToken
+          }
         });
       
       if (uploadError) {
@@ -311,7 +325,10 @@ const UploadCase = () => {
         'application/zip'
       );
       
-      // 7. Trigger edge function to extract metadata
+      // 7. Log case creation
+      await logCaseCreation(newCase.id);
+      
+      // 8. Trigger edge function to extract metadata
       const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
         body: {
           caseId: newCase.id,

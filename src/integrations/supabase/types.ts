@@ -855,6 +855,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      test_rls_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          policy_count: number
+          rls_enabled: boolean
+          table_name: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "clinic" | "reporter"

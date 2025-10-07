@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Download, ArrowLeft, FileText, Calendar, User, Activity } from "lucide-react";
+import { Loader2, Download, ArrowLeft, FileText, Calendar, User, Activity, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { ReportPDF } from '@/components/ReportPDF';
+import { logCaseView, logUnauthorizedAccess, logDicomDownload } from "@/lib/auditLog";
+import { sanitizeText } from "@/utils/sanitization";
 
 const ViewerPage = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -20,6 +22,7 @@ const ViewerPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [caseData, setCaseData] = useState<any>(null);
   const [metadataOpen, setMetadataOpen] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     if (caseId) {
@@ -28,23 +31,59 @@ const ViewerPage = () => {
   }, [caseId]);
 
   const loadCaseData = async () => {
+    if (!caseId) {
+      navigate('/dashboard');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
+      // Attempt to fetch case (RLS will enforce access control)
       const { data, error: caseError } = await supabase
         .from('cases')
         .select('*')
         .eq('id', caseId)
         .single();
 
-      if (caseError) throw caseError;
-      if (!data) throw new Error('Case not found');
+      if (caseError || !data) {
+        // Access denied or case not found
+        setAccessDenied(true);
+        
+        // Log unauthorized access attempt
+        await logUnauthorizedAccess('case', caseId);
+        
+        toast({
+          title: 'Access Denied',
+          description: 'You do not have permission to view this case',
+          variant: 'destructive',
+          duration: 5000
+        });
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+        
+        return;
+      }
 
+      // Access granted - log the view
+      await logCaseView(caseId);
+      
       setCaseData(data);
     } catch (err) {
       console.error('Error loading case:', err);
       setError(err instanceof Error ? err.message : 'Failed to load case');
+      
+      toast({
+        title: 'Error Loading Case',
+        description: 'Failed to load case details',
+        variant: 'destructive'
+      });
+      
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }
@@ -62,6 +101,10 @@ const ViewerPage = () => {
 
     try {
       setDownloading(true);
+      
+      // Log DICOM download
+      await logDicomDownload(caseId!, caseData.file_path);
+      
       const { data, error } = await supabase.storage
         .from('cbct-scans')
         .download(caseData.file_path);
@@ -172,6 +215,25 @@ const ViewerPage = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center max-w-md">
+          <div className="text-destructive mb-4">
+            <AlertTriangle className="w-16 h-16 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+          <p className="text-muted-foreground mb-4">
+            You do not have permission to view this case. This incident has been logged.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Redirecting to dashboard...
+          </p>
+        </div>
       </div>
     );
   }
