@@ -71,3 +71,52 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## 🔒 Security
+
+This application implements comprehensive security measures for handling patient health data:
+
+### Security Features
+
+- **Multi-Factor Authentication (MFA)**: TOTP-based MFA required for all users
+- **Row Level Security (RLS)**: Database-level access control
+- **Rate Limiting**: Protection against brute force attacks (5 attempts/15 minutes)
+- **CSRF Protection**: Tokens required for all state-changing operations
+- **Input Sanitization**: XSS prevention on all user inputs using DOMPurify
+- **Audit Logging**: Immutable 7-year audit trail via secure RPC functions
+- **File Validation**: Deep inspection of uploaded DICOM files (zip bomb & path traversal detection)
+- **Session Management**: Auto-logout after 30 minutes inactivity
+- **Password Policy**: Strong passwords enforced (12+ characters, complexity requirements)
+
+### Compliance
+
+- UK GDPR compliant
+- NHS Digital security standards aligned
+- HIPAA-ready architecture
+- SOC 2 Type II infrastructure (Supabase)
+
+### Security Testing
+
+Before deploying to production:
+
+1. Verify all tables have RLS enabled
+2. Test authentication rate limiting
+3. Test IDOR protection with multiple user accounts
+4. Verify CSRF tokens are required
+5. Test file upload validation (zip bombs, path traversal)
+6. Verify audit logs are immutable
+7. Test XSS prevention with malicious inputs
+
+### Reporting Security Issues
+
+If you discover a security vulnerability, please email security@yourdomain.com
+
+**Do not** create public GitHub issues for security vulnerabilities.
+
+### Security Monitoring
+
+Access the security dashboard at `/security-dashboard` (admin only) to monitor:
+- Failed login attempts
+- Unauthorized access attempts
+- Active user sessions
+- Suspicious activity alerts
