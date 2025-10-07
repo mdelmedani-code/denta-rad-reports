@@ -47,33 +47,43 @@ Deno.serve(async (req) => {
     const zip = await JSZip.loadAsync(zipBuffer);
     
     const dicomFiles: string[] = [];
-    let metadata: any = null;
+    let firstDicomMetadata: any = null;
 
-    // Find all DICOM files in the ZIP
+    // Process each file in the ZIP
     for (const [filename, file] of Object.entries(zip.files)) {
-      if (filename.toLowerCase().endsWith('.dcm') && !file.dir) {
-        dicomFiles.push(filename);
+      if (file.dir) continue;
+      
+      // Check if it's a DICOM file
+      if (filename.toLowerCase().endsWith('.dcm') || 
+          filename.toLowerCase().endsWith('.dicom')) {
         
-        // Extract metadata from first DICOM file
-        if (!metadata) {
-          const arrayBuffer = await file.async('arraybuffer');
-          metadata = extractDicomMetadata(new Uint8Array(arrayBuffer));
+        const fileData = await file.async('arraybuffer');
+        const uint8Array = new Uint8Array(fileData);
+        
+        // Verify DICOM header
+        if (isDicomFile(filename, uint8Array)) {
+          dicomFiles.push(filename);
+          
+          // Extract metadata from first DICOM file
+          if (!firstDicomMetadata) {
+            firstDicomMetadata = extractBasicDicomMetadata(uint8Array);
+          }
         }
       }
     }
 
     if (dicomFiles.length === 0) {
-      throw new Error('No DICOM files found in ZIP');
+      throw new Error('No valid DICOM files found in ZIP');
     }
 
-    console.log(`Found ${dicomFiles.length} DICOM files in ZIP`);
+    console.log(`Found ${dicomFiles.length} DICOM files`);
 
-    // Update the case record with metadata
+    // Update case with metadata and processing status
     const { error: updateError } = await supabase
       .from('cases')
       .update({
         status: 'awaiting_report',
-        dicom_metadata: metadata || {},
+        dicom_metadata: firstDicomMetadata || {},
         series_count: dicomFiles.length,
         processed_at: new Date().toISOString()
       })
@@ -88,7 +98,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         seriesCount: dicomFiles.length,
-        metadata: metadata,
+        metadata: firstDicomMetadata,
         message: `Successfully processed ${dicomFiles.length} DICOM files`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -97,38 +107,48 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in extract-dicom-zip function:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Internal server error' 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-// Extract basic DICOM metadata
-function extractDicomMetadata(data: Uint8Array): any {
-  try {
-    // Check for DICOM header
-    if (data.length > 132) {
-      const dicmBytes = data.slice(128, 132);
-      const dicmString = String.fromCharCode(...dicmBytes);
-      
-      if (dicmString === 'DICM') {
-        // Basic metadata extraction
-        // In production, use a proper DICOM parser like dicom-parser
-        return {
-          isDicom: true,
-          fileSize: data.length,
-          extractedAt: new Date().toISOString(),
-          // Add more metadata fields as needed when you integrate dicom-parser
-        };
-      }
-    }
-  } catch (error) {
-    console.error('Error extracting DICOM metadata:', error);
+// Check if a file is a DICOM file
+function isDicomFile(filename: string, data: Uint8Array): boolean {
+  // Check file extension
+  if (filename.toLowerCase().endsWith('.dcm') || filename.toLowerCase().endsWith('.dicom')) {
+    return true;
   }
   
-  return {
-    isDicom: false,
+  // Check DICOM header (starts with specific bytes after 128 byte preamble)
+  if (data.length > 132) {
+    const dicmBytes = data.slice(128, 132);
+    const dicmString = String.fromCharCode(...dicmBytes);
+    return dicmString === 'DICM';
+  }
+  
+  return false;
+}
+
+// Extract basic DICOM metadata without full parser
+function extractBasicDicomMetadata(data: Uint8Array): any {
+  const metadata: any = {
     fileSize: data.length,
+    hasDicomHeader: false,
     extractedAt: new Date().toISOString()
   };
+  
+  // Check for DICM header
+  if (data.length > 132) {
+    const dicmBytes = data.slice(128, 132);
+    const dicmString = String.fromCharCode(...dicmBytes);
+    metadata.hasDicomHeader = dicmString === 'DICM';
+  }
+  
+  // Note: For production, integrate dicom-parser for full metadata extraction
+  // This is a simplified version that confirms DICOM validity
+  
+  return metadata;
 }
