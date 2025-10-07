@@ -71,6 +71,7 @@ const ReportingPage = () => {
   const [showImageAnnotator, setShowImageAnnotator] = useState(false);
   const [currentImageForAnnotation, setCurrentImageForAnnotation] = useState<{url: string, name: string} | null>(null);
   const [pdfTemplate, setPdfTemplate] = useState<any>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (caseId) {
@@ -83,6 +84,37 @@ const ReportingPage = () => {
       fetchPDFTemplate();
     }
   }, [caseData?.clinical_question]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (reportText) {
+      setHasUnsavedChanges(true);
+    }
+  }, [reportText]);
+
+  // Warn user before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && !isSaving) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges, isSaving]);
+
+  // Clear flag after successful save
+  useEffect(() => {
+    if (!isSaving) {
+      setHasUnsavedChanges(false);
+    }
+  }, [isSaving]);
 
   // Real-time presence tracking for concurrent editing
   useEffect(() => {
@@ -334,16 +366,27 @@ const ReportingPage = () => {
   };
 
   const saveReport = async () => {
-    if (!caseData || !reportText.trim()) {
+    if (!caseData) {
       toast({
         title: "Error",
-        description: "Please enter a report before saving",
+        description: "Case data not found",
         variant: "destructive",
       });
       return;
     }
 
+    // Validate required fields
+    if (!reportText.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Report findings are required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setIsSaving(true);
+
     try {
       const user = await supabase.auth.getUser();
       
@@ -351,19 +394,8 @@ const ReportingPage = () => {
       const existingReport = caseData.reports?.[0];
       let reportId = existingReport?.id;
       
-      if (existingReport) {
-        // Update existing report
-        const { error } = await supabase
-          .from('reports')
-          .update({ 
-            report_text: reportText,
-            author_id: user.data.user?.id 
-          })
-          .eq('id', existingReport.id);
-
-        if (error) throw error;
-      } else {
-        // Create new report
+      if (!existingReport) {
+        // Create new report first
         const { data: newReport, error } = await supabase
           .from('reports')
           .insert({
@@ -378,9 +410,37 @@ const ReportingPage = () => {
         reportId = newReport.id;
       }
 
-      // Generate PDF using edge function
-      try {
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-pdf-report', {
+      // Call atomic transaction function to finalize report
+      const { data, error: transactionError } = await supabase.rpc(
+        'finalize_report_transaction',
+        {
+          p_report_id: reportId,
+          p_findings: reportText,
+          p_impression: '', // You may want to separate these in your UI
+          p_recommendations: ''
+        }
+      );
+
+      if (transactionError) {
+        throw transactionError;
+      }
+
+      // Parse the JSON response
+      const result = data as { success: boolean; report_id: string; case_id: string; invoice_id: string; price: number } | null;
+      
+      if (!result || !result.success) {
+        throw new Error('Transaction failed');
+      }
+
+      // Success - report finalized, invoice created, case updated
+      toast({
+        title: 'Report Finalized',
+        description: `Report saved successfully. Invoice created.`
+      });
+
+      // Queue PDF generation in background (non-blocking)
+      supabase.functions
+        .invoke('generate-pdf-report', {
           body: {
             reportId: reportId,
             caseData: {
@@ -391,78 +451,31 @@ const ReportingPage = () => {
               field_of_view: caseData.field_of_view,
               urgency: caseData.urgency,
               upload_date: caseData.upload_date,
-              clinic_name: caseData.clinics.name,
-              clinic_contact_email: caseData.clinics.contact_email
+              clinic_name: caseData.clinics?.name,
+              clinic_contact_email: caseData.clinics?.contact_email
             },
             reportText: reportText,
             templateId: pdfTemplate?.id
           }
+        })
+        .then(({ data: pdfData, error: pdfError }) => {
+          if (pdfError) {
+            console.error('PDF generation error:', pdfError);
+          } else {
+            console.log('PDF generation queued successfully');
+          }
         });
 
-        if (pdfError) {
-          console.error('PDF generation error:', pdfError);
-          toast({
-            title: "Warning",
-            description: "Report saved but PDF generation failed. You can regenerate it later.",
-            variant: "destructive",
-          });
-        } else if (pdfData?.pdfUrl) {
-          // Update report with PDF URL
-          await supabase
-            .from('reports')
-            .update({ pdf_url: pdfData.pdfUrl })
-            .eq('id', reportId);
-        }
-      } catch (pdfError) {
-        console.error('PDF generation failed:', pdfError);
-      }
-
-      // Update case status to report_ready
-      const { error: statusError } = await supabase
-        .from('cases')
-        .update({ status: 'report_ready' })
-        .eq('id', caseData.id);
-
-      if (statusError) throw statusError;
-
-      // Generate invoice automatically
-      try {
-        const { error: invoiceError } = await supabase
-          .from('invoices')
-          .insert({
-            case_id: caseData.id,
-            clinic_id: caseData.clinic_id,
-            amount: calculateCasePrice(caseData.field_of_view, caseData.urgency),
-            invoice_number: await generateInvoiceNumber(),
-            line_items: [{
-              description: `CBCT Scan Analysis - ${caseData.patient_name}`,
-              quantity: 1,
-              unit_price: calculateCasePrice(caseData.field_of_view, caseData.urgency),
-              total: calculateCasePrice(caseData.field_of_view, caseData.urgency)
-            }],
-            status: 'pending'
-          });
-
-        if (invoiceError && !invoiceError.message.includes('duplicate')) {
-          console.error('Invoice generation error:', invoiceError);
-        }
-      } catch (invoiceError) {
-        console.error('Failed to generate invoice:', invoiceError);
-      }
-      
-      toast({
-        title: "Report finalized successfully",
-        description: "Report saved, PDF generated, and invoice created.",
-      });
-      
       // Navigate back to dashboard
       navigate('/admin/reporter');
     } catch (error) {
-      console.error('Error saving report:', error);
+      console.error('Error finalizing report:', error);
       toast({
-        title: "Error saving report",
-        description: "Please try again or contact support if the problem persists.",
-        variant: "destructive",
+        title: 'Error',
+        description: error instanceof Error 
+          ? error.message 
+          : 'Failed to finalize report. Please try again.',
+        variant: 'destructive'
       });
     } finally {
       setIsSaving(false);
@@ -886,13 +899,19 @@ const ReportingPage = () => {
                     <Button
                       onClick={saveReport}
                       disabled={isSaving || !reportText.trim()}
+                      className="w-full"
                     >
                       {isSaving ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Finalizing Report...
+                        </>
                       ) : (
-                        <FileText className="w-4 h-4 mr-2" />
+                        <>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Finalize Report
+                        </>
                       )}
-                      Finalize Report
                     </Button>
                   </div>
                 </div>

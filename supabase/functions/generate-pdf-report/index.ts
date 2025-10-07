@@ -44,6 +44,17 @@ interface PDFTemplate {
   footer_text: string;
 }
 
+// HTML sanitization function to prevent XSS
+function escapeHtml(unsafe: string): string {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // Enhanced HTML generation with print-optimized styling
 function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
   const currentDate = new Date().toLocaleDateString();
@@ -54,7 +65,7 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Diagnostic Report - ${data.caseData.patient_name}</title>
+      <title>Diagnostic Report - ${escapeHtml(data.caseData.patient_name)}</title>
       <style>
         @page {
           size: A4;
@@ -284,10 +295,10 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
       <div class="container">
         <div class="header">
           <div class="header-content">
-            ${template.logo_url ? `<img src="${template.logo_url}" alt="Company Logo" class="logo-img">` : ''}
+            ${template.logo_url ? `<img src="${escapeHtml(template.logo_url)}" alt="Company Logo" class="logo-img">` : ''}
             <div class="company-info">
-              <h1>${template.company_name}</h1>
-              <p>${template.header_text}</p>
+              <h1>${escapeHtml(template.company_name)}</h1>
+              <p>${escapeHtml(template.header_text)}</p>
             </div>
           </div>
         </div>
@@ -296,7 +307,7 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
           <div class="info-grid">
             <div class="info-item">
               <div class="info-label">Patient Name</div>
-              <div class="info-value">${data.caseData.patient_name}</div>
+              <div class="info-value">${escapeHtml(data.caseData.patient_name)}</div>
             </div>
             ${data.caseData.patient_dob ? `
             <div class="info-item">
@@ -307,18 +318,18 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
             ${data.caseData.patient_internal_id ? `
             <div class="info-item">
               <div class="info-label">Patient ID</div>
-              <div class="info-value">${data.caseData.patient_internal_id}</div>
+              <div class="info-value">${escapeHtml(data.caseData.patient_internal_id)}</div>
             </div>
             ` : ''}
             <div class="info-item">
               <div class="info-label">Field of View</div>
-              <div class="info-value">${data.caseData.field_of_view.replace('_', ' ').toUpperCase()}</div>
+              <div class="info-value">${escapeHtml(data.caseData.field_of_view.replace('_', ' ').toUpperCase())}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Urgency</div>
               <div class="info-value">
-                <span class="urgency-badge urgency-${data.caseData.urgency}">
-                  ${data.caseData.urgency.toUpperCase()}
+                <span class="urgency-badge urgency-${escapeHtml(data.caseData.urgency)}">
+                  ${escapeHtml(data.caseData.urgency.toUpperCase())}
                 </span>
               </div>
             </div>
@@ -336,12 +347,12 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
           <div class="info-grid">
             <div class="info-item">
               <div class="info-label">Referring Clinic</div>
-              <div class="info-value">${data.caseData.clinic_name}</div>
+              <div class="info-value">${escapeHtml(data.caseData.clinic_name)}</div>
             </div>
             ${data.caseData.clinic_contact_email ? `
             <div class="info-item">
               <div class="info-label">Contact Email</div>
-              <div class="info-value">${data.caseData.clinic_contact_email}</div>
+              <div class="info-value">${escapeHtml(data.caseData.clinic_contact_email)}</div>
             </div>
             ` : ''}
           </div>
@@ -350,12 +361,12 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
         
         <div class="clinical-question">
           <strong>Clinical Question:</strong><br>
-          ${data.caseData.clinical_question}
+          ${escapeHtml(data.caseData.clinical_question)}
         </div>
         
         <div class="section">
           <div class="section-title">Diagnostic Findings</div>
-          <div class="report-content">${data.reportText}</div>
+          <div class="report-content">${escapeHtml(data.reportText)}</div>
         </div>
         
         <div class="images-section">
@@ -379,10 +390,10 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
         ${data.signatureData ? `
         <div class="signature-section">
           <div class="signature-title">Digitally Signed Report</div>
-          <div class="signature-content">${data.signatureData.signature_statement}</div>
-          <div class="signature-name">${data.signatureData.signatory_name}</div>
-          <div class="signature-details">${data.signatureData.signatory_title}</div>
-          <div class="signature-details">${data.signatureData.signatory_credentials}</div>
+          <div class="signature-content">${escapeHtml(data.signatureData.signature_statement)}</div>
+          <div class="signature-name">${escapeHtml(data.signatureData.signatory_name)}</div>
+          <div class="signature-details">${escapeHtml(data.signatureData.signatory_title)}</div>
+          <div class="signature-details">${escapeHtml(data.signatureData.signatory_credentials)}</div>
           <div class="signature-details">Digitally signed on: ${new Date(data.signatureData.signed_off_at).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'long',
@@ -394,10 +405,10 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
         ` : ''}
         
         <div class="footer">
-          <div class="footer-logo">${template.company_name}</div>
-          ${template.company_address ? `<div>${template.company_address}</div>` : ''}
-          <div>${template.footer_text}</div>
-          <div style="margin-top: 10px;">Report ID: ${data.reportId} | Generated: ${currentDate}</div>
+          <div class="footer-logo">${escapeHtml(template.company_name)}</div>
+          ${template.company_address ? `<div>${escapeHtml(template.company_address)}</div>` : ''}
+          <div>${escapeHtml(template.footer_text)}</div>
+          <div style="margin-top: 10px;">Report ID: ${escapeHtml(data.reportId)} | Generated: ${currentDate}</div>
         </div>
       </div>
     </body>
@@ -471,9 +482,85 @@ const serve_handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get authenticated user from request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Missing authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse request body
     const { reportId, caseData, reportText, templateId }: PDFRequest = await req.json();
-    console.log('Processing PDF for report:', reportId);
+    
+    // Validate reportId is a valid UUID (prevents path traversal)
+    if (!reportId || typeof reportId !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Report ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(reportId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid report ID format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize reportId
+    const sanitizedReportId = reportId.replace(/[^a-zA-Z0-9-]/g, '');
+    
+    console.log('Processing PDF for report:', sanitizedReportId);
+
+    // Verify user has access to this report
+    const { data: report, error: reportError } = await supabase
+      .from('reports')
+      .select(`
+        id,
+        case_id,
+        cases!inner(
+          clinic_id,
+          assigned_reporter
+        )
+      `)
+      .eq('id', sanitizedReportId)
+      .single();
+
+    if (reportError || !report) {
+      return new Response(
+        JSON.stringify({ error: 'Report not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user is the assigned reporter or admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const isAdmin = profile?.role === 'admin';
+    
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Only admins can generate PDFs' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Fetch PDF template
     let template: PDFTemplate;
@@ -518,57 +605,101 @@ const serve_handler = async (req: Request): Promise<Response> => {
     }
 
     // Generate HTML content optimized for PDF
-    const htmlContent = generatePDFHTML({ reportId, caseData, reportText, templateId }, template);
+    const htmlContent = generatePDFHTML({ reportId: sanitizedReportId, caseData, reportText, templateId }, template);
     console.log('Generated HTML content for PDF');
 
-    // Generate PDF from HTML
-    const pdfBytes = await generatePDFFromHTML(htmlContent);
+    // Log PDF generation start
+    const { data: logData } = await supabase
+      .from('pdf_generation_logs')
+      .insert({
+        report_id: sanitizedReportId,
+        status: 'processing'
+      })
+      .select()
+      .single();
 
-    // Upload to Supabase Storage
-    const fileName = `pdfs/report-${reportId}-${Date.now()}.pdf`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('reports')
-      .upload(fileName, pdfBytes, {
-        contentType: 'application/pdf',
-        cacheControl: '3600',
-        upsert: true
-      });
+    const startTime = Date.now();
 
-    if (uploadError) {
-      throw uploadError;
-    }
+    try {
+      // Generate PDF from HTML with timeout
+      const PDF_TIMEOUT = 60000; // 60 seconds
+      
+      const pdfBytes = await Promise.race([
+        generatePDFFromHTML(htmlContent),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('PDF generation timeout')), PDF_TIMEOUT)
+        )
+      ]);
 
-    // Get the public URL
-    const { data: urlData } = supabase.storage
-      .from('reports')
-      .getPublicUrl(fileName);
+      // Upload to Supabase Storage using sanitized ID
+      const fileName = `pdfs/report-${sanitizedReportId}-${Date.now()}.pdf`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(fileName, pdfBytes, {
+          contentType: 'application/pdf',
+          cacheControl: '3600',
+          upsert: true
+        });
 
-    // Update the reports table with the PDF URL (only if not a preview)
-    if (reportId !== 'preview') {
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('reports')
+        .getPublicUrl(fileName);
+
+      // Update the reports table with the PDF URL
       const { error: updateError } = await supabase
         .from('reports')
         .update({ pdf_url: urlData.publicUrl })
-        .eq('id', reportId);
+        .eq('id', sanitizedReportId);
 
       if (updateError) {
         console.error('Error updating report:', updateError);
-        // Don't throw error for preview mode
       }
+
+      // Log success
+      if (logData) {
+        await supabase
+          .from('pdf_generation_logs')
+          .update({
+            status: 'success',
+            duration_ms: Date.now() - startTime,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', logData.id);
+      }
+
+      console.log('PDF generated successfully:', urlData.publicUrl);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          pdfUrl: urlData.publicUrl,
+          fileName,
+          templateUsed: template.name
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (pdfError) {
+      // Log failure
+      if (logData) {
+        await supabase
+          .from('pdf_generation_logs')
+          .update({
+            status: 'failed',
+            duration_ms: Date.now() - startTime,
+            error_message: pdfError instanceof Error ? pdfError.message : String(pdfError),
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', logData.id);
+      }
+      throw pdfError;
     }
-
-    console.log('PDF generated successfully:', urlData.publicUrl);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        pdfUrl: urlData.publicUrl,
-        fileName,
-        templateUsed: template.name
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
 
   } catch (error) {
     console.error('Error generating PDF:', error);
