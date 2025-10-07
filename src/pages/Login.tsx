@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { validatePasswordStrength } from "@/utils/passwordStrength";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -36,6 +38,14 @@ const Login = () => {
 
     try {
       if (isSignUp) {
+        // Validate password strength for sign up
+        const strength = validatePasswordStrength(password);
+        if (!strength.valid) {
+          setError(strength.errors[0] || 'Please choose a stronger password');
+          setIsLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -140,6 +150,11 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {isSignUp && (
+                <div className="mt-2">
+                  <PasswordStrengthMeter password={password} />
+                </div>
+              )}
             </div>
 
             {error && (
