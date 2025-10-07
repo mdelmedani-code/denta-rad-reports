@@ -25,6 +25,8 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyNotice from "./pages/PrivacyNotice";
 import MFASetup from "./pages/MFASetup";
 import AuditLogs from "./pages/AuditLogs";
+import SecurityDashboard from "./pages/SecurityDashboard";
+import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
 
@@ -55,34 +57,63 @@ const App = () => (
               </RequireAuth>
             } />
             
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/upload-case" element={<UploadCase />} />
+            {/* Clinic routes - protected with layout */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requiredRole="clinic">
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/upload-case" element={
+              <ProtectedRoute requiredRole="clinic">
+                <AppLayout>
+                  <UploadCase />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             
-            {/* Audit Logs - admin only */}
+            {/* Admin routes - protected with layout */}
             <Route path="/admin/audit-logs" element={
               <ProtectedRoute requiredRole="admin">
-                <AuditLogs />
+                <AppLayout>
+                  <AuditLogs />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/security-dashboard" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <SecurityDashboard />
+                </AppLayout>
               </ProtectedRoute>
             } />
             
             {/* Unified dashboard for reporter/admin */}
             <Route path="/reporter" element={
               <ProtectedRoute requiredRole="admin">
-                <UnifiedDashboard />
+                <AppLayout>
+                  <UnifiedDashboard />
+                </AppLayout>
               </ProtectedRoute>
             } />
             
             {/* Billing export */}
             <Route path="/billing-export" element={
               <ProtectedRoute requiredRole="admin">
-                <BillingExport />
+                <AppLayout>
+                  <BillingExport />
+                </AppLayout>
               </ProtectedRoute>
             } />
             
             {/* Viewer page */}
             <Route path="/viewer/:caseId" element={
               <ProtectedRoute requiredRole="admin">
-                <ViewerPage />
+                <AppLayout>
+                  <ViewerPage />
+                </AppLayout>
               </ProtectedRoute>
             } />
             
@@ -92,22 +123,30 @@ const App = () => (
             
             <Route path="/admin/invoices" element={
               <ProtectedRoute requiredRole="admin">
-                <Invoices />
+                <AppLayout>
+                  <Invoices />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/reporter/case/:caseId" element={
               <ProtectedRoute requiredRole="admin">
-                <ReportingPage />
+                <AppLayout>
+                  <ReportingPage />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/pdf-templates" element={
               <ProtectedRoute requiredRole="admin">
-                <PDFTemplateSettings />
+                <AppLayout>
+                  <PDFTemplateSettings />
+                </AppLayout>
               </ProtectedRoute>
             } />
             <Route path="/admin/template-management" element={
               <ProtectedRoute requiredRole="admin">
-                <TemplateManagement />
+                <AppLayout>
+                  <TemplateManagement />
+                </AppLayout>
               </ProtectedRoute>
             } />
             
