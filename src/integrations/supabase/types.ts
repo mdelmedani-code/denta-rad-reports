@@ -60,22 +60,21 @@ export type Database = {
           clinic_id: string
           clinical_question: string
           created_at: string | null
+          dicom_metadata: Json | null
           field_of_view: Database["public"]["Enums"]["field_of_view"]
           file_path: string | null
           id: string
           monthly_billed: boolean | null
           monthly_invoice_id: string | null
-          orthanc_instance_ids: string[] | null
-          orthanc_series_id: string | null
-          orthanc_study_id: string | null
           patient_dob: string | null
           patient_id: string | null
           patient_internal_id: string | null
           patient_name: string
           pregenerated_zip_path: string | null
+          processed_at: string | null
           report_path: string | null
+          series_count: number | null
           status: Database["public"]["Enums"]["case_status"]
-          study_instance_uid: string | null
           updated_at: string | null
           upload_date: string | null
           urgency: Database["public"]["Enums"]["urgency_level"]
@@ -85,22 +84,21 @@ export type Database = {
           clinic_id: string
           clinical_question: string
           created_at?: string | null
+          dicom_metadata?: Json | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
-          orthanc_instance_ids?: string[] | null
-          orthanc_series_id?: string | null
-          orthanc_study_id?: string | null
           patient_dob?: string | null
           patient_id?: string | null
           patient_internal_id?: string | null
           patient_name: string
           pregenerated_zip_path?: string | null
+          processed_at?: string | null
           report_path?: string | null
+          series_count?: number | null
           status?: Database["public"]["Enums"]["case_status"]
-          study_instance_uid?: string | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
@@ -110,22 +108,21 @@ export type Database = {
           clinic_id?: string
           clinical_question?: string
           created_at?: string | null
+          dicom_metadata?: Json | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
-          orthanc_instance_ids?: string[] | null
-          orthanc_series_id?: string | null
-          orthanc_study_id?: string | null
           patient_dob?: string | null
           patient_id?: string | null
           patient_internal_id?: string | null
           patient_name?: string
           pregenerated_zip_path?: string | null
+          processed_at?: string | null
           report_path?: string | null
+          series_count?: number | null
           status?: Database["public"]["Enums"]["case_status"]
-          study_instance_uid?: string | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
