@@ -182,7 +182,7 @@ const ReporterDashboard = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (roleError) throw roleError;
 
@@ -191,7 +191,7 @@ const ReporterDashboard = () => {
           .from('profiles')
           .select('professional_title, credentials, signature_statement')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) throw profileError;
 

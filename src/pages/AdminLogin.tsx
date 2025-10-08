@@ -27,7 +27,7 @@ const AdminLogin = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
         
         if (roleData?.role === 'admin') {
           navigate("/admin");
@@ -55,7 +55,7 @@ const AdminLogin = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
-        .single();
+        .maybeSingle();
 
       if (roleError) throw roleError;
 
