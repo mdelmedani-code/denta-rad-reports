@@ -23,13 +23,13 @@ const AdminLogin = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         // Check if user has admin role
-        const { data: profile } = await supabase
-          .from('profiles')
+        const { data: roleData } = await supabase
+          .from('user_roles')
           .select('role')
-          .eq('id', session.user.id)
+          .eq('user_id', session.user.id)
           .single();
         
-        if (profile?.role === 'admin') {
+        if (roleData?.role === 'admin') {
           navigate("/admin");
         }
       }
@@ -51,15 +51,15 @@ const AdminLogin = () => {
       if (error) throw error;
 
       // Check if user has admin role
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
         .select('role')
-        .eq('id', data.user.id)
+        .eq('user_id', data.user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (roleError) throw roleError;
 
-      if (profile?.role !== 'admin') {
+      if (roleData?.role !== 'admin') {
         await supabase.auth.signOut();
         throw new Error('Access denied. Admin credentials required.');
       }
