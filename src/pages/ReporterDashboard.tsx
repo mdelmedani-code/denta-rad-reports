@@ -177,15 +177,26 @@ const ReporterDashboard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: profile, error } = await supabase
+        // Fetch role from user_roles
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (roleError) throw roleError;
+
+        // Fetch profile details from profiles (without role)
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role, professional_title, credentials, signature_statement')
+          .select('professional_title, credentials, signature_statement')
           .eq('id', user.id)
           .single();
-        
-        if (error) throw error;
-        setUserRole(profile?.role);
-        setUserProfile(profile);
+
+        if (profileError) throw profileError;
+
+        setUserRole(roleData?.role || null);
+        setUserProfile(profileData);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
