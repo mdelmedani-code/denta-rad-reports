@@ -15,8 +15,29 @@ serve(async (req) => {
   try {
     const { transcribedText, caseDetails, reportStyle = 'detailed' } = await req.json();
     
+    // INPUT VALIDATION
     if (!transcribedText) {
       throw new Error('No transcribed text provided');
+    }
+    
+    // Validate transcribedText length and type
+    if (typeof transcribedText !== 'string' || transcribedText.length > 50000) {
+      throw new Error('Invalid transcribed text - must be string under 50000 characters');
+    }
+    
+    // Validate reportStyle
+    if (!['detailed', 'concise'].includes(reportStyle)) {
+      throw new Error('Invalid report style - must be "detailed" or "concise"');
+    }
+    
+    // Validate caseDetails if provided
+    if (caseDetails) {
+      if (caseDetails.patient_name && (typeof caseDetails.patient_name !== 'string' || caseDetails.patient_name.length > 200)) {
+        throw new Error('Invalid patient name');
+      }
+      if (caseDetails.clinical_question && (typeof caseDetails.clinical_question !== 'string' || caseDetails.clinical_question.length > 2000)) {
+        throw new Error('Invalid clinical question');
+      }
     }
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');

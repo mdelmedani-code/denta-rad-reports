@@ -16,9 +16,27 @@ Deno.serve(async (req) => {
   try {
     const { caseId, zipPath } = await req.json();
     
+    // INPUT VALIDATION
     if (!caseId || !zipPath) {
       return new Response(
         JSON.stringify({ error: 'Missing caseId or zipPath' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate caseId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(caseId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid caseId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate zipPath format and length
+    if (typeof zipPath !== 'string' || zipPath.length > 500 || zipPath.includes('..')) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid zipPath' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

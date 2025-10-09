@@ -135,13 +135,24 @@ export default function MFASetup() {
       // Generate and hash backup codes SECURELY
       const { plaintext, hashed } = await generateBackupCodes();
       
+      // Store MFA secret in secure table using SECURITY DEFINER function
+      const { data: secretStored, error: secretError } = await supabase
+        .rpc('store_mfa_secret', {
+          p_user_id: user.id,
+          p_mfa_secret: secret,
+          p_backup_codes: hashed
+        });
+      
+      if (secretError || !secretStored) {
+        throw new Error('Failed to store MFA secret securely');
+      }
+      
+      // Update profile with MFA enabled status only
       const { error } = await supabase
         .from('profiles')
         .update({
-          mfa_secret: secret,
           mfa_enabled: true,
-          mfa_enforced_at: new Date().toISOString(),
-          backup_codes: hashed // Store HASHED codes only
+          mfa_enforced_at: new Date().toISOString()
         })
         .eq('id', user.id);
 
