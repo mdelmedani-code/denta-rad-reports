@@ -48,6 +48,7 @@ export async function recordLoginAttempt(
   ipAddress?: string
 ) {
   try {
+    // Call the RPC function which has SECURITY DEFINER to bypass RLS
     await supabase.rpc('record_login_attempt', {
       p_email: email,
       p_successful: successful,
@@ -56,6 +57,7 @@ export async function recordLoginAttempt(
     });
   } catch (error) {
     console.error('Failed to record login attempt:', error);
+    // Fail silently - don't block login on logging failure
   }
 }
 
