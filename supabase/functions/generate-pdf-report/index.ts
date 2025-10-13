@@ -21,6 +21,7 @@ interface PDFRequest {
     clinic_contact_email?: string;
   };
   reportText: string;
+  images?: { url: string; name: string; id: string }[];
   templateId?: string;
   signatureData?: {
     signatory_name: string;
@@ -369,23 +370,19 @@ function generatePDFHTML(data: PDFRequest, template: PDFTemplate): string {
           <div class="report-content">${escapeHtml(data.reportText)}</div>
         </div>
         
+        ${data.images && data.images.length > 0 ? `
         <div class="images-section">
           <div class="section-title">Clinical Images</div>
           <div class="images-grid">
-            <div class="image-placeholder">
-              Image 1<br>[To be added]
-            </div>
-            <div class="image-placeholder">
-              Image 2<br>[To be added]
-            </div>
-            <div class="image-placeholder">
-              Image 3<br>[To be added]
-            </div>
-            <div class="image-placeholder">
-              Image 4<br>[To be added]
-            </div>
+            ${data.images.map((img, idx) => `
+              <div style="page-break-inside: avoid;">
+                <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.name || `Image ${idx + 1}`)}" style="width: 100%; height: auto; max-height: 300px; object-fit: contain; border: 1px solid #ddd; border-radius: 5px;">
+                <div style="text-align: center; font-size: 10px; color: #666; margin-top: 5px;">${escapeHtml(img.name || `Image ${idx + 1}`)}</div>
+              </div>
+            `).join('')}
           </div>
         </div>
+        ` : ''}
         
         ${data.signatureData ? `
         <div class="signature-section">

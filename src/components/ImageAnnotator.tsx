@@ -101,17 +101,17 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
   useEffect(() => {
     if (!fabricCanvas) return;
 
-    // Enable drawing mode first
+    // Configure drawing mode and brush
     fabricCanvas.isDrawingMode = activeTool === "draw";
     
-    // Then configure the brush if in drawing mode
-    if (activeTool === "draw") {
-      // Ensure the brush is available
-      if (fabricCanvas.freeDrawingBrush) {
-        fabricCanvas.freeDrawingBrush.color = activeColor;
-        fabricCanvas.freeDrawingBrush.width = brushWidth;
-      }
+    // Always ensure brush is configured (whether drawing or not)
+    if (fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.color = activeColor;
+      fabricCanvas.freeDrawingBrush.width = brushWidth;
     }
+    
+    // Force canvas refresh to apply changes
+    fabricCanvas.renderAll();
   }, [activeTool, activeColor, brushWidth, fabricCanvas]);
 
   const handleToolClick = (tool: typeof activeTool) => {

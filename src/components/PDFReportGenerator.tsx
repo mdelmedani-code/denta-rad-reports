@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 
 // Define styles for the PDF
 const styles = StyleSheet.create({
@@ -112,21 +112,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  imagePlaceholder: {
+  reportImage: {
     width: '45%',
-    height: 120,
-    backgroundColor: '#f0f0f0',
-    border: '1pt dashed #cccccc',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    maxHeight: 200,
+    objectFit: 'contain',
+    border: '1pt solid #cccccc',
     borderRadius: 5,
     marginBottom: 10,
   },
-  imagePlaceholderText: {
-    fontSize: 10,
-    color: '#999999',
+  imageCaption: {
+    fontSize: 9,
+    color: '#666666',
     textAlign: 'center',
+    marginTop: 3,
   },
   footer: {
     marginTop: 30,
@@ -290,8 +288,12 @@ const PDFReport: React.FC<PDFReportProps> = ({ reportData, template }) => {
             </Text>
             <View style={styles.imagesGrid}>
               {reportData.images.map((image, index) => (
-                <View key={image.id} style={styles.imagePlaceholder}>
-                  <Text style={styles.imagePlaceholderText}>
+                <View key={image.id}>
+                  <Image 
+                    src={image.url} 
+                    style={styles.reportImage}
+                  />
+                  <Text style={styles.imageCaption}>
                     {image.name || `Image ${index + 1}`}
                   </Text>
                 </View>
