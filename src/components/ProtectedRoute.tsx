@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireTerms } from "@/hooks/useRequireTerms";
-import { useRequireMFA } from "@/hooks/useRequireMFA";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -19,7 +18,6 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   
   // Enforce security requirements for authenticated users
-  useRequireMFA();
   useRequireTerms();
   useSessionTimeout();
 

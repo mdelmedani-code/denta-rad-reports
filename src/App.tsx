@@ -23,7 +23,6 @@ import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyNotice from "./pages/PrivacyNotice";
-import MFASetup from "./pages/MFASetup";
 import AuditLogs from "./pages/AuditLogs";
 import SecurityDashboard from "./pages/SecurityDashboard";
 import { AppLayout } from "./components/AppLayout";
@@ -42,13 +41,6 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
-            
-            {/* MFA Setup - requires auth but before MFA enforcement */}
-            <Route path="/mfa-setup" element={
-              <RequireAuth>
-                <MFASetup />
-              </RequireAuth>
-            } />
             
             {/* Terms of Service - requires auth but not terms acceptance */}
             <Route path="/terms-of-service" element={
