@@ -143,6 +143,13 @@ const App = () => (
                 </AppLayout>
               </ProtectedRoute>
             } />
+            <Route path="/admin/report-templates" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <TemplateManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="/admin/template-editor" element={
               <ProtectedRoute requiredRole="admin">
                 <TemplateEditor />

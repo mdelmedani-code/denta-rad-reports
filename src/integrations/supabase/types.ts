@@ -162,6 +162,57 @@ export type Database = {
           },
         ]
       }
+      cbct_report_templates: {
+        Row: {
+          clinical_history_template: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          findings_template: string
+          id: string
+          imaging_technique_template: string | null
+          impression_template: string
+          indication_category: string
+          is_default: boolean | null
+          name: string
+          recommendations_template: string | null
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          clinical_history_template?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          findings_template: string
+          id?: string
+          imaging_technique_template?: string | null
+          impression_template: string
+          indication_category: string
+          is_default?: boolean | null
+          name: string
+          recommendations_template?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          clinical_history_template?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          findings_template?: string
+          id?: string
+          imaging_technique_template?: string | null
+          impression_template?: string
+          indication_category?: string
+          is_default?: boolean | null
+          name?: string
+          recommendations_template?: string | null
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       clinic_branding: {
         Row: {
           accent_color: string
@@ -898,6 +949,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_template_usage: {
+        Args: { template_id: string }
+        Returns: undefined
       }
       is_account_locked: {
         Args: { p_email: string }

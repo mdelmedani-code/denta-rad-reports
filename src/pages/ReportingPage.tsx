@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { PDFViewer } from "@react-pdf/renderer";
 import { ModernReportPDF } from "@/components/reports/ModernReportPDF";
 import { usePDFTemplate } from "@/hooks/usePDFTemplate";
+import { TemplateSelector } from "@/components/templates/TemplateSelector";
 import { 
   ArrowLeft,
   Save,
@@ -784,6 +785,25 @@ const ReportingPage = () => {
 
           {/* Reporting Panel */}
           <div className="lg:col-span-2">
+            {/* Template Selector */}
+            <div className="mb-4">
+              <TemplateSelector
+                caseData={caseData}
+                onTemplateLoad={(content) => {
+                  setReportText(
+                    [
+                      content.clinicalHistory && `CLINICAL HISTORY:\n${content.clinicalHistory}\n\n`,
+                      content.imagingTechnique && `IMAGING TECHNIQUE:\n${content.imagingTechnique}\n\n`,
+                      `FINDINGS:\n${content.findings}\n\n`,
+                      `IMPRESSION:\n${content.impression}\n\n`,
+                      content.recommendations && `RECOMMENDATIONS:\n${content.recommendations}`
+                    ].filter(Boolean).join('')
+                  );
+                }}
+                disabled={isSaving || isGenerating}
+              />
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle>Diagnostic Report</CardTitle>
