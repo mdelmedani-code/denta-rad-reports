@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas, Circle, Rect, FabricText, FabricImage, Line, Polyline, Polygon } from "fabric";
+import { Canvas as FabricCanvas, Circle, FabricText, FabricImage, Line } from "fabric";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,13 @@ import { Separator } from "@/components/ui/separator";
 import { 
   MousePointer2, 
   Pencil, 
-  Square, 
   Circle as CircleIcon, 
   Type, 
   Trash2, 
   Download,
   Undo,
   Redo,
-  Pentagon,
-  Minus,
   ArrowRight,
-  Eraser,
   Upload,
   Save
 } from "lucide-react";
@@ -31,7 +27,7 @@ interface ImageAnnotatorProps {
   fileName: string;
 }
 
-type AnnotationTool = "select" | "pen" | "polyline" | "polygon" | "rectangle" | "circle" | "arrow" | "text" | "eraser";
+type AnnotationTool = "select" | "pen" | "circle" | "arrow" | "text";
 
 const PRESET_COLORS = [
   "#ff0000", // red
@@ -52,12 +48,6 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
   const [opacity, setOpacity] = useState(100);
   const [textInput, setTextInput] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
-  
-  // Polygon/Polyline state
-  const [polygonPoints, setPolygonPoints] = useState<{x: number, y: number}[]>([]);
-  const [tempLines, setTempLines] = useState<Line[]>([]);
-  const [tempCircles, setTempCircles] = useState<Circle[]>([]);
-  const [isDrawingPolygon, setIsDrawingPolygon] = useState(false);
   
   // Undo/Redo state
   const [history, setHistory] = useState<string[]>([]);
@@ -159,9 +149,7 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
     if (!fabricCanvas) return;
 
     const handleObjectAdded = () => {
-      if (!isDrawingPolygon) {
-        saveToHistory(fabricCanvas);
-      }
+      saveToHistory(fabricCanvas);
     };
 
     const handleObjectModified = () => {
@@ -175,7 +163,7 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
       fabricCanvas.off('object:added', handleObjectAdded);
       fabricCanvas.off('object:modified', handleObjectModified);
     };
-  }, [fabricCanvas, isDrawingPolygon]);
+  }, [fabricCanvas]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -190,29 +178,13 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
         switch (e.key.toLowerCase()) {
           case 'v': setActiveTool('select'); break;
           case 'p': setActiveTool('pen'); break;
-          case 'l': setActiveTool('polyline'); break;
-          case 'g': setActiveTool('polygon'); break;
-          case 'r': setActiveTool('rectangle'); break;
           case 'c': setActiveTool('circle'); break;
           case 'a': setActiveTool('arrow'); break;
           case 't': setActiveTool('text'); setShowTextInput(true); break;
-          case 'e': setActiveTool('eraser'); break;
           case 'delete':
           case 'backspace':
             handleDeleteSelected();
             e.preventDefault();
-            break;
-          case 'enter':
-            if (isDrawingPolygon) {
-              finishPolygon();
-              e.preventDefault();
-            }
-            break;
-          case 'escape':
-            if (isDrawingPolygon) {
-              cancelPolygon();
-              e.preventDefault();
-            }
             break;
         }
       }
@@ -230,78 +202,7 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDrawingPolygon, fabricCanvas, historyStep, history]);
-
-  // Polygon/Polyline click handler
-  useEffect(() => {
-    if (!fabricCanvas) return;
-    if (activeTool !== 'polygon' && activeTool !== 'polyline') return;
-
-    const handleCanvasClick = (e: any) => {
-      if (!e.pointer) return;
-      
-      const point = { x: e.pointer.x, y: e.pointer.y };
-      
-      if (!isDrawingPolygon) {
-        setIsDrawingPolygon(true);
-        setPolygonPoints([point]);
-        
-        // Add first circle
-        const circle = new Circle({
-          left: point.x - 3,
-          top: point.y - 3,
-          radius: 3,
-          fill: activeColor,
-          selectable: false,
-          evented: false,
-        });
-        fabricCanvas.add(circle);
-        setTempCircles([circle]);
-      } else {
-        const newPoints = [...polygonPoints, point];
-        setPolygonPoints(newPoints);
-        
-        // Add circle at new point
-        const circle = new Circle({
-          left: point.x - 3,
-          top: point.y - 3,
-          radius: 3,
-          fill: activeColor,
-          selectable: false,
-          evented: false,
-        });
-        fabricCanvas.add(circle);
-        setTempCircles(prev => [...prev, circle]);
-        
-        // Add line from previous point
-        const prevPoint = polygonPoints[polygonPoints.length - 1];
-        const line = new Line([prevPoint.x, prevPoint.y, point.x, point.y], {
-          stroke: activeColor,
-          strokeWidth: 2,
-          selectable: false,
-          evented: false,
-        });
-        fabricCanvas.add(line);
-        setTempLines(prev => [...prev, line]);
-        
-        fabricCanvas.renderAll();
-      }
-    };
-
-    const handleDoubleClick = () => {
-      if (isDrawingPolygon && polygonPoints.length >= 2) {
-        finishPolygon();
-      }
-    };
-
-    fabricCanvas.on('mouse:down', handleCanvasClick);
-    fabricCanvas.on('mouse:dblclick', handleDoubleClick);
-
-    return () => {
-      fabricCanvas.off('mouse:down', handleCanvasClick);
-      fabricCanvas.off('mouse:dblclick', handleDoubleClick);
-    };
-  }, [fabricCanvas, activeTool, isDrawingPolygon, polygonPoints, activeColor]);
+  }, [fabricCanvas, historyStep, history]);
 
   const saveToHistory = (canvas: FabricCanvas) => {
     const json = JSON.stringify(canvas.toJSON());
@@ -337,81 +238,14 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
     });
   };
 
-  const finishPolygon = () => {
-    if (!fabricCanvas || polygonPoints.length < 2) return;
-
-    // Remove temp lines and circles
-    tempLines.forEach(line => fabricCanvas.remove(line));
-    tempCircles.forEach(circle => fabricCanvas.remove(circle));
-    setTempLines([]);
-    setTempCircles([]);
-
-    const points = polygonPoints.map(p => ({ x: p.x, y: p.y }));
-
-    if (activeTool === 'polygon') {
-      const polygon = new Polygon(points, {
-        fill: `${activeColor}33`, // semi-transparent
-        stroke: activeColor,
-        strokeWidth: brushWidth,
-        opacity: opacity / 100,
-      });
-      fabricCanvas.add(polygon);
-    } else {
-      const polyline = new Polyline(points, {
-        fill: '',
-        stroke: activeColor,
-        strokeWidth: brushWidth,
-        opacity: opacity / 100,
-      });
-      fabricCanvas.add(polyline);
-    }
-
-    fabricCanvas.renderAll();
-    setPolygonPoints([]);
-    setIsDrawingPolygon(false);
-    setActiveTool('select');
-  };
-
-  const cancelPolygon = () => {
-    if (!fabricCanvas) return;
-
-    tempLines.forEach(line => fabricCanvas.remove(line));
-    tempCircles.forEach(circle => fabricCanvas.remove(circle));
-    setTempLines([]);
-    setTempCircles([]);
-    setPolygonPoints([]);
-    setIsDrawingPolygon(false);
-    fabricCanvas.renderAll();
-  };
-
   const handleToolClick = (tool: AnnotationTool) => {
-    // Cancel polygon if switching tools
-    if (isDrawingPolygon && tool !== activeTool) {
-      cancelPolygon();
-    }
 
     setActiveTool(tool);
     setShowTextInput(tool === "text");
 
     if (!fabricCanvas) return;
 
-    const colorWithOpacity = `${activeColor}${Math.round((opacity / 100) * 255).toString(16).padStart(2, '0')}`;
-
-    if (tool === "rectangle") {
-      const rect = new Rect({
-        left: 100,
-        top: 100,
-        fill: "transparent",
-        stroke: activeColor,
-        strokeWidth: brushWidth,
-        width: 100,
-        height: 100,
-        opacity: opacity / 100,
-      });
-      fabricCanvas.add(rect);
-      fabricCanvas.setActiveObject(rect);
-      setActiveTool("select");
-    } else if (tool === "circle") {
+    if (tool === "circle") {
       const circle = new Circle({
         left: 100,
         top: 100,
@@ -433,12 +267,6 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
       fabricCanvas.add(arrow);
       fabricCanvas.setActiveObject(arrow);
       setActiveTool("select");
-    } else if (tool === "eraser") {
-      fabricCanvas.isDrawingMode = true;
-      if (fabricCanvas.freeDrawingBrush) {
-        fabricCanvas.freeDrawingBrush.color = "#ffffff";
-        fabricCanvas.freeDrawingBrush.width = brushWidth * 2;
-      }
     }
   };
 
@@ -559,18 +387,18 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
       {/* Toolbar */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Premium Image Annotation Tools</CardTitle>
+          <CardTitle className="text-lg">Quick Annotation Tools</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Tool Buttons Grid */}
+          {/* Tool Buttons Grid - Simplified to 4 Essential Tools */}
           <div>
-            <Label className="text-sm font-medium mb-2 block">Drawing Tools</Label>
+            <Label className="text-sm font-medium mb-2 block">Quick Annotation Tools</Label>
             <div className="grid grid-cols-5 gap-2">
               <Button
                 variant={activeTool === "select" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleToolClick("select")}
-                title="Select (V)"
+                title="Select Tool (V)"
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <MousePointer2 className="w-4 h-4" />
@@ -581,7 +409,7 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
                 variant={activeTool === "pen" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleToolClick("pen")}
-                title="Pen (P)"
+                title="Pen Tool (P) - Freehand drawing"
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <Pencil className="w-4 h-4" />
@@ -589,43 +417,10 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
               </Button>
 
               <Button
-                variant={activeTool === "polyline" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleToolClick("polyline")}
-                title="Polyline (L)"
-                className="flex flex-col items-center gap-1 h-auto py-2"
-              >
-                <Minus className="w-4 h-4" />
-                <span className="text-xs">Polyline</span>
-              </Button>
-
-              <Button
-                variant={activeTool === "polygon" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleToolClick("polygon")}
-                title="Polygon (G)"
-                className="flex flex-col items-center gap-1 h-auto py-2"
-              >
-                <Pentagon className="w-4 h-4" />
-                <span className="text-xs">Polygon</span>
-              </Button>
-
-              <Button
-                variant={activeTool === "rectangle" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleToolClick("rectangle")}
-                title="Rectangle (R)"
-                className="flex flex-col items-center gap-1 h-auto py-2"
-              >
-                <Square className="w-4 h-4" />
-                <span className="text-xs">Rectangle</span>
-              </Button>
-
-              <Button
                 variant={activeTool === "circle" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleToolClick("circle")}
-                title="Circle (C)"
+                title="Circle Tool (C) - Highlight areas"
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <CircleIcon className="w-4 h-4" />
@@ -636,7 +431,7 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
                 variant={activeTool === "arrow" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleToolClick("arrow")}
-                title="Arrow (A)"
+                title="Arrow Tool (A) - Point to findings"
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <ArrowRight className="w-4 h-4" />
@@ -647,24 +442,16 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
                 variant={activeTool === "text" ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleToolClick("text")}
-                title="Text (T)"
+                title="Text Tool (T) - Add labels"
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <Type className="w-4 h-4" />
                 <span className="text-xs">Text</span>
               </Button>
-
-              <Button
-                variant={activeTool === "eraser" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleToolClick("eraser")}
-                title="Eraser (E)"
-                className="flex flex-col items-center gap-1 h-auto py-2"
-              >
-                <Eraser className="w-4 h-4" />
-                <span className="text-xs">Eraser</span>
-              </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 For complex measurements and 3D annotations, use OsiriX/Horos before uploading
+            </p>
           </div>
 
           <Separator />
@@ -800,20 +587,6 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
             </div>
           )}
 
-          {/* Polygon Instructions */}
-          {(activeTool === 'polygon' || activeTool === 'polyline') && (
-            <div className="bg-muted p-3 rounded-md text-sm">
-              <p className="font-medium mb-1">
-                {activeTool === 'polygon' ? 'Polygon' : 'Polyline'} Mode:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Click to add points</li>
-                <li>Double-click or press Enter to finish</li>
-                <li>Press Escape to cancel</li>
-              </ul>
-            </div>
-          )}
-
           {/* Save/Export Buttons */}
           <div className="flex gap-2">
             <Button onClick={handleSave} className="flex-1">
@@ -841,13 +614,9 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-muted-foreground">
             <div><kbd className="px-1 py-0.5 bg-muted rounded">V</kbd> Select</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">P</kbd> Pen</div>
-            <div><kbd className="px-1 py-0.5 bg-muted rounded">L</kbd> Polyline</div>
-            <div><kbd className="px-1 py-0.5 bg-muted rounded">G</kbd> Polygon</div>
-            <div><kbd className="px-1 py-0.5 bg-muted rounded">R</kbd> Rectangle</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">C</kbd> Circle</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">A</kbd> Arrow</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">T</kbd> Text</div>
-            <div><kbd className="px-1 py-0.5 bg-muted rounded">E</kbd> Eraser</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">Del</kbd> Delete</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">Ctrl+Z</kbd> Undo</div>
             <div><kbd className="px-1 py-0.5 bg-muted rounded">Ctrl+Y</kbd> Redo</div>
