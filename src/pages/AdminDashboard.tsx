@@ -23,7 +23,8 @@ import {
   TrendingUp,
   PoundSterling,
   Calendar,
-  Trash2
+  Trash2,
+  Database
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +67,7 @@ const AdminDashboard = () => {
   const [weeklyStats, setWeeklyStats] = useState<IncomeStats | null>(null);
   const [monthlyStats, setMonthlyStats] = useState<IncomeStats | null>(null);
   const [selectedCases, setSelectedCases] = useState<string[]>([]);
+  const [isBackingUp, setIsBackingUp] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -257,6 +259,30 @@ const AdminDashboard = () => {
     navigate("/admin/login");
   };
 
+  const handleBackup = async () => {
+    setIsBackingUp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backup-to-gcs', {
+        body: {}
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Backup completed",
+        description: `Successfully backed up ${data.successCount} files to Google Cloud Storage`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Backup failed",
+        description: error.message || "Failed to backup files",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'uploaded': return 'bg-blue-100 text-blue-800';
@@ -304,6 +330,14 @@ const AdminDashboard = () => {
               <Button variant="default" onClick={() => navigate("/admin/invoices")}>
                 <FileText className="w-4 h-4 mr-2" />
                 View Invoices
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleBackup}
+                disabled={isBackingUp}
+              >
+                <Database className="w-4 h-4 mr-2" />
+                {isBackingUp ? "Backing up..." : "Backup to GCS"}
               </Button>
               <Button variant="outline" onClick={() => navigate("/admin/reporter")}>
                 <Eye className="w-4 h-4 mr-2" />
