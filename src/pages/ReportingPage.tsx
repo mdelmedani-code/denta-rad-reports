@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { PDFViewer } from "@react-pdf/renderer";
+import { ModernReportPDF } from "@/components/reports/ModernReportPDF";
+import { usePDFTemplate } from "@/hooks/usePDFTemplate";
 import { 
   ArrowLeft,
   Save,
@@ -19,7 +22,8 @@ import {
   Download,
   ImageIcon,
   Upload,
-  X
+  X,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +79,10 @@ const ReportingPage = () => {
   const [currentImageForAnnotation, setCurrentImageForAnnotation] = useState<{url: string, name: string} | null>(null);
   const [pdfTemplate, setPdfTemplate] = useState<any>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+
+  // Fetch clinic branding for PDF preview
+  const { data: templateData } = usePDFTemplate(caseData?.clinic_id);
 
   useEffect(() => {
     if (caseId) {
@@ -872,33 +880,45 @@ const ReportingPage = () => {
                       {isGenerating ? 'Generating...' : 'AI Enhance'}
                     </Button>
                     
-                    {/* Client-side PDF Generation */}
-                    {reportText.trim() && caseData && pdfTemplate && (
-                      <PDFDownloadButton
-                        reportData={{
-                          reportId: caseData.reports?.[0]?.id || 'draft',
-                          caseData: {
-                            patient_name: caseData.patient_name,
-                            patient_dob: caseData.patient_dob,
-                            patient_internal_id: caseData.patient_internal_id,
-                            clinical_question: caseData.clinical_question,
-                            field_of_view: caseData.field_of_view,
-                            urgency: caseData.urgency,
-                            upload_date: caseData.upload_date,
-                            clinic_name: caseData.clinics.name,
-                            clinic_contact_email: caseData.clinics.contact_email
-                          },
-                          reportText: reportText,
-                          images: uploadedImages
-                        }}
-                        template={pdfTemplate}
-                        fileName={`${caseData.patient_name}_Report_${caseData.id}.pdf`}
-                      >
-                        <Button variant="outline" className="flex items-center gap-2">
-                          <Download className="w-4 h-4" />
-                          Download PDF
+                    {/* PDF Preview and Download */}
+                    {reportText.trim() && caseData && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowPDFPreview(true)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview PDF
                         </Button>
-                      </PDFDownloadButton>
+
+                        {pdfTemplate && (
+                          <PDFDownloadButton
+                            reportData={{
+                              reportId: caseData.reports?.[0]?.id || 'draft',
+                              caseData: {
+                                patient_name: caseData.patient_name,
+                                patient_dob: caseData.patient_dob,
+                                patient_internal_id: caseData.patient_internal_id,
+                                clinical_question: caseData.clinical_question,
+                                field_of_view: caseData.field_of_view,
+                                urgency: caseData.urgency,
+                                upload_date: caseData.upload_date,
+                                clinic_name: caseData.clinics.name,
+                                clinic_contact_email: caseData.clinics.contact_email
+                              },
+                              reportText: reportText,
+                              images: uploadedImages
+                            }}
+                            template={pdfTemplate}
+                            fileName={`${caseData.patient_name}_Report_${caseData.id}.pdf`}
+                          >
+                            <Button variant="outline" className="flex items-center gap-2">
+                              <Download className="w-4 h-4" />
+                              Download PDF
+                            </Button>
+                          </PDFDownloadButton>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -958,6 +978,53 @@ const ReportingPage = () => {
               onSave={handleAnnotatedImageSave}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={showPDFPreview} onOpenChange={setShowPDFPreview}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>PDF Report Preview</DialogTitle>
+            <DialogDescription>
+              Preview your report before finalizing. 
+              <Button 
+                variant="link" 
+                className="px-1 h-auto"
+                onClick={() => navigate('/admin/template-editor')}
+              >
+                Customize template
+              </Button>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {reportText.trim() && caseData && templateData && (
+              <PDFViewer width="100%" height="100%" className="border rounded">
+                <ModernReportPDF
+                  reportData={{
+                    patientName: caseData.patient_name,
+                    patientDob: caseData.patient_dob || undefined,
+                    patientId: caseData.patient_internal_id || undefined,
+                    clinicName: caseData.clinics.name,
+                    reportDate: new Date().toISOString(),
+                    clinicalQuestion: caseData.clinical_question,
+                    findings: reportText,
+                    impression: "",
+                    recommendations: [],
+                    images: uploadedImages.map(img => ({
+                      url: img.url,
+                      caption: img.name
+                    })),
+                    reporterName: "Reporter",
+                    caseId: caseData.id
+                  }}
+                  template={templateData.template.template_data}
+                  branding={templateData.branding}
+                />
+              </PDFViewer>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

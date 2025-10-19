@@ -19,6 +19,7 @@ import ViewerPage from "./pages/ViewerPage";
 import PDFTemplateSettings from "./pages/PDFTemplateSettings";
 import TemplateManagement from "./pages/TemplateManagement";
 import TemplateEditor from "./pages/TemplateEditor";
+import AdminTemplates from "./pages/AdminTemplates";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
@@ -145,6 +146,11 @@ const App = () => (
             <Route path="/admin/template-editor" element={
               <ProtectedRoute requiredRole="admin">
                 <TemplateEditor />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/templates" element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminTemplates />
               </ProtectedRoute>
             } />
             
