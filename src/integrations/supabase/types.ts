@@ -909,7 +909,7 @@ export type Database = {
         | "awaiting_payment"
       field_of_view: "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8"
       urgency_level: "standard" | "urgent"
-      user_role: "clinic" | "admin"
+      user_role: "clinic" | "admin" | "reporter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1046,7 +1046,7 @@ export const Constants = {
       ],
       field_of_view: ["up_to_5x5", "up_to_8x5", "up_to_8x8", "over_8x8"],
       urgency_level: ["standard", "urgent"],
-      user_role: ["clinic", "admin"],
+      user_role: ["clinic", "admin", "reporter"],
     },
   },
 } as const
