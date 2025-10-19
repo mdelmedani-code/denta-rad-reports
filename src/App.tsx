@@ -18,6 +18,7 @@ import ReportingPage from "./pages/ReportingPage";
 import ViewerPage from "./pages/ViewerPage";
 import PDFTemplateSettings from "./pages/PDFTemplateSettings";
 import TemplateManagement from "./pages/TemplateManagement";
+import TemplateEditor from "./pages/TemplateEditor";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
@@ -139,6 +140,11 @@ const App = () => (
                 <AppLayout>
                   <TemplateManagement />
                 </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/template-editor" element={
+              <ProtectedRoute requiredRole="admin">
+                <TemplateEditor />
               </ProtectedRoute>
             } />
             

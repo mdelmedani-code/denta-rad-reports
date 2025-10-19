@@ -162,6 +162,63 @@ export type Database = {
           },
         ]
       }
+      clinic_branding: {
+        Row: {
+          accent_color: string
+          clinic_id: string
+          created_at: string
+          footer_text: string | null
+          header_text: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          clinic_id: string
+          created_at?: string
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          clinic_id?: string
+          created_at?: string
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_branding_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_branding_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
@@ -346,48 +403,57 @@ export type Database = {
           company_address: string | null
           company_name: string | null
           created_at: string
+          description: string | null
           font_family: string | null
           footer_text: string | null
           header_text: string | null
           id: string
           indication_type: string | null
           is_active: boolean | null
+          is_default: boolean | null
           logo_url: string | null
           name: string
           primary_color: string | null
           secondary_color: string | null
+          template_data: Json
           updated_at: string
         }
         Insert: {
           company_address?: string | null
           company_name?: string | null
           created_at?: string
+          description?: string | null
           font_family?: string | null
           footer_text?: string | null
           header_text?: string | null
           id?: string
           indication_type?: string | null
           is_active?: boolean | null
+          is_default?: boolean | null
           logo_url?: string | null
           name?: string
           primary_color?: string | null
           secondary_color?: string | null
+          template_data: Json
           updated_at?: string
         }
         Update: {
           company_address?: string | null
           company_name?: string | null
           created_at?: string
+          description?: string | null
           font_family?: string | null
           footer_text?: string | null
           header_text?: string | null
           id?: string
           indication_type?: string | null
           is_active?: boolean | null
+          is_default?: boolean | null
           logo_url?: string | null
           name?: string
           primary_color?: string | null
           secondary_color?: string | null
+          template_data?: Json
           updated_at?: string
         }
         Relationships: []
