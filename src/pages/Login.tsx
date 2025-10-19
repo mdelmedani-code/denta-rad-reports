@@ -21,12 +21,32 @@ const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
+    // Check if user is already logged in and route based on role to avoid loops
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      if (!session) return;
+
+      // Look up role from user_roles
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (roleData?.role === 'clinic') {
         navigate("/dashboard");
+        return;
       }
+
+      if (roleData?.role === 'admin') {
+        // Send admins to admin area to prevent /login <> /dashboard loop
+        navigate("/admin");
+        return;
+      }
+
+      // Unknown/non-clinic role: sign out so clinic login page stays usable
+      setError("You are logged in with a non-clinic account. Please use Admin Login or sign in with a clinic account.");
+      await supabase.auth.signOut();
     };
     checkUser();
   }, [navigate]);
@@ -68,11 +88,19 @@ const Login = () => {
         
         if (error) throw error;
         
+        // Determine role and route accordingly
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user!.id)
+          .maybeSingle();
+        
         toast({
           title: "Login successful",
           description: "Welcome back!",
         });
-        navigate("/dashboard");
+        navigate(roleData?.role === 'admin' ? "/admin" : "/dashboard");
       }
     } catch (error: any) {
       setError(error.message || "An error occurred");
