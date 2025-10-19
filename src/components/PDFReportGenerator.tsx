@@ -287,17 +287,27 @@ const PDFReport: React.FC<PDFReportProps> = ({ reportData, template }) => {
               Clinical Images
             </Text>
             <View style={styles.imagesGrid}>
-              {reportData.images.map((image, index) => (
-                <View key={image.id}>
-                  <Image 
-                    src={image.url} 
-                    style={styles.reportImage}
-                  />
-                  <Text style={styles.imageCaption}>
-                    {image.name || `Image ${index + 1}`}
-                  </Text>
-                </View>
-              ))}
+              {reportData.images.map((image, index) => {
+                // Ensure we have a valid URL
+                const imageUrl = image.url || '';
+                
+                // Log for debugging
+                console.log(`PDF Image ${index + 1}:`, imageUrl);
+                
+                if (!imageUrl) return null;
+                
+                return (
+                  <View key={image.id}>
+                    <Image 
+                      src={imageUrl}
+                      style={styles.reportImage}
+                    />
+                    <Text style={styles.imageCaption}>
+                      {image.name || `Image ${index + 1}`}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}

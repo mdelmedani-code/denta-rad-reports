@@ -578,6 +578,20 @@ const ReportingPage = () => {
         .from('reports')
         .getPublicUrl(`case_images/${fileName}`);
 
+      console.log('Annotated image uploaded:', {
+        fileName,
+        publicUrl: urlData.publicUrl,
+        bucketPath: `case_images/${fileName}`
+      });
+
+      // Verify the image is accessible
+      try {
+        const testResponse = await fetch(urlData.publicUrl, { method: 'HEAD' });
+        console.log('Image accessibility check:', testResponse.ok);
+      } catch (e) {
+        console.warn('Image may not be immediately accessible:', e);
+      }
+
       // Save annotation to database
       const user = await supabase.auth.getUser();
       const { error: dbError } = await supabase

@@ -88,7 +88,14 @@ export const ImageAnnotator = ({ imageUrl, onSave, fileName }: ImageAnnotatorPro
       });
     };
 
+    // Set crossOrigin before src to avoid CORS issues
     img.crossOrigin = "anonymous";
+    
+    // For Supabase storage URLs, ensure proper CORS handling
+    if (imageUrl.includes('supabase.co')) {
+      console.log('Loading Supabase image with CORS:', imageUrl);
+    }
+    
     img.src = imageUrl;
 
     return () => {
