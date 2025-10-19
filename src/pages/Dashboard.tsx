@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { PDFDownloadButton } from "@/components/PDFReportGenerator";
+import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
 
 
 interface Case {
@@ -426,6 +427,12 @@ const Dashboard = () => {
                                   Reupload
                                 </Button>
                               )}
+                              <DeleteCaseDialog
+                                caseId={case_.id}
+                                caseStatus={case_.status}
+                                patientName={case_.patient_name}
+                                onDeleteSuccess={fetchCases}
+                              />
                               {case_.status === 'report_ready' && (
                                 pdfTemplate && case_.reports?.[0]?.report_text ? (
                                   <PDFDownloadButton
@@ -524,17 +531,25 @@ const Dashboard = () => {
 
                           {/* Mobile Actions */}
                           <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                            {case_.status === 'uploaded' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReupload(case_.id)}
-                                className="w-full sm:w-auto"
-                              >
-                                <Upload className="h-4 w-4 mr-2" />
-                                Reupload
-                              </Button>
-                            )}
+                            <div className="flex gap-2 flex-1">
+                              {case_.status === 'uploaded' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleReupload(case_.id)}
+                                  className="flex-1"
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Reupload
+                                </Button>
+                              )}
+                              <DeleteCaseDialog
+                                caseId={case_.id}
+                                caseStatus={case_.status}
+                                patientName={case_.patient_name}
+                                onDeleteSuccess={fetchCases}
+                              />
+                            </div>
                             {case_.status === 'report_ready' && (
                               pdfTemplate && case_.reports?.[0]?.report_text ? (
                                 <PDFDownloadButton
