@@ -64,6 +64,7 @@
     "date-fns": "^3.6.0",
     "dicom-parser": "^1.8.21",
     "dompurify": "^3.2.7",
+    "dropbox": "^10.34.0",
     "embla-carousel-react": "^8.3.0",
     "fabric": "^6.7.1",
     "input-otp": "^1.2.4",

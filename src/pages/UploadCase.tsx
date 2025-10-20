@@ -292,47 +292,76 @@ const UploadCase = () => {
         zipFilename = `case_${newCase.id}_dicom.zip`;
       }
       
-      // 4. Upload to storage with CSRF token in metadata
-      const zipPath = `${profile.clinic_id}/${newCase.id}/${zipFilename}`;
-      const { error: uploadError } = await supabase.storage
-        .from('cbct-scans')
-        .upload(zipPath, finalZipFile, {
-          cacheControl: '3600',
-          upsert: false,
-          metadata: {
-            'x-csrf-token': csrfToken
-          }
+      // 4. Convert file to base64 for Dropbox upload
+      const fileToBase64 = (file: File | Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result as string;
+            resolve(base64.split(',')[1]); // Remove data URL prefix
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
+      };
       
-      if (uploadError) {
+      toast({
+        title: 'Uploading to Dropbox',
+        description: 'Securely uploading your files...'
+      });
+      
+      const fileData = await fileToBase64(finalZipFile);
+      
+      // 5. Upload to Dropbox via edge function
+      const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('upload-to-dropbox', {
+        body: {
+          caseId: newCase.id,
+          patientId: newCase.patient_id,
+          clinicId: profile.clinic_id,
+          fileName: zipFilename,
+          fileData: fileData,
+          metadata: {
+            patientName: sanitizedPatientName,
+            patientDob: formData.patientDob || '',
+            patientInternalId: sanitizedPatientInternalId || '',
+            clinicalQuestion: sanitizedClinicalQuestion,
+            fieldOfView: formData.fieldOfView,
+            urgency: formData.urgency,
+            uploadDate: new Date().toISOString()
+          }
+        }
+      });
+      
+      if (uploadError || !uploadResponse?.success) {
         await supabase.from('cases').delete().eq('id', newCase.id);
-        throw uploadError;
+        throw new Error(uploadError?.message || uploadResponse?.error || 'Upload failed');
       }
       
-      // 5. Update case with ZIP path
+      // 6. Update case with Dropbox path
       const { error: updateError } = await supabase
         .from('cases')
         .update({
-          file_path: zipPath
+          dropbox_path: uploadResponse.dropboxPath,
+          file_path: uploadResponse.dropboxPath // Keep for compatibility
         })
         .eq('id', newCase.id);
       
       if (updateError) throw updateError;
       
-      // 6. Record upload for rate limiting
+      // 7. Record upload for rate limiting
       await recordUpload(
         finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
         'application/zip'
       );
       
-      // 7. Log case creation
+      // 8. Log case creation
       await logCaseCreation(newCase.id);
       
-      // 8. Trigger edge function to extract metadata
+      // 9. Trigger edge function to extract metadata (optional, files are in Dropbox)
       const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
         body: {
           caseId: newCase.id,
-          zipPath: zipPath
+          dropboxPath: uploadResponse.dropboxPath
         }
       });
       

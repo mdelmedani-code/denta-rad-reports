@@ -85,6 +85,7 @@ export type Database = {
           clinical_question: string
           created_at: string | null
           dicom_metadata: Json | null
+          dropbox_path: string | null
           field_of_view: Database["public"]["Enums"]["field_of_view"]
           file_path: string | null
           id: string
@@ -109,6 +110,7 @@ export type Database = {
           clinical_question: string
           created_at?: string | null
           dicom_metadata?: Json | null
+          dropbox_path?: string | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
@@ -133,6 +135,7 @@ export type Database = {
           clinical_question?: string
           created_at?: string | null
           dicom_metadata?: Json | null
+          dropbox_path?: string | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string

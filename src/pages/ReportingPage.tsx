@@ -24,7 +24,8 @@ import {
   ImageIcon,
   Upload,
   X,
-  Eye
+  Eye,
+  Folder
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,8 @@ interface Case {
   file_path: string | null;
   patient_dob: string | null;
   patient_internal_id: string | null;
+  patient_id: string;
+  dropbox_path: string | null;
   clinics: {
     name: string;
     contact_email: string;
@@ -778,6 +781,81 @@ const ReportingPage = () => {
                       </Badge>
                     </div>
                   )}
+                </div>
+
+                {/* File Access Section */}
+                <div className="pt-4 border-t">
+                  <label className="text-sm font-medium text-muted-foreground mb-3 block">DICOM File Access</label>
+                  
+                  <div className="space-y-3">
+                    {/* Primary Access - Synced Folder */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold mt-0.5">1</div>
+                        <div className="flex-1">
+                          <span className="font-semibold text-blue-900 text-sm">Primary: Open from Synced Folder</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-blue-800 ml-7 mb-2">
+                        Files auto-sync to your Mac within seconds:
+                      </p>
+                      <code className="text-[10px] bg-white px-2 py-1 rounded border block ml-7 mb-2 break-all">
+                        ~/Dropbox/DentaRad/Uploads/{caseData.patient_id}_{caseData.id}/
+                      </code>
+                      <p className="text-xs text-blue-600 ml-7 flex items-center gap-1">
+                        <span className="text-base">💡</span>
+                        <span>Open directly in Falcon MD - fastest workflow!</span>
+                      </p>
+                    </div>
+
+                    {/* Secondary Access - Browser Download */}
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="flex items-start gap-2 mb-2">
+                        <div className="w-5 h-5 bg-gray-600 rounded flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
+                        <div className="flex-1">
+                          <span className="font-semibold text-gray-900 text-sm">Backup: Download via Browser</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-700 ml-7 mb-2">
+                        Use when away from main Mac or for sharing
+                      </p>
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.functions.invoke('download-from-dropbox', {
+                              body: { 
+                                dropboxPath: caseData.dropbox_path || caseData.file_path,
+                                fileName: `${caseData.patient_id}_${caseData.id}.zip`
+                              }
+                            });
+
+                            if (error) throw error;
+
+                            if (data?.downloadUrl) {
+                              window.open(data.downloadUrl, '_blank');
+                              toast({
+                                title: 'Download Link Ready',
+                                description: 'Opening download in new tab (link expires in 4 hours)'
+                              });
+                            }
+                          } catch (error) {
+                            console.error('Download error:', error);
+                            toast({
+                              title: 'Download Failed',
+                              description: 'Could not generate download link',
+                              variant: 'destructive'
+                            });
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="ml-7 w-full max-w-[200px]"
+                      >
+                        <Download className="w-3 h-3 mr-2" />
+                        Download from Dropbox
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
