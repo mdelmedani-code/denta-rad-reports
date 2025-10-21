@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileArchive, Files, Info } from "lucide-react";
+import { ArrowLeft, FileArchive, Files, Info, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ import { validateDICOMZip, getReadableFileSize, checkUploadRateLimit, recordUplo
 import { getCSRFToken } from "@/utils/csrf";
 import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
+import { Progress } from "@/components/ui/progress";
 
 type UploadMode = 'zip' | 'individual';
 
@@ -28,6 +29,9 @@ const UploadCase = () => {
   const [dicomFiles, setDicomFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [processingFiles, setProcessingFiles] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [estimatedTimeLeft, setEstimatedTimeLeft] = useState<string>('');
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -238,6 +242,11 @@ const UploadCase = () => {
     
     try {
       setUploading(true);
+      setUploadProgress(0);
+      setUploadSuccess(false);
+      setEstimatedTimeLeft('Calculating...');
+      
+      const startTime = Date.now();
       
       // Get CSRF token for security
       const csrfToken = await getCSRFToken();
@@ -276,6 +285,9 @@ const UploadCase = () => {
       if (caseError) throw caseError;
       
       // 3. Prepare ZIP
+      setUploadProgress(10);
+      setEstimatedTimeLeft('Preparing files...');
+      
       let finalZipFile: File | Blob;
       let zipFilename: string;
       
@@ -292,6 +304,8 @@ const UploadCase = () => {
         zipFilename = `case_${newCase.id}_dicom.zip`;
       }
       
+      setUploadProgress(20);
+      
       // 4. Convert file to base64 for Dropbox upload
       const fileToBase64 = (file: File | Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -305,14 +319,17 @@ const UploadCase = () => {
         });
       };
       
-      toast({
-        title: 'Uploading to Dropbox',
-        description: 'Securely uploading your files...'
-      });
+      setUploadProgress(30);
+      const fileSizeMB = (finalZipFile.size / 1024 / 1024);
+      const estimatedSeconds = Math.ceil(fileSizeMB * 2); // Estimate 2 seconds per MB
+      setEstimatedTimeLeft(`~${estimatedSeconds} seconds`);
       
       const fileData = await fileToBase64(finalZipFile);
       
+      setUploadProgress(50);
+      
       // 5. Upload to Dropbox via edge function
+      setEstimatedTimeLeft('Uploading...');
       const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('upload-to-dropbox', {
         body: {
           caseId: newCase.id,
@@ -337,6 +354,9 @@ const UploadCase = () => {
         throw new Error(uploadError?.message || uploadResponse?.error || 'Upload failed');
       }
       
+      setUploadProgress(70);
+      setEstimatedTimeLeft('Finalizing...');
+      
       // 6. Update case with Dropbox path
       const { error: updateError } = await supabase
         .from('cases')
@@ -348,6 +368,8 @@ const UploadCase = () => {
       
       if (updateError) throw updateError;
       
+      setUploadProgress(85);
+      
       // 7. Record upload for rate limiting
       await recordUpload(
         finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
@@ -356,6 +378,8 @@ const UploadCase = () => {
       
       // 8. Log case creation
       await logCaseCreation(newCase.id);
+      
+      setUploadProgress(95);
       
       // 9. Trigger edge function to extract metadata (optional, files are in Dropbox)
       const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
@@ -369,6 +393,10 @@ const UploadCase = () => {
         console.error('Edge function error:', functionError);
         // Don't fail - metadata extraction can be retried
       }
+      
+      setUploadProgress(100);
+      setUploadSuccess(true);
+      setEstimatedTimeLeft('');
       
       toast({
         title: 'Upload Successful',
@@ -387,7 +415,10 @@ const UploadCase = () => {
       setZipFile(null);
       setDicomFiles([]);
       
-      navigate('/dashboard');
+      // Wait a moment to show the success state before navigating
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
       
     } catch (error) {
       console.error('Upload failed:', error);
@@ -397,7 +428,11 @@ const UploadCase = () => {
         variant: 'destructive'
       });
     } finally {
-      setUploading(false);
+      if (!uploadSuccess) {
+        setUploading(false);
+        setUploadProgress(0);
+        setEstimatedTimeLeft('');
+      }
     }
   };
 
@@ -676,6 +711,33 @@ const UploadCase = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Upload Progress */}
+          {uploading && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {uploadSuccess ? (
+                        <>
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <span className="font-medium text-green-600">Upload Complete!</span>
+                        </>
+                      ) : (
+                        <span className="font-medium">Uploading...</span>
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {uploadSuccess ? '100%' : `${uploadProgress}%`}
+                      {estimatedTimeLeft && !uploadSuccess && ` • ${estimatedTimeLeft}`}
+                    </span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Submit Button */}
           <div className="flex justify-center">
