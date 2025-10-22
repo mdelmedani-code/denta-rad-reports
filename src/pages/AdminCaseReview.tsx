@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Eye, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AdminCaseReview() {
   const { id: caseId } = useParams();
@@ -206,7 +206,7 @@ export default function AdminCaseReview() {
           {/* Clinical Question */}
           <div>
             <h3 className="font-semibold text-lg mb-2">Clinical Question</h3>
-            <p className="text-sm">{caseData.clinical_question}</p>
+            <p className="text-sm bg-muted p-3 rounded">{caseData.clinical_question}</p>
           </div>
 
           {/* Field of View & Urgency */}
@@ -251,20 +251,21 @@ export default function AdminCaseReview() {
           <div className="border-t pt-6">
             <h3 className="font-semibold text-lg mb-4">Report Review</h3>
 
-            {/* Instructions */}
+            {/* Manual Export Instructions */}
             {caseData.status !== 'report_ready' && (
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Manual Export Workflow:</strong>
                   <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
-                    <li>Download DICOM and review in FalconMD</li>
+                    <li>Download DICOM and import to FalconMD</li>
+                    <li>Import REFERRAL-INFO.dcm for clinical context (appears as Series 2)</li>
+                    <li>Review images with clinical information visible</li>
                     <li>Create diagnostic report in FalconMD</li>
                     <li>Export report PDF from FalconMD (saves to Desktop/Downloads)</li>
-                    <li>Open Dropbox Reports folder using button below</li>
-                    <li>Drag your PDF into the folder</li>
-                    <li>Rename file to exactly: <code className="bg-muted px-1 py-0.5 rounded">report.pdf</code></li>
-                    <li>Return here to preview and release report</li>
+                    <li>Open Reports folder using button below</li>
+                    <li>Drag PDF into folder and rename to: <code className="bg-muted px-1 py-0.5 rounded">report.pdf</code></li>
+                    <li>Return here to preview and release</li>
                   </ol>
                   {caseData.folder_name && (
                     <p className="mt-3 text-xs font-mono bg-muted p-2 rounded">
@@ -307,7 +308,7 @@ export default function AdminCaseReview() {
                 <Alert>
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription>
-                    ✓ Report has been released to clinic. Completed on {new Date(caseData.completed_at).toLocaleString()}
+                    ✓ Report released to clinic on {new Date(caseData.completed_at).toLocaleString()}
                   </AlertDescription>
                 </Alert>
               )}

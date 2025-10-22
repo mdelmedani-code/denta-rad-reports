@@ -54,7 +54,7 @@ export default function ReporterDashboard() {
     }
   }
 
-  async function downloadDICOM(caseId: string) {
+  async function downloadDICOM(caseId: string, folderName: string) {
     setDownloadingCase(caseId);
     try {
       const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
@@ -68,7 +68,7 @@ export default function ReporterDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `case_${caseId}_scan.zip`;
+      a.download = `${folderName}_scan.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -201,7 +201,7 @@ export default function ReporterDashboard() {
                   Review Case
                 </Button>
                 <Button 
-                  onClick={() => downloadDICOM(caseData.id)}
+                  onClick={() => downloadDICOM(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
                   disabled={downloadingCase === caseData.id}
                   variant="outline"
                 >

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Dropbox } from 'https://esm.sh/dropbox@10.34.0';
+import dcmjs from 'https://esm.sh/dcmjs@0.29.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,6 +58,7 @@ serve(async (req) => {
 
     // 4. Generate folder name from patient name + simple_id
     const folderName = generateFolderName(caseData.patient_name, caseData.simple_id);
+    const simpleId = String(caseData.simple_id).padStart(5, '0');
     const clinicName = caseData.clinics?.name || 'Unknown Clinic';
 
     console.log('Generated folder name:', folderName);
@@ -70,11 +72,38 @@ serve(async (req) => {
 
     // === CREATE UPLOADS FOLDER ===
     const uploadBasePath = `/DentaRad/Uploads/${folderName}`;
+    const reportBasePath = `/DentaRad/Reports/${folderName}`;
     console.log('Creating uploads folder:', uploadBasePath);
 
-    // 6. Generate and upload cover sheet PDF
+    // 6. Generate DICOM Structured Report
+    console.log('Generating DICOM SR...');
+    const dicomSR = await createDICOMStructuredReport({
+      simpleId: simpleId,
+      patientName: caseData.patient_name,
+      patientDOB: caseData.patient_dob,
+      patientID: caseData.patient_id || simpleId,
+      clinicalQuestion: caseData.clinical_question,
+      fieldOfView: caseData.field_of_view,
+      urgency: caseData.urgency,
+      referringDentist: caseData.referring_dentist,
+      clinicName: clinicName,
+      studyDate: new Date().toISOString().split('T')[0].replace(/-/g, ''),
+      studyTime: new Date().toTimeString().split(' ')[0].replace(/:/g, ''),
+      folderName: folderName,
+    });
+
+    await dbx.filesUpload({
+      path: `${uploadBasePath}/REFERRAL-INFO.dcm`,
+      contents: dicomSR,
+      mode: { '.tag': 'add' },
+      autorename: false,
+    });
+    console.log('DICOM SR uploaded');
+
+    // 7. Generate and upload cover sheet PDF
+    console.log('Generating PDF cover sheet...');
     const coverSheetPDF = await generateCoverSheetPDF({
-      id: String(caseData.simple_id).padStart(5, '0'),
+      id: simpleId,
       patient_name: caseData.patient_name,
       patient_dob: caseData.patient_dob,
       patient_id: caseData.patient_id,
@@ -93,14 +122,13 @@ serve(async (req) => {
       mode: { '.tag': 'add' },
       autorename: false,
     });
+    console.log('PDF cover sheet uploaded');
 
-    console.log('Cover sheet uploaded');
-
-    // 7. Create referral-info.txt
+    // 8. Create referral-info.txt
     const referralText = `CBCT SCAN REFERRAL
 ==================
 
-Case ID: ${String(caseData.simple_id).padStart(5, '0')}
+Case ID: ${simpleId}
 Patient Name: ${caseData.patient_name}
 Date of Birth: ${caseData.patient_dob}
 Internal ID: ${caseData.patient_id || 'N/A'}
@@ -119,15 +147,20 @@ Uploaded: ${new Date(caseData.created_at).toLocaleString()}
 
 ═══════════════════════════════════════════════════════════════════
 
+REFERRAL INFO AVAILABLE IN:
+1. REFERRAL-INFO.dcm - DICOM Structured Report (opens in FalconMD)
+2. cover-sheet.pdf - PDF document (for printing/emailing)
+3. This text file - Quick reference
+
 INSTRUCTIONS FOR REPORTER:
+1. Download this folder from Dropbox
+2. Import to FalconMD (folder contains DICOM SR + images)
+3. FalconMD will show clinical info alongside images
+4. Create diagnostic report in FalconMD
+5. Export report PDF from FalconMD
+6. Save report to: /DentaRad/Reports/${folderName}/report.pdf
 
-1. Review DICOM from this folder
-2. Open cover-sheet.pdf for clinical context
-3. Create report in FalconMD
-4. Export report PDF from FalconMD (to Desktop/Downloads)
-5. Save report to: /DentaRad/Reports/${folderName}/report.pdf
-
-IMPORTANT: Filename MUST be exactly "report.pdf" (lowercase)
+IMPORTANT: Report filename MUST be exactly "report.pdf" (lowercase)
 
 ═══════════════════════════════════════════════════════════════════
 `;
@@ -141,7 +174,7 @@ IMPORTANT: Filename MUST be exactly "report.pdf" (lowercase)
 
     console.log('Referral info uploaded');
 
-    // 8. Create metadata.json
+    // 9. Create metadata.json
     const metadata = {
       caseId: caseId,
       simpleId: caseData.simple_id,
@@ -157,6 +190,8 @@ IMPORTANT: Filename MUST be exactly "report.pdf" (lowercase)
       clinicId: caseData.clinic_id,
       clinicName: clinicName,
       uploadPath: `${uploadBasePath}/scan.zip`,
+      dicomSRPath: `${uploadBasePath}/REFERRAL-INFO.dcm`,
+      pdfCoverSheetPath: `${uploadBasePath}/cover-sheet.pdf`,
       reportPath: `/DentaRad/Reports/${folderName}/report.pdf`
     };
 
@@ -170,11 +205,10 @@ IMPORTANT: Filename MUST be exactly "report.pdf" (lowercase)
     console.log('Metadata uploaded');
 
     // === CREATE EMPTY REPORTS FOLDER ===
-    const reportBasePath = `/DentaRad/Reports/${folderName}`;
     console.log('Creating reports folder:', reportBasePath);
 
-    // 9. Create README.txt in Reports folder
-    const readmeText = `CASE: ${caseData.patient_name} (ID: ${String(caseData.simple_id).padStart(5, '0')})
+    // 10. Create README.txt in Reports folder
+    const readmeText = `CASE: ${caseData.patient_name} (ID: ${simpleId})
 FOLDER: ${folderName}
 ═══════════════════════════════════════════════════════════════════
 
@@ -198,6 +232,11 @@ Referring Dentist: ${caseData.referring_dentist || 'N/A'}
 
 Uploaded: ${new Date(caseData.created_at).toLocaleString()}
 
+REFERRAL INFO AVAILABLE IN:
+• /Uploads/${folderName}/REFERRAL-INFO.dcm (DICOM - opens in FalconMD)
+• /Uploads/${folderName}/cover-sheet.pdf (PDF - for printing)
+• /Uploads/${folderName}/referral-info.txt (Text - quick reference)
+
 ═══════════════════════════════════════════════════════════════════
 
 ⚠️  CRITICAL: The report filename MUST be exactly "report.pdf"
@@ -219,7 +258,7 @@ The webapp will look for this EXACT path. Any other filename will not work!
 
     console.log('README uploaded to Reports folder');
 
-    // 10. Update database with paths and folder name
+    // 11. Update database with paths and folder name
     const { error: updateError } = await supabaseClient
       .from('cases')
       .update({
@@ -240,12 +279,14 @@ The webapp will look for this EXACT path. Any other filename will not work!
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Case synced to Dropbox with auto-generated folders',
+        message: 'Case synced to Dropbox with DICOM SR and auto-generated folders',
         folderName: folderName,
         simpleId: caseData.simple_id,
         uploadsPath: uploadBasePath,
         reportsPath: reportBasePath,
         dropbox_scan_path: dropboxPath,
+        dicomSRCreated: true,
+        pdfCreated: true,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -267,19 +308,18 @@ The webapp will look for this EXACT path. Any other filename will not work!
   }
 });
 
-// Helper: Generate folder name from patient name and ID
+// ============================================================================
+// HELPER: Generate folder name from patient name and ID
+// ============================================================================
 function generateFolderName(patientName: string, simpleId: number): string {
-  // Split name into parts
   const nameParts = patientName.trim().split(/\s+/);
   
-  // Get first name (first part)
   let firstName = nameParts[0]
     .toUpperCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^A-Z]/g, ''); // Remove non-letters
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z]/g, '');
   
-  // Get last name (last part, or use first name if only one name)
   let lastName = nameParts.length > 1
     ? nameParts[nameParts.length - 1]
         .toUpperCase()
@@ -288,22 +328,119 @@ function generateFolderName(patientName: string, simpleId: number): string {
         .replace(/[^A-Z]/g, '')
     : firstName;
   
-  // Fallback if empty
   if (!firstName) firstName = 'UNKNOWN';
   if (!lastName) lastName = firstName;
 
-  // Format ID with leading zeros (5 digits)
   const idFormatted = String(simpleId).padStart(5, '0');
 
   return `${lastName}_${firstName}_${idFormatted}`;
 }
 
-// Helper: Generate cover sheet PDF
+// ============================================================================
+// HELPER: Create DICOM Structured Report
+// ============================================================================
+async function createDICOMStructuredReport(referralData: any): Promise<Uint8Array> {
+  const { DicomMetaDictionary, DicomDict } = dcmjs.data;
+
+  const studyInstanceUID = generateDICOMUID();
+  const seriesInstanceUID = generateDICOMUID();
+  const sopInstanceUID = generateDICOMUID();
+
+  const now = new Date();
+  const studyDate = now.toISOString().split('T')[0].replace(/-/g, '');
+  const studyTime = now.toTimeString().split(' ')[0].replace(/:/g, '');
+
+  const dataset = {
+    '00100010': { vr: 'PN', Value: [{ Alphabetic: referralData.patientName }] },
+    '00100020': { vr: 'LO', Value: [referralData.patientID] },
+    '00100030': { vr: 'DA', Value: [referralData.patientDOB.replace(/-/g, '')] },
+    '00100040': { vr: 'CS', Value: ['O'] },
+    '0020000D': { vr: 'UI', Value: [studyInstanceUID] },
+    '00080020': { vr: 'DA', Value: [studyDate] },
+    '00080030': { vr: 'TM', Value: [studyTime] },
+    '00080050': { vr: 'SH', Value: [referralData.simpleId] },
+    '00080090': { vr: 'PN', Value: [{ Alphabetic: referralData.referringDentist || 'Unknown' }] },
+    '00081030': { vr: 'LO', Value: ['CBCT Scan'] },
+    '0020000E': { vr: 'UI', Value: [seriesInstanceUID] },
+    '00080060': { vr: 'CS', Value: ['SR'] },
+    '00200011': { vr: 'IS', Value: ['999'] },
+    '0008103E': { vr: 'LO', Value: ['Clinical Referral Information'] },
+    '00080016': { vr: 'UI', Value: ['1.2.840.10008.5.1.4.1.1.88.11'] },
+    '00080018': { vr: 'UI', Value: [sopInstanceUID] },
+    '00200013': { vr: 'IS', Value: ['1'] },
+    '0040A010': { vr: 'CS', Value: ['CONTAINER'] },
+    '0040A040': { vr: 'CS', Value: ['SEPARATE'] },
+    '0040A043': { 
+      vr: 'SQ', 
+      Value: [{
+        '00080100': { vr: 'SH', Value: ['REFERRAL'] },
+        '00080102': { vr: 'SH', Value: ['DentaRad'] },
+        '00080104': { vr: 'LO', Value: ['Clinical Referral Information'] },
+      }]
+    },
+    '0040A730': { 
+      vr: 'SQ',
+      Value: [
+        createTextContentItem('CASE_ID', 'Case ID', referralData.simpleId),
+        createTextContentItem('FOLDER', 'Folder Name', referralData.folderName),
+        createTextContentItem('CLINICAL_QUESTION', 'Clinical Question', referralData.clinicalQuestion),
+        createTextContentItem('FOV', 'Field of View', referralData.fieldOfView),
+        createTextContentItem('URGENCY', 'Urgency', referralData.urgency.toUpperCase()),
+        createTextContentItem('REFERRING', 'Referring Dentist', referralData.referringDentist || 'N/A'),
+        createTextContentItem('CLINIC', 'Referring Clinic', referralData.clinicName),
+      ]
+    },
+  };
+
+  const dicomDict = DicomDict.naturalizeDataset(dataset);
+  const meta = {
+    FileMetaInformationVersion: new Uint8Array([0, 1]).buffer,
+    MediaStorageSOPClassUID: '1.2.840.10008.5.1.4.1.1.88.11',
+    MediaStorageSOPInstanceUID: sopInstanceUID,
+    TransferSyntaxUID: '1.2.840.10008.1.2.1',
+    ImplementationClassUID: '1.2.826.0.1.3680043.10.474',
+    ImplementationVersionName: 'DentaRad_v1',
+  };
+
+  const denaturalizedDataset = DicomMetaDictionary.denaturalizeDataset(dicomDict);
+  const dicomData = denaturalizedDataset;
+  dicomData._meta = DicomMetaDictionary.denaturalizeDataset(meta);
+
+  const buffer = dicomData.write();
+  return new Uint8Array(buffer);
+}
+
+function createTextContentItem(conceptCode: string, conceptName: string, textValue: string) {
+  return {
+    '0040A010': { vr: 'CS', Value: ['TEXT'] },
+    '0040A040': { vr: 'CS', Value: ['SEPARATE'] },
+    '0040A043': { 
+      vr: 'SQ', 
+      Value: [{
+        '00080100': { vr: 'SH', Value: [conceptCode] },
+        '00080102': { vr: 'SH', Value: ['DentaRad'] },
+        '00080104': { vr: 'LO', Value: [conceptName] },
+      }]
+    },
+    '0040A160': { vr: 'UT', Value: [textValue] },
+  };
+}
+
+function generateDICOMUID(): string {
+  const root = '1.2.826.0.1.3680043.10.474';
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000000);
+  return `${root}.${timestamp}.${random}`;
+}
+
+// ============================================================================
+// HELPER: Generate cover sheet PDF
+// ============================================================================
 async function generateCoverSheetPDF(caseData: any) {
   const { PDFDocument, rgb } = await import('https://cdn.skypack.dev/pdf-lib@1.17.1');
   
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 size
+  const page = pdfDoc.addPage([595, 842]);
   const { height } = page.getSize();
   
   const fontSize = 12;
@@ -312,7 +449,6 @@ async function generateCoverSheetPDF(caseData: any) {
   const margin = 50;
   let y = height - margin;
 
-  // Title
   page.drawText('CBCT SCAN REFERRAL', {
     x: margin,
     y: y,
@@ -340,7 +476,6 @@ async function generateCoverSheetPDF(caseData: any) {
 
   y -= 30;
 
-  // Horizontal line
   page.drawLine({
     start: { x: margin, y: y },
     end: { x: 595 - margin, y: y },
@@ -349,7 +484,6 @@ async function generateCoverSheetPDF(caseData: any) {
   });
   y -= 40;
 
-  // Patient Information Section
   page.drawText('PATIENT INFORMATION', {
     x: margin,
     y: y,
@@ -382,7 +516,6 @@ async function generateCoverSheetPDF(caseData: any) {
 
   y -= 20;
 
-  // Clinical Information Section
   page.drawText('CLINICAL INFORMATION', {
     x: margin,
     y: y,
@@ -399,7 +532,6 @@ async function generateCoverSheetPDF(caseData: any) {
   });
   y -= 20;
 
-  // Handle multi-line clinical question
   const clinicalQ = caseData.clinical_question;
   const maxCharsPerLine = 70;
   const words = clinicalQ.split(' ');
@@ -456,7 +588,6 @@ async function generateCoverSheetPDF(caseData: any) {
 
   y -= 20;
 
-  // Referring Information Section
   page.drawText('REFERRING INFORMATION', {
     x: margin,
     y: y,
@@ -487,7 +618,22 @@ async function generateCoverSheetPDF(caseData: any) {
     y -= 20;
   }
 
-  // Footer
+  y -= 30;
+
+  page.drawText('NOTE: This information is also available in DICOM format:', {
+    x: margin,
+    y: y,
+    size: 10,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+  y -= 15;
+  page.drawText(`REFERRAL-INFO.dcm (opens in FalconMD alongside images)`, {
+    x: margin,
+    y: y,
+    size: 10,
+    color: rgb(0.3, 0.3, 0.3),
+  });
+
   page.drawLine({
     start: { x: margin, y: 80 },
     end: { x: 595 - margin, y: 80 },
