@@ -56,7 +56,9 @@ serve(async (req) => {
       throw new Error('Failed to get Dropbox access token')
     }
 
-    const dropboxPath = `/DentaRad/Uploads/${patientId}_${caseId}/${fileName}`
+    // Use Cases folder structure instead of Uploads
+    const dropboxBasePath = `/DentaRad/Cases/${patientId}_${caseId}`
+    const dropboxPath = `${dropboxBasePath}/${fileName}`
     console.log(`Dropbox path: ${dropboxPath}`)
 
     return new Response(JSON.stringify({
@@ -64,6 +66,7 @@ serve(async (req) => {
       uploadConfig: {
         accessToken: tokenData.access_token,
         dropboxPath: dropboxPath,
+        dropboxBasePath: dropboxBasePath,
         expiresIn: tokenData.expires_in || 14400,
       },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })

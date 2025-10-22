@@ -83,9 +83,12 @@ export type Database = {
         Row: {
           clinic_id: string
           clinical_question: string
+          completed_at: string | null
           created_at: string | null
           dicom_metadata: Json | null
           dropbox_path: string | null
+          dropbox_report_path: string | null
+          dropbox_scan_path: string | null
           field_of_view: Database["public"]["Enums"]["field_of_view"]
           file_path: string | null
           id: string
@@ -100,6 +103,8 @@ export type Database = {
           report_path: string | null
           series_count: number | null
           status: Database["public"]["Enums"]["case_status"]
+          synced_at: string | null
+          synced_to_dropbox: boolean | null
           updated_at: string | null
           upload_date: string | null
           urgency: Database["public"]["Enums"]["urgency_level"]
@@ -108,9 +113,12 @@ export type Database = {
         Insert: {
           clinic_id: string
           clinical_question: string
+          completed_at?: string | null
           created_at?: string | null
           dicom_metadata?: Json | null
           dropbox_path?: string | null
+          dropbox_report_path?: string | null
+          dropbox_scan_path?: string | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
@@ -125,6 +133,8 @@ export type Database = {
           report_path?: string | null
           series_count?: number | null
           status?: Database["public"]["Enums"]["case_status"]
+          synced_at?: string | null
+          synced_to_dropbox?: boolean | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
@@ -133,9 +143,12 @@ export type Database = {
         Update: {
           clinic_id?: string
           clinical_question?: string
+          completed_at?: string | null
           created_at?: string | null
           dicom_metadata?: Json | null
           dropbox_path?: string | null
+          dropbox_report_path?: string | null
+          dropbox_scan_path?: string | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
           id?: string
@@ -150,6 +163,8 @@ export type Database = {
           report_path?: string | null
           series_count?: number | null
           status?: Database["public"]["Enums"]["case_status"]
+          synced_at?: string | null
+          synced_to_dropbox?: boolean | null
           updated_at?: string | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
@@ -161,114 +176,6 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      cbct_report_templates: {
-        Row: {
-          clinical_history_template: string | null
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          findings_template: string
-          id: string
-          imaging_technique_template: string | null
-          impression_template: string
-          indication_category: string
-          is_default: boolean | null
-          name: string
-          recommendations_template: string | null
-          updated_at: string | null
-          usage_count: number | null
-        }
-        Insert: {
-          clinical_history_template?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          findings_template: string
-          id?: string
-          imaging_technique_template?: string | null
-          impression_template: string
-          indication_category: string
-          is_default?: boolean | null
-          name: string
-          recommendations_template?: string | null
-          updated_at?: string | null
-          usage_count?: number | null
-        }
-        Update: {
-          clinical_history_template?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          findings_template?: string
-          id?: string
-          imaging_technique_template?: string | null
-          impression_template?: string
-          indication_category?: string
-          is_default?: boolean | null
-          name?: string
-          recommendations_template?: string | null
-          updated_at?: string | null
-          usage_count?: number | null
-        }
-        Relationships: []
-      }
-      clinic_branding: {
-        Row: {
-          accent_color: string
-          clinic_id: string
-          created_at: string
-          footer_text: string | null
-          header_text: string | null
-          id: string
-          logo_url: string | null
-          primary_color: string
-          secondary_color: string
-          template_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          accent_color?: string
-          clinic_id: string
-          created_at?: string
-          footer_text?: string | null
-          header_text?: string | null
-          id?: string
-          logo_url?: string | null
-          primary_color?: string
-          secondary_color?: string
-          template_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          accent_color?: string
-          clinic_id?: string
-          created_at?: string
-          footer_text?: string | null
-          header_text?: string | null
-          id?: string
-          logo_url?: string | null
-          primary_color?: string
-          secondary_color?: string
-          template_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clinic_branding_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: true
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "clinic_branding_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "pdf_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -404,111 +311,6 @@ export type Database = {
           sent_at?: string | null
           title?: string
           type?: string
-        }
-        Relationships: []
-      }
-      pdf_generation_logs: {
-        Row: {
-          completed_at: string | null
-          created_at: string | null
-          duration_ms: number | null
-          error_message: string | null
-          id: string
-          report_id: string | null
-          status: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string | null
-          duration_ms?: number | null
-          error_message?: string | null
-          id?: string
-          report_id?: string | null
-          status: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string | null
-          duration_ms?: number | null
-          error_message?: string | null
-          id?: string
-          report_id?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pdf_generation_logs_report_id_fkey"
-            columns: ["report_id"]
-            isOneToOne: false
-            referencedRelation: "billable_reports"
-            referencedColumns: ["report_id"]
-          },
-          {
-            foreignKeyName: "pdf_generation_logs_report_id_fkey"
-            columns: ["report_id"]
-            isOneToOne: false
-            referencedRelation: "reports"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pdf_templates: {
-        Row: {
-          company_address: string | null
-          company_name: string | null
-          created_at: string
-          description: string | null
-          font_family: string | null
-          footer_text: string | null
-          header_text: string | null
-          id: string
-          indication_type: string | null
-          is_active: boolean | null
-          is_default: boolean | null
-          logo_url: string | null
-          name: string
-          primary_color: string | null
-          secondary_color: string | null
-          template_data: Json
-          updated_at: string
-        }
-        Insert: {
-          company_address?: string | null
-          company_name?: string | null
-          created_at?: string
-          description?: string | null
-          font_family?: string | null
-          footer_text?: string | null
-          header_text?: string | null
-          id?: string
-          indication_type?: string | null
-          is_active?: boolean | null
-          is_default?: boolean | null
-          logo_url?: string | null
-          name?: string
-          primary_color?: string | null
-          secondary_color?: string | null
-          template_data: Json
-          updated_at?: string
-        }
-        Update: {
-          company_address?: string | null
-          company_name?: string | null
-          created_at?: string
-          description?: string | null
-          font_family?: string | null
-          footer_text?: string | null
-          header_text?: string | null
-          id?: string
-          indication_type?: string | null
-          is_active?: boolean | null
-          is_default?: boolean | null
-          logo_url?: string | null
-          name?: string
-          primary_color?: string | null
-          secondary_color?: string | null
-          template_data?: Json
-          updated_at?: string
         }
         Relationships: []
       }
@@ -656,6 +458,7 @@ export type Database = {
           billed_date: string | null
           case_id: string
           created_at: string | null
+          dropbox_path: string | null
           finalized_at: string | null
           id: string
           pdf_url: string | null
@@ -673,6 +476,7 @@ export type Database = {
           billed_date?: string | null
           case_id: string
           created_at?: string | null
+          dropbox_path?: string | null
           finalized_at?: string | null
           id?: string
           pdf_url?: string | null
@@ -690,6 +494,7 @@ export type Database = {
           billed_date?: string | null
           case_id?: string
           created_at?: string | null
+          dropbox_path?: string | null
           finalized_at?: string | null
           id?: string
           pdf_url?: string | null
@@ -755,44 +560,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
-      template_indications: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          indication_name: string
-          keywords: string[] | null
-          template_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          indication_name: string
-          keywords?: string[] | null
-          template_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          indication_name?: string
-          keywords?: string[] | null
-          template_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "template_indications_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "pdf_templates"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       upload_rate_limits: {
         Row: {
