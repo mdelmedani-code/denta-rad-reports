@@ -404,7 +404,28 @@ const UploadCase = () => {
       
       setUploadProgress(95);
       
-      // 9. Trigger edge function to extract metadata (optional)
+      // 9. Call sync-case-to-dropbox to create folder structure and metadata files
+      if (dropboxPath) {
+        try {
+          const { error: syncError } = await supabase.functions.invoke('sync-case-to-dropbox', {
+            body: {
+              caseId: newCase.id,
+              dropboxPath: dropboxPath
+            }
+          });
+          
+          if (syncError) {
+            console.error('Failed to sync case to Dropbox:', syncError);
+            // Don't fail - folder structure creation can be retried
+          } else {
+            console.log('Case synced to Dropbox with folder structure');
+          }
+        } catch (syncError) {
+          console.error('Sync error:', syncError);
+        }
+      }
+      
+      // 10. Trigger edge function to extract metadata (optional)
       if (dropboxPath) {
         const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
           body: {

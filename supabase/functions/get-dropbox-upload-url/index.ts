@@ -32,6 +32,36 @@ serve(async (req) => {
 
     console.log(`Getting Dropbox upload config for case ${caseId}, patient ${patientId}`)
 
+    // Get case details to generate folder name
+    const { data: caseData, error: caseError } = await supabaseClient
+      .from('cases')
+      .select('simple_id, patient_name, folder_name')
+      .eq('id', caseId)
+      .single()
+
+    if (caseError || !caseData) {
+      console.error('Failed to fetch case:', caseError)
+      throw new Error('Case not found')
+    }
+
+    // Generate folder name if not already set
+    let folderName = caseData.folder_name
+    if (!folderName && caseData.simple_id && caseData.patient_name) {
+      folderName = generateFolderName(caseData.patient_name, caseData.simple_id)
+      
+      // Update case with folder name
+      await supabaseClient
+        .from('cases')
+        .update({ folder_name: folderName })
+        .eq('id', caseId)
+    }
+
+    if (!folderName) {
+      throw new Error('Could not generate folder name')
+    }
+
+    console.log(`Using folder name: ${folderName}`)
+
     // Get Dropbox access token using refresh token
     const tokenResponse = await fetch('https://api.dropboxapi.com/oauth2/token', {
       method: 'POST',
@@ -56,9 +86,9 @@ serve(async (req) => {
       throw new Error('Failed to get Dropbox access token')
     }
 
-    // Use Cases folder structure instead of Uploads
-    const dropboxBasePath = `/DentaRad/Cases/${patientId}_${caseId}`
-    const dropboxPath = `${dropboxBasePath}/${fileName}`
+    // Use new Uploads folder structure with human-readable folder names
+    const dropboxBasePath = `/DentaRad/Uploads/${folderName}`
+    const dropboxPath = `${dropboxBasePath}/scan.zip`
     console.log(`Dropbox path: ${dropboxPath}`)
 
     return new Response(JSON.stringify({
@@ -67,6 +97,7 @@ serve(async (req) => {
         accessToken: tokenData.access_token,
         dropboxPath: dropboxPath,
         dropboxBasePath: dropboxBasePath,
+        folderName: folderName,
         expiresIn: tokenData.expires_in || 14400,
       },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
@@ -78,3 +109,34 @@ serve(async (req) => {
     })
   }
 })
+
+// Helper: Generate folder name from patient name and ID
+function generateFolderName(patientName: string, simpleId: number): string {
+  // Split name into parts
+  const nameParts = patientName.trim().split(/\s+/)
+  
+  // Get first name (first part)
+  let firstName = nameParts[0]
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^A-Z]/g, '') // Remove non-letters
+  
+  // Get last name (last part, or use first name if only one name)
+  let lastName = nameParts.length > 1
+    ? nameParts[nameParts.length - 1]
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Z]/g, '')
+    : firstName
+  
+  // Fallback if empty
+  if (!firstName) firstName = 'UNKNOWN'
+  if (!lastName) lastName = firstName
+
+  // Format ID with leading zeros (5 digits)
+  const idFormatted = String(simpleId).padStart(5, '0')
+
+  return `${lastName}_${firstName}_${idFormatted}`
+}
