@@ -1,21 +1,25 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileArchive, Files, Info, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, FileArchive, Files, Info, CheckCircle2, Upload, Activity, Clock, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import JSZip from "jszip";
 import { validateDICOMZip, getReadableFileSize, checkUploadRateLimit, recordUpload } from "@/services/fileValidationService";
 import { getCSRFToken } from "@/utils/csrf";
 import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
 import { Progress } from "@/components/ui/progress";
+import { useChunkedUpload } from "@/hooks/useChunkedUpload";
 import { DropboxUploadService } from "@/services/dropboxUploadService";
 
 type UploadMode = 'zip' | 'individual';
@@ -28,11 +32,19 @@ const UploadCase = () => {
   const [uploadMode, setUploadMode] = useState<UploadMode>('zip');
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [dicomFiles, setDicomFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
   const [processingFiles, setProcessingFiles] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [estimatedTimeLeft, setEstimatedTimeLeft] = useState<string>('');
+  const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
+  const [createdSimpleId, setCreatedSimpleId] = useState<string | null>(null);
+  const [createdPatientName, setCreatedPatientName] = useState<string>('');
+  const [postUploadProcessing, setPostUploadProcessing] = useState(false);
+
+  const { upload, cancel, uploading, progress } = useChunkedUpload({
+    bucketName: 'cbct-scans',
+    onError: (error) => {
+      sonnerToast.error(`Upload failed: ${error.message}`);
+    }
+  });
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -242,12 +254,8 @@ const UploadCase = () => {
     }
     
     try {
-      setUploading(true);
-      setUploadProgress(0);
       setUploadSuccess(false);
-      setEstimatedTimeLeft('Calculating...');
-      
-      const startTime = Date.now();
+      setCreatedPatientName(sanitizedPatientName);
       
       // Get CSRF token for security
       const csrfToken = await getCSRFToken();
@@ -285,10 +293,10 @@ const UploadCase = () => {
       
       if (caseError) throw caseError;
       
-      // 3. Prepare ZIP
-      setUploadProgress(10);
-      setEstimatedTimeLeft('Preparing files...');
+      setCreatedCaseId(newCase.id);
+      setCreatedSimpleId(String(newCase.simple_id).padStart(5, '0'));
       
+      // 3. Prepare ZIP
       let finalZipFile: File | Blob;
       let zipFilename: string;
       
@@ -296,190 +304,127 @@ const UploadCase = () => {
         finalZipFile = zipFile!;
         zipFilename = zipFile!.name;
       } else {
-        toast({ 
-          title: 'Creating ZIP', 
-          description: `Compressing ${dicomFiles.length} DICOM files...` 
-        });
+        sonnerToast.info(`Compressing ${dicomFiles.length} DICOM files...`);
         const zipBlob = await createZipFromFiles(dicomFiles);
         finalZipFile = zipBlob;
         zipFilename = `case_${newCase.id}_dicom.zip`;
       }
       
-      setUploadProgress(20);
-      
-      // 4. Upload file to Supabase Storage first
-      setEstimatedTimeLeft('Uploading to storage...');
+      // 4. Upload to Supabase Storage using TUS chunked upload
       const storagePath = `${newCase.clinic_id}/${newCase.id}/${zipFilename}`;
       
-      const { error: storageError } = await supabase.storage
-        .from('cbct-scans')
-        .upload(storagePath, finalZipFile, {
-          upsert: true,
-          contentType: 'application/zip'
-        });
-
-      if (storageError) {
-        await supabase.from('cases').delete().eq('id', newCase.id);
-        throw new Error(`Storage upload failed: ${storageError.message}`);
-      }
+      await upload(finalZipFile, storagePath);
       
-      setUploadProgress(50);
+      // Upload completed - show success
+      setUploadSuccess(true);
       
-      // 5. Upload to Dropbox - direct client-side upload (no memory limits!)
-      setEstimatedTimeLeft('Backing up to Dropbox...');
-      let dropboxPath: string | undefined;
+      // Start background processing (non-blocking)
+      setPostUploadProcessing(true);
+      handleBackgroundProcessing(newCase, finalZipFile, zipFilename, storagePath).finally(() => {
+        setPostUploadProcessing(false);
+      });
       
-      try {
-        // Get Dropbox upload credentials from edge function
-        const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
-          'get-dropbox-upload-url',
-          { 
-            body: { 
-              caseId: newCase.id, 
-              fileName: zipFilename, 
-              patientId: newCase.patient_id 
-            } 
-          }
-        );
+    } catch (error) {
+      console.error('Upload failed:', error);
+      sonnerToast.error(error instanceof Error ? error.message : 'Upload failed');
+    }
+  };
 
-        if (configError || !uploadConfigData?.success) {
-          console.error('Failed to get Dropbox config:', configError || uploadConfigData);
-          toast({
-            title: "Dropbox Backup Failed",
-            description: "File saved to main storage but Dropbox backup failed. Your case is still accessible.",
-            variant: "default",
-          });
-        } else {
-          // Upload directly to Dropbox from browser (streams file in chunks)
-          console.log("Starting direct Dropbox upload...");
-          await DropboxUploadService.uploadFile(
-            finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
-            uploadConfigData.uploadConfig,
-            (progress) => {
-              console.log(`Dropbox upload progress: ${progress.percentage}%`);
-              setUploadProgress(50 + (progress.percentage * 0.2)); // 50-70% range for Dropbox
-            }
-          );
-
-          dropboxPath = uploadConfigData.uploadConfig.dropboxPath;
-          console.log("Dropbox backup successful:", dropboxPath);
+  const handleBackgroundProcessing = async (
+    newCase: any,
+    finalZipFile: File | Blob,
+    zipFilename: string,
+    storagePath: string
+  ) => {
+    try {
+      // Get Dropbox upload credentials
+      const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
+        'get-dropbox-upload-url',
+        { 
+          body: { 
+            caseId: newCase.id, 
+            fileName: zipFilename
+          } 
         }
-      } catch (dropboxError) {
-        console.error("Dropbox backup error:", dropboxError);
-        toast({
-          title: "Dropbox Backup Warning",
-          description: "Your case was saved but backup may be incomplete.",
-          variant: "default",
-        });
+      );
+
+      let dropboxPath: string | undefined;
+
+      if (!configError && uploadConfigData?.success) {
+        // Upload to Dropbox
+        await DropboxUploadService.uploadFile(
+          finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
+          uploadConfigData.uploadConfig,
+          (progress) => console.log(`Dropbox: ${progress.percentage}%`)
+        );
+        dropboxPath = uploadConfigData.uploadConfig.dropboxPath;
       }
       
-      setUploadProgress(70);
-      setEstimatedTimeLeft('Finalizing...');
-      
-      // 6. Update case with Dropbox path if successful
+      // Update case with paths
       if (dropboxPath) {
-        const { error: updateError } = await supabase
+        await supabase
           .from('cases')
           .update({
             dropbox_path: dropboxPath,
-            file_path: dropboxPath // Keep for compatibility
+            file_path: dropboxPath
           })
           .eq('id', newCase.id);
-        
-        if (updateError) {
-          console.error('Failed to update dropbox path:', updateError);
-        }
       }
       
-      setUploadProgress(85);
-      
-      // 7. Record upload for rate limiting
+      // Record upload
       await recordUpload(
         finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
         'application/zip'
       );
       
-      // 8. Log case creation
+      // Log case creation
       await logCaseCreation(newCase.id);
       
-      setUploadProgress(95);
-      
-      // 9. Call sync-case-to-dropbox to create folder structure and metadata files
+      // Sync to Dropbox (create folders & metadata)
       if (dropboxPath) {
-        try {
-          const { error: syncError } = await supabase.functions.invoke('sync-case-to-dropbox', {
-            body: {
-              caseId: newCase.id,
-              dropboxPath: dropboxPath
-            }
-          });
-          
-          if (syncError) {
-            console.error('Failed to sync case to Dropbox:', syncError);
-            // Don't fail - folder structure creation can be retried
-          } else {
-            console.log('Case synced to Dropbox with folder structure');
-          }
-        } catch (syncError) {
-          console.error('Sync error:', syncError);
-        }
-      }
-      
-      // 10. Trigger edge function to extract metadata (optional)
-      if (dropboxPath) {
-        const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
-          body: {
-            caseId: newCase.id,
-            dropboxPath: dropboxPath
-          }
+        await supabase.functions.invoke('sync-case-to-dropbox', {
+          body: { caseId: newCase.id, dropboxPath }
         });
         
-        if (functionError) {
-          console.error('Edge function error:', functionError);
-          // Don't fail - metadata extraction can be retried
-        }
+        // Extract metadata
+        await supabase.functions.invoke('extract-dicom-zip', {
+          body: { caseId: newCase.id, dropboxPath }
+        });
       }
       
-      setUploadProgress(100);
-      setUploadSuccess(true);
-      setEstimatedTimeLeft('');
-      
-      toast({
-        title: 'Upload Successful',
-        description: 'DICOM files are being processed. You will be notified when ready.'
-      });
-      
-      // Reset form
-      setFormData({
-        patientName: "",
-        patientInternalId: "",
-        patientDob: "",
-        clinicalQuestion: "",
-        fieldOfView: "up_to_5x5",
-        urgency: "standard"
-      });
-      setZipFile(null);
-      setDicomFiles([]);
-      
-      // Wait a moment to show the success state before navigating
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-      
+      sonnerToast.success('Case processing complete!');
     } catch (error) {
-      console.error('Upload failed:', error);
-      toast({
-        title: 'Upload Failed',
-        description: error instanceof Error ? error.message : 'Upload failed',
-        variant: 'destructive'
-      });
-    } finally {
-      if (!uploadSuccess) {
-        setUploading(false);
-        setUploadProgress(0);
-        setEstimatedTimeLeft('');
-      }
+      console.error('Background processing error:', error);
     }
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (remainingSeconds === 0) {
+      return `${minutes}m`;
+    }
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const resetForm = () => {
+    setFormData({
+      patientName: "",
+      patientInternalId: "",
+      patientDob: "",
+      clinicalQuestion: "",
+      fieldOfView: "up_to_5x5",
+      urgency: "standard"
+    });
+    setZipFile(null);
+    setDicomFiles([]);
+    setUploadSuccess(false);
+    setCreatedCaseId(null);
+    setCreatedSimpleId(null);
+    setCreatedPatientName('');
   };
 
   const canSubmit = !uploading && 
@@ -759,30 +704,133 @@ const UploadCase = () => {
           </Card>
 
           {/* Upload Progress */}
-          {uploading && (
+          {uploading && !uploadSuccess && (
             <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {uploadSuccess ? (
-                        <>
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                          <span className="font-medium text-green-600">Upload Complete!</span>
-                        </>
-                      ) : (
-                        <span className="font-medium">Uploading...</span>
-                      )}
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {uploadSuccess ? '100%' : `${uploadProgress}%`}
-                      {estimatedTimeLeft && !uploadSuccess && ` • ${estimatedTimeLeft}`}
-                    </span>
+              <CardContent className="pt-6 space-y-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-1">
+                    Uploading CBCT Scan...
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {createdPatientName}
+                  </p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-3">
+                  <Progress 
+                    value={progress.percentage} 
+                    className="h-3 transition-all duration-150 ease-out" 
+                  />
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-primary">
+                      {Math.round(progress.percentage)}%
+                    </p>
                   </div>
-                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-4 text-center text-sm">
+                  <div className="space-y-1">
+                    <Activity className="h-5 w-5 mx-auto text-blue-500" />
+                    <p className="text-xs text-muted-foreground">Speed</p>
+                    <p className="font-semibold">{progress.speedMBps} MB/s</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Clock className="h-5 w-5 mx-auto text-orange-500" />
+                    <p className="text-xs text-muted-foreground">Remaining</p>
+                    <p className="font-semibold">{formatTime(progress.etaSeconds)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Upload className="h-5 w-5 mx-auto text-green-500" />
+                    <p className="text-xs text-muted-foreground">Uploaded</p>
+                    <p className="font-semibold">
+                      {progress.uploadedMB} / {progress.totalMB} MB
+                    </p>
+                  </div>
+                </div>
+
+                {/* Cancel Button */}
+                <div className="text-center">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={cancel}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel Upload
+                  </Button>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Success Animation */}
+          {uploadSuccess && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="border-green-500 bg-green-50 dark:bg-green-950">
+                <CardContent className="pt-6 text-center space-y-6">
+                  {/* Animated Checkmark */}
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 15,
+                      duration: 0.5,
+                    }}
+                  >
+                    <CheckCircle2 className="h-20 w-20 mx-auto text-green-600" />
+                  </motion.div>
+
+                  {/* Success Message */}
+                  <div>
+                    <h3 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-2">
+                      Upload Complete!
+                    </h3>
+                    <p className="text-green-700 dark:text-green-300">
+                      Your case has been submitted successfully.
+                    </p>
+                    {createdSimpleId && (
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+                        Case ID: {createdSimpleId} - {createdPatientName}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Background Processing Notice */}
+                  <Alert className="bg-white/60 dark:bg-white/10 border-green-300 dark:border-green-700">
+                    <AlertDescription className="text-left">
+                      <p className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                        ⏳ Processing your scan in the background
+                      </p>
+                      <p className="text-sm text-green-800 dark:text-green-200">
+                        We're generating your referral documents (DICOM SR, PDF cover sheet).
+                        You'll receive an email when your report is ready (usually 1-2 days).
+                      </p>
+                      <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                        You can safely close this page.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 justify-center pt-4">
+                    <Button onClick={() => navigate('/dashboard')}>
+                      View My Cases
+                    </Button>
+                    <Button variant="outline" onClick={resetForm}>
+                      Upload Another
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
           {/* Submit Button */}

@@ -127,3 +127,18 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Smooth progress bar transitions */
+[role="progressbar"] {
+  transition: all 0.15s ease-out;
+}
+
+/* Prevent text jitter during updates */
+.upload-stats {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smooth opacity transitions for countdown */
+.eta-text {
+  transition: opacity 0.3s ease-in-out;
+}
