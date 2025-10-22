@@ -82,32 +82,33 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to download file from storage: ${downloadError?.message}`);
     }
 
-    // Convert blob to array buffer for streaming
-    const fileBuffer = new Uint8Array(await fileData.arrayBuffer());
-    const fileSizeBytes = fileBuffer.length;
+    // Determine file size without loading entire blob into memory
+    const fileSizeBytes = fileData.size;
     const fileSizeMB = fileSizeBytes / (1024 * 1024);
 
     console.log(`File size: ${fileSizeMB.toFixed(2)} MB`);
 
     // Upload CBCT file - use chunked upload for files > 10MB to avoid memory issues
     if (fileSizeMB < 10) {
-      // Small file - direct upload
+      // Small file - direct upload (safe to buffer)
       console.log('Using direct upload for small file');
+      const smallBuffer = new Uint8Array(await fileData.arrayBuffer());
       await dbx.filesUpload({
         path: `${basePath}/${fileName}`,
-        contents: fileBuffer,
+        contents: smallBuffer,
         mode: { '.tag': 'overwrite' },
       });
     } else {
-      // Large file - chunked upload with smaller chunks to avoid memory issues
+      // Large file - true streaming via Blob slicing to keep memory low
       console.log('Using chunked upload for large file');
       const chunkSize = 4 * 1024 * 1024; // 4MB chunks to stay within memory limits
       let offset = 0;
       let sessionId: string | undefined;
 
-      while (offset < fileBuffer.length) {
-        const end = Math.min(offset + chunkSize, fileBuffer.length);
-        const chunk = fileBuffer.slice(offset, end);
+      while (offset < fileSizeBytes) {
+        const end = Math.min(offset + chunkSize, fileSizeBytes);
+        const chunkBlob = fileData.slice(offset, end);
+        const chunk = new Uint8Array(await chunkBlob.arrayBuffer());
         
         if (offset === 0) {
           // Start upload session
@@ -117,7 +118,7 @@ Deno.serve(async (req) => {
           });
           sessionId = response.result.session_id;
           console.log(`Started upload session: ${sessionId}, chunk size: ${chunk.length}`);
-        } else if (end >= fileBuffer.length) {
+        } else if (end >= fileSizeBytes) {
           // Final chunk - finish upload
           await dbx.filesUploadSessionFinish({
             cursor: {
