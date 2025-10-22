@@ -306,37 +306,33 @@ const UploadCase = () => {
       
       setUploadProgress(20);
       
-      // 4. Convert file to base64 for Dropbox upload
-      const fileToBase64 = (file: File | Blob): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = reader.result as string;
-            resolve(base64.split(',')[1]); // Remove data URL prefix
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
+      // 4. Upload file to Supabase Storage first
+      setEstimatedTimeLeft('Uploading to storage...');
+      const storagePath = `${newCase.clinic_id}/${newCase.id}/${zipFilename}`;
+      
+      const { error: storageError } = await supabase.storage
+        .from('cbct-scans')
+        .upload(storagePath, finalZipFile, {
+          upsert: true,
+          contentType: 'application/zip'
         });
-      };
-      
-      setUploadProgress(30);
-      const fileSizeMB = (finalZipFile.size / 1024 / 1024);
-      const estimatedSeconds = Math.ceil(fileSizeMB * 2); // Estimate 2 seconds per MB
-      setEstimatedTimeLeft(`~${estimatedSeconds} seconds`);
-      
-      const fileData = await fileToBase64(finalZipFile);
+
+      if (storageError) {
+        await supabase.from('cases').delete().eq('id', newCase.id);
+        throw new Error(`Storage upload failed: ${storageError.message}`);
+      }
       
       setUploadProgress(50);
       
-      // 5. Upload to Dropbox via edge function
-      setEstimatedTimeLeft('Uploading...');
+      // 5. Upload to Dropbox via edge function (using storage path)
+      setEstimatedTimeLeft('Backing up to Dropbox...');
       const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('upload-to-dropbox', {
         body: {
           caseId: newCase.id,
           patientId: newCase.patient_id,
           clinicId: profile.clinic_id,
           fileName: zipFilename,
-          fileData: fileData,
+          storagePath: storagePath,
           metadata: {
             patientName: sanitizedPatientName,
             patientDob: formData.patientDob || '',
@@ -350,8 +346,13 @@ const UploadCase = () => {
       });
       
       if (uploadError || !uploadResponse?.success) {
-        await supabase.from('cases').delete().eq('id', newCase.id);
-        throw new Error(uploadError?.message || uploadResponse?.error || 'Upload failed');
+        // Don't delete the case - it's already uploaded to Supabase Storage
+        console.error('Dropbox backup failed, but file is in Supabase Storage:', uploadError);
+        toast({
+          title: "Partial upload",
+          description: "File uploaded to storage, but Dropbox backup failed. Case created successfully.",
+          variant: "default"
+        });
       }
       
       setUploadProgress(70);

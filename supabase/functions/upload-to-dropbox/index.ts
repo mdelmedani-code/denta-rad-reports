@@ -11,7 +11,7 @@ interface UploadRequest {
   patientId: string;
   clinicId: string;
   fileName: string;
-  fileData: string; // base64 encoded
+  storagePath: string; // Path to file in Supabase Storage
   metadata: {
     patientName: string;
     patientDob?: string;
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     }
 
     const body: UploadRequest = await req.json();
-    const { caseId, patientId, clinicId, fileName, fileData, metadata } = body;
+    const { caseId, patientId, clinicId, fileName, storagePath, metadata } = body;
 
     // Initialize Dropbox with refresh token
     const dbx = new Dropbox({
@@ -71,15 +71,26 @@ Deno.serve(async (req) => {
 
     console.log('Metadata JSON uploaded successfully');
 
-    // Decode base64 file data
-    const fileBuffer = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
+    // Download file from Supabase Storage
+    console.log(`Downloading file from storage: ${storagePath}`);
+    const { data: fileData, error: downloadError } = await supabaseClient
+      .storage
+      .from('cbct-scans')
+      .download(storagePath);
+
+    if (downloadError || !fileData) {
+      throw new Error(`Failed to download file from storage: ${downloadError?.message}`);
+    }
+
+    // Convert blob to array buffer for streaming
+    const fileBuffer = new Uint8Array(await fileData.arrayBuffer());
     const fileSizeBytes = fileBuffer.length;
     const fileSizeMB = fileSizeBytes / (1024 * 1024);
 
     console.log(`File size: ${fileSizeMB.toFixed(2)} MB`);
 
-    // Upload CBCT file - use chunked upload for files > 150MB
-    if (fileSizeMB < 150) {
+    // Upload CBCT file - use chunked upload for files > 10MB to avoid memory issues
+    if (fileSizeMB < 10) {
       // Small file - direct upload
       console.log('Using direct upload for small file');
       await dbx.filesUpload({
@@ -88,14 +99,15 @@ Deno.serve(async (req) => {
         mode: { '.tag': 'overwrite' },
       });
     } else {
-      // Large file - chunked upload
+      // Large file - chunked upload with smaller chunks to avoid memory issues
       console.log('Using chunked upload for large file');
-      const chunkSize = 8 * 1024 * 1024; // 8MB chunks
+      const chunkSize = 4 * 1024 * 1024; // 4MB chunks to stay within memory limits
       let offset = 0;
       let sessionId: string | undefined;
 
       while (offset < fileBuffer.length) {
-        const chunk = fileBuffer.slice(offset, offset + chunkSize);
+        const end = Math.min(offset + chunkSize, fileBuffer.length);
+        const chunk = fileBuffer.slice(offset, end);
         
         if (offset === 0) {
           // Start upload session
@@ -104,8 +116,8 @@ Deno.serve(async (req) => {
             close: false,
           });
           sessionId = response.result.session_id;
-          console.log(`Started upload session: ${sessionId}`);
-        } else if (offset + chunk.length >= fileBuffer.length) {
+          console.log(`Started upload session: ${sessionId}, chunk size: ${chunk.length}`);
+        } else if (end >= fileBuffer.length) {
           // Final chunk - finish upload
           await dbx.filesUploadSessionFinish({
             cursor: {
@@ -129,10 +141,10 @@ Deno.serve(async (req) => {
             contents: chunk,
             close: false,
           });
-          console.log(`Uploaded chunk at offset ${offset}`);
+          console.log(`Uploaded chunk at offset ${offset}, size: ${chunk.length}`);
         }
 
-        offset += chunk.length;
+        offset = end;
       }
     }
 
