@@ -78,10 +78,9 @@ serve(async (req) => {
 
     console.log('Case found:', caseData.patient_id);
 
-    // 5. Construct expected Dropbox report path
-    const dropboxReportPath = caseData.dropbox_scan_path
-      ? caseData.dropbox_scan_path.replace('/scan.zip', '/report.pdf')
-      : `/DentaRad/Cases/${caseData.patient_id}_${caseId}/report.pdf`;
+    // 5. Construct expected Dropbox report path in Reports folder
+    const patientId = caseData.patient_id;
+    const dropboxReportPath = `/DentaRad/Reports/${patientId}_${caseId}/report.pdf`;
 
     console.log('Expected report path:', dropboxReportPath);
 
@@ -101,7 +100,7 @@ serve(async (req) => {
       console.error('Report PDF not found in Dropbox:', error);
       throw new Error(
         `Report PDF not found in Dropbox at: ${dropboxReportPath}\n\n` +
-        `Please upload the report PDF to Dropbox first, then try again.`
+        `Please export from FalconMD to /DentaRad/Reports/${patientId}_${caseId}/ first.`
       );
     }
 

@@ -81,17 +81,8 @@ export default function ReporterDashboard() {
   }
 
   function openDropboxFolder(caseData: Case) {
-    if (!caseData.dropbox_scan_path) {
-      toast.error('Dropbox path not available');
-      return;
-    }
-
-    // Extract folder path (remove filename)
-    const pathParts = caseData.dropbox_scan_path.split('/');
-    pathParts.pop(); // Remove filename
-    const folderPath = pathParts.join('/');
-
-    // Construct Dropbox URL
+    // Open /Uploads/ folder in Dropbox
+    const folderPath = `/DentaRad/Uploads/${caseData.patient_id}_${caseData.id}`;
     const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
     window.open(dropboxUrl, '_blank');
   }
@@ -198,10 +189,9 @@ export default function ReporterDashboard() {
                 <Button 
                   onClick={() => openDropboxFolder(caseData)} 
                   variant="outline"
-                  disabled={!caseData.dropbox_scan_path}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Open in Dropbox
+                  Open Dropbox Uploads Folder
                 </Button>
               </CardFooter>
             </Card>

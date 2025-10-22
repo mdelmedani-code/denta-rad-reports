@@ -147,7 +147,8 @@ export default function AdminCaseReview() {
 
   if (loading) return <div className="container mx-auto p-6">Loading...</div>;
 
-  const expectedReportPath = caseData.dropbox_scan_path?.replace('/scan.zip', '/report.pdf');
+  const expectedScanPath = `/DentaRad/Uploads/${caseData.patient_id}_${caseData.id}/scan.zip`;
+  const expectedReportPath = `/DentaRad/Reports/${caseData.patient_id}_${caseData.id}/report.pdf`;
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
@@ -229,13 +230,18 @@ export default function AdminCaseReview() {
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Instructions:</strong>
+                  <strong>FalconMD Workflow:</strong>
                   <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
-                    <li>Upload your completed report PDF to Dropbox: <code className="bg-muted px-1 py-0.5 rounded text-xs break-all">{expectedReportPath}</code></li>
-                    <li>Click "Preview Report" below to verify it's correct</li>
-                    <li>Click "Download Report" to save a local copy (optional)</li>
-                    <li>If everything looks good, click "Mark as Complete & Release to Clinic"</li>
+                    <li>Download DICOM from Uploads folder (button below)</li>
+                    <li>Open in FalconMD for review</li>
+                    <li>Create report in FalconMD</li>
+                    <li>Export from FalconMD to: <code className="bg-muted px-1 py-0.5 rounded text-xs break-all">{expectedReportPath}</code></li>
+                    <li>Return here to preview and release report to clinic</li>
                   </ol>
+                  <div className="mt-3 text-xs text-muted-foreground space-y-1">
+                    <p><strong>Scan location:</strong> <code className="bg-muted px-1 py-0.5 rounded">{expectedScanPath}</code></p>
+                    <p><strong>Report location:</strong> <code className="bg-muted px-1 py-0.5 rounded">{expectedReportPath}</code></p>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
