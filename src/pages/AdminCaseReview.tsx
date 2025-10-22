@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Eye, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { Download, Eye, CheckCircle, AlertCircle, Info, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -12,12 +12,9 @@ export default function AdminCaseReview() {
   const navigate = useNavigate();
   const [caseData, setCaseData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [reportExists, setReportExists] = useState(false);
-  const [checkingReport, setCheckingReport] = useState(false);
 
   useEffect(() => {
     fetchCase();
-    checkReportExists();
   }, [caseId]);
 
   async function fetchCase() {
@@ -34,22 +31,6 @@ export default function AdminCaseReview() {
 
     setCaseData(data);
     setLoading(false);
-  }
-
-  async function checkReportExists() {
-    setCheckingReport(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('check-dropbox-report', {
-        body: { caseId },
-      });
-
-      if (error) throw error;
-      setReportExists(data.exists);
-    } catch (error) {
-      setReportExists(false);
-    } finally {
-      setCheckingReport(false);
-    }
   }
 
   function downloadDICOM() {
@@ -76,46 +57,38 @@ export default function AdminCaseReview() {
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'width=800,height=1000');
       
-      toast.success('Report opened in new window');
+      toast.success('Report opened');
     } catch (error: any) {
-      toast.error(error.message || 'Report not found. Please upload it to Dropbox first.');
+      toast.error(error.message || 'Report not found. Please save your report first.');
     }
   }
 
-  async function downloadReport() {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
-        body: { caseId, fileType: 'report' },
-      });
+  function openDropboxUploadsFolder() {
+    const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
+    const url = `https://www.dropbox.com/home/DentaRad/Uploads/${folderName}`;
+    window.open(url, '_blank');
+    toast.success('Opening Uploads folder');
+  }
 
-      if (error) throw error;
-
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `case_${caseId}_report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Report downloaded');
-    } catch (error) {
-      toast.error('Failed to download report');
-    }
+  function openDropboxReportsFolder() {
+    const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
+    const url = `https://www.dropbox.com/home/DentaRad/Reports/${folderName}`;
+    window.open(url, '_blank');
+    toast.success('Opening Reports folder');
   }
 
   async function markCompleteAndRelease() {
+    const simpleId = caseData.simple_id ? String(caseData.simple_id).padStart(5, '0') : caseId;
+    
     const confirmed = confirm(
-      `Are you sure you want to release this report to the clinic?\n\n` +
-      `Patient: ${caseData.patient_name}\n` +
-      `Case ID: ${caseId}\n\n` +
-      `Please confirm you have:\n` +
-      `✓ Reviewed the report PDF\n` +
-      `✓ Verified it's for the correct patient\n` +
-      `✓ Checked report is complete and accurate\n\n` +
-      `Once released, the clinic will be notified and can download the report.`
+      `Release report to clinic?\n\n` +
+      `Case: ${simpleId} - ${caseData.patient_name}\n` +
+      `Folder: ${caseData.folder_name || 'N/A'}\n\n` +
+      `Confirm you have:\n` +
+      `✓ Saved report.pdf to /Reports/${caseData.folder_name}/\n` +
+      `✓ Previewed report (correct patient & complete)\n` +
+      `✓ Verified accuracy\n\n` +
+      `Clinic will be notified immediately.`
     );
 
     if (!confirmed) return;
@@ -134,21 +107,8 @@ export default function AdminCaseReview() {
     }
   }
 
-  async function openDropboxFolder() {
-    const folderPath = caseData.dropbox_scan_path?.split('/').slice(0, -1).join('/');
-    if (!folderPath) {
-      toast.error('Dropbox path not available');
-      return;
-    }
-
-    const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
-    window.open(dropboxUrl, '_blank');
-  }
 
   if (loading) return <div className="container mx-auto p-6">Loading...</div>;
-
-  const expectedScanPath = `/DentaRad/Uploads/${caseData.patient_id}_${caseData.id}/scan.zip`;
-  const expectedReportPath = `/DentaRad/Reports/${caseData.patient_id}_${caseData.id}/report.pdf`;
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
@@ -180,6 +140,39 @@ export default function AdminCaseReview() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Clinical Referral Info Alert */}
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-900">
+              Clinical Referral Information Available
+            </AlertTitle>
+            <AlertDescription className="text-blue-800">
+              <p className="mb-2">
+                The clinical referral is available in multiple formats in the Uploads folder:
+              </p>
+              <ul className="space-y-1 text-sm">
+                <li>
+                  <strong>REFERRAL-INFO.dcm</strong> - DICOM Structured Report (opens in FalconMD alongside images)
+                </li>
+                <li>
+                  <strong>cover-sheet.pdf</strong> - PDF document (for printing or emailing)
+                </li>
+                <li>
+                  <strong>referral-info.txt</strong> - Plain text (quick reference)
+                </li>
+              </ul>
+              <Button
+                onClick={openDropboxUploadsFolder}
+                variant="outline"
+                size="sm"
+                className="mt-3"
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Open Uploads Folder
+              </Button>
+            </AlertDescription>
+          </Alert>
+
           {/* Case Information */}
           <div className="space-y-2">
             <h3 className="font-semibold text-lg">Patient Information</h3>
@@ -224,27 +217,10 @@ export default function AdminCaseReview() {
           {/* DICOM Download */}
           <div>
             <h3 className="font-semibold text-lg mb-2">DICOM Files</h3>
-            <div className="flex gap-2">
-              <Button onClick={downloadDICOM} variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Download DICOM
-              </Button>
-              <Button onClick={openDropboxFolder} variant="outline">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open Uploads Folder
-              </Button>
-              <Button
-                onClick={() => {
-                  const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
-                  const dropboxUrl = `https://www.dropbox.com/home/DentaRad/Reports/${folderName}`;
-                  window.open(dropboxUrl, '_blank');
-                }}
-                variant="outline"
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open Reports Folder
-              </Button>
-            </div>
+            <Button onClick={downloadDICOM} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Download DICOM
+            </Button>
           </div>
 
           {/* Report Status & Actions */}
@@ -279,16 +255,13 @@ export default function AdminCaseReview() {
             {/* Report Actions */}
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
+                <Button onClick={openDropboxReportsFolder} variant="outline">
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Open Reports Folder
+                </Button>
                 <Button onClick={previewReport} variant="outline">
                   <Eye className="mr-2 h-4 w-4" />
                   Preview Report
-                </Button>
-                <Button onClick={downloadReport} variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Report
-                </Button>
-                <Button onClick={checkReportExists} variant="ghost" size="sm" disabled={checkingReport}>
-                  {checkingReport ? 'Checking...' : reportExists ? '✓ Report Found' : 'Check if Report Exists'}
                 </Button>
               </div>
 
