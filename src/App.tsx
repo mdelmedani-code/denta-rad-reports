@@ -12,6 +12,7 @@ import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
 import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
+import AdminCaseReview from "./pages/AdminCaseReview";
 import UnifiedDashboard from "./pages/UnifiedDashboard";
 import BillingExport from "./pages/BillingExport";
 import ViewerPage from "./pages/ViewerPage";
@@ -102,6 +103,15 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <ViewerPage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Reporter case review */}
+            <Route path="/reporter/case/:id" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <AdminCaseReview />
                 </AppLayout>
               </ProtectedRoute>
             } />

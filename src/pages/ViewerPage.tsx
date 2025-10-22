@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Download, ArrowLeft, FileText, Calendar, User, Activity, AlertTriangle } from "lucide-react";
+import { Loader2, Download, ArrowLeft, FileText, Calendar, User, Activity, AlertTriangle, Eye, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { logCaseView, logUnauthorizedAccess, logDicomDownload } from "@/lib/auditLog";
@@ -38,7 +39,6 @@ const ViewerPage = () => {
       setLoading(true);
       setError(null);
 
-      // Attempt to fetch case (RLS will enforce access control)
       const { data, error: caseError } = await supabase
         .from('cases')
         .select('*')
@@ -46,10 +46,7 @@ const ViewerPage = () => {
         .single();
 
       if (caseError || !data) {
-        // Access denied or case not found
         setAccessDenied(true);
-        
-        // Log unauthorized access attempt
         await logUnauthorizedAccess('case', caseId);
         
         toast({
@@ -59,7 +56,6 @@ const ViewerPage = () => {
           duration: 5000
         });
         
-        // Redirect after short delay
         setTimeout(() => {
           navigate('/dashboard');
         }, 2000);
@@ -67,9 +63,7 @@ const ViewerPage = () => {
         return;
       }
 
-      // Access granted - log the view
       await logCaseView(caseId);
-      
       setCaseData(data);
     } catch (err) {
       console.error('Error loading case:', err);
@@ -88,28 +82,17 @@ const ViewerPage = () => {
   };
 
   const handleDownloadDicom = async () => {
-    if (!caseData?.file_path) {
-      toast({
-        title: "Download Error",
-        description: "No DICOM file available for this case",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setDownloading(true);
       
-      // Log DICOM download
-      await logDicomDownload(caseId!, caseData.file_path);
-      
-      const { data, error } = await supabase.storage
-        .from('cbct-scans')
-        .download(caseData.file_path);
+      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
+        body: { caseId, fileType: 'scan' },
+      });
 
       if (error) throw error;
 
-      const url = URL.createObjectURL(data);
+      const blob = new Blob([data]);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `case_${caseId}_dicom.zip`;
@@ -118,6 +101,8 @@ const ViewerPage = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      await logDicomDownload(caseId!, caseData?.file_path || '');
+      
       toast({
         title: "Download Started",
         description: "Your DICOM file is downloading",
@@ -134,6 +119,62 @@ const ViewerPage = () => {
     }
   };
 
+  const previewReport = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
+        body: { caseId, fileType: 'report' },
+      });
+
+      if (error) throw error;
+
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'width=800,height=1000');
+      
+      toast({
+        title: 'Report Opened',
+        description: 'Report opened in new window',
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to Load Report',
+        description: 'Unable to load report PDF',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const downloadReport = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
+        body: { caseId, fileType: 'report' },
+      });
+
+      if (error) throw error;
+
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${caseData?.patient_name}_${caseId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Report Downloaded',
+        description: 'Report PDF downloaded successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download report PDF',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'completed':
@@ -141,6 +182,7 @@ const ViewerPage = () => {
         return 'default';
       case 'processing':
       case 'awaiting_report':
+      case 'in_progress':
         return 'secondary';
       default:
         return 'outline';
@@ -235,6 +277,8 @@ const ViewerPage = () => {
       </div>
     );
   }
+
+  const isReportReady = caseData?.status === 'report_ready';
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -345,33 +389,9 @@ const ViewerPage = () => {
                 </div>
               </div>
 
-              {/* Collapsible Metadata */}
-              {caseData?.dicom_metadata && Object.keys(caseData.dicom_metadata).length > 0 && (
-                <Collapsible open={metadataOpen} onOpenChange={setMetadataOpen}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span>View DICOM Metadata</span>
-                      <span className="text-xs text-muted-foreground">
-                        {metadataOpen ? 'Hide' : 'Show'}
-                      </span>
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4">
-                    <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto max-h-96">
-                      {JSON.stringify(caseData.dicom_metadata, null, 2)}
-                    </pre>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Download Section */}
-            <div className="space-y-4">
               <Button 
                 onClick={handleDownloadDicom} 
-                disabled={!caseData?.file_path || downloading}
+                disabled={downloading}
                 size="lg"
                 className="w-full md:w-auto"
               >
@@ -388,39 +408,43 @@ const ViewerPage = () => {
                 )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Info Box - External Viewers */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-lg">How to View DICOM Files</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              After downloading the DICOM ZIP file, extract it and open the files using professional DICOM viewing software:
-            </p>
-            <div className="grid md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <p className="font-semibold text-sm">macOS Viewers</p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Horos (Free)</li>
-                  <li>• OsiriX (Free/Paid)</li>
-                  <li>• 3D Slicer (Free)</li>
-                </ul>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-sm">Windows Viewers</p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• RadiAnt DICOM Viewer (Paid)</li>
-                  <li>• MicroDicom (Free)</li>
-                  <li>• 3D Slicer (Free)</li>
-                </ul>
-              </div>
+            <Separator />
+
+            {/* Report Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Diagnostic Report</h3>
+
+              {isReportReady ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Report completed on {caseData.completed_at ? new Date(caseData.completed_at).toLocaleString() : 'N/A'}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button onClick={previewReport}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Preview Report
+                    </Button>
+                    <Button onClick={downloadReport} variant="outline">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Report PDF
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Alert>
+                  <Clock className="h-4 w-4" />
+                  <AlertDescription>
+                    Report is being prepared by our radiologist. You will receive an email notification when it's ready.
+                    {caseData?.urgency === 'urgent' && (
+                      <p className="mt-2 font-semibold">
+                        This case is marked as urgent and will be prioritized.
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground italic">
-              These professional desktop applications provide advanced tools for viewing, measuring, and analyzing CBCT scans.
-            </p>
           </CardContent>
         </Card>
       </div>

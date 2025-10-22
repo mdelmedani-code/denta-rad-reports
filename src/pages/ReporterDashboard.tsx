@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, ExternalLink, CheckCircle, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Case {
@@ -21,6 +22,7 @@ interface Case {
 }
 
 export default function ReporterDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,8 +178,15 @@ export default function ReporterDashboard() {
               </CardContent>
               <CardFooter className="flex flex-wrap gap-2">
                 <Button 
+                  onClick={() => navigate(`/reporter/case/${caseData.id}`)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Review Case
+                </Button>
+                <Button 
                   onClick={() => downloadDICOM(caseData.id)}
                   disabled={downloadingCase === caseData.id}
+                  variant="outline"
                 >
                   {downloadingCase === caseData.id ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -193,18 +202,6 @@ export default function ReporterDashboard() {
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Open in Dropbox
-                </Button>
-                <Button 
-                  onClick={() => markCompleted(caseData.id, caseData)} 
-                  variant="default"
-                  disabled={completingCase === caseData.id}
-                >
-                  {completingCase === caseData.id ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                  )}
-                  Mark as Completed
                 </Button>
               </CardFooter>
             </Card>
