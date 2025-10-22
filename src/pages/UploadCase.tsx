@@ -16,6 +16,7 @@ import { getCSRFToken } from "@/utils/csrf";
 import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
 import { Progress } from "@/components/ui/progress";
+import { DropboxUploadService } from "@/services/dropboxUploadService";
 
 type UploadMode = 'zip' | 'individual';
 
@@ -324,50 +325,71 @@ const UploadCase = () => {
       
       setUploadProgress(50);
       
-      // 5. Upload to Dropbox via edge function (using storage path)
+      // 5. Upload to Dropbox - direct client-side upload (no memory limits!)
       setEstimatedTimeLeft('Backing up to Dropbox...');
-      const { data: uploadResponse, error: uploadError } = await supabase.functions.invoke('upload-to-dropbox', {
-        body: {
-          caseId: newCase.id,
-          patientId: newCase.patient_id,
-          clinicId: profile.clinic_id,
-          fileName: zipFilename,
-          storagePath: storagePath,
-          metadata: {
-            patientName: sanitizedPatientName,
-            patientDob: formData.patientDob || '',
-            patientInternalId: sanitizedPatientInternalId || '',
-            clinicalQuestion: sanitizedClinicalQuestion,
-            fieldOfView: formData.fieldOfView,
-            urgency: formData.urgency,
-            uploadDate: new Date().toISOString()
-          }
-        }
-      });
+      let dropboxPath: string | undefined;
       
-      if (uploadError || !uploadResponse?.success) {
-        // Don't delete the case - it's already uploaded to Supabase Storage
-        console.error('Dropbox backup failed, but file is in Supabase Storage:', uploadError);
+      try {
+        // Get Dropbox upload credentials from edge function
+        const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
+          'get-dropbox-upload-url',
+          { 
+            body: { 
+              caseId: newCase.id, 
+              fileName: zipFilename, 
+              patientId: newCase.patient_id 
+            } 
+          }
+        );
+
+        if (configError || !uploadConfigData?.success) {
+          console.error('Failed to get Dropbox config:', configError || uploadConfigData);
+          toast({
+            title: "Dropbox Backup Failed",
+            description: "File saved to main storage but Dropbox backup failed. Your case is still accessible.",
+            variant: "default",
+          });
+        } else {
+          // Upload directly to Dropbox from browser (streams file in chunks)
+          console.log("Starting direct Dropbox upload...");
+          await DropboxUploadService.uploadFile(
+            finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
+            uploadConfigData.uploadConfig,
+            (progress) => {
+              console.log(`Dropbox upload progress: ${progress.percentage}%`);
+              setUploadProgress(50 + (progress.percentage * 0.2)); // 50-70% range for Dropbox
+            }
+          );
+
+          dropboxPath = uploadConfigData.uploadConfig.dropboxPath;
+          console.log("Dropbox backup successful:", dropboxPath);
+        }
+      } catch (dropboxError) {
+        console.error("Dropbox backup error:", dropboxError);
         toast({
-          title: "Partial upload",
-          description: "File uploaded to storage, but Dropbox backup failed. Case created successfully.",
-          variant: "default"
+          title: "Dropbox Backup Warning",
+          description: "Your case was saved but backup may be incomplete.",
+          variant: "default",
         });
       }
       
       setUploadProgress(70);
       setEstimatedTimeLeft('Finalizing...');
       
-      // 6. Update case with Dropbox path
-      const { error: updateError } = await supabase
-        .from('cases')
-        .update({
-          dropbox_path: uploadResponse.dropboxPath,
-          file_path: uploadResponse.dropboxPath // Keep for compatibility
-        })
-        .eq('id', newCase.id);
-      
-      if (updateError) throw updateError;
+      // 6. Update case with Dropbox path if successful
+      if (dropboxPath) {
+        const { error: updateError } = await supabase
+          .from('cases')
+          .update({
+            dropbox_path: dropboxPath,
+            file_path: dropboxPath // Keep for compatibility
+          })
+          .eq('id', newCase.id);
+        
+        if (updateError) {
+          console.error('Failed to update dropbox path:', updateError);
+        }
+      }
       
       setUploadProgress(85);
       
@@ -382,17 +404,19 @@ const UploadCase = () => {
       
       setUploadProgress(95);
       
-      // 9. Trigger edge function to extract metadata (optional, files are in Dropbox)
-      const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
-        body: {
-          caseId: newCase.id,
-          dropboxPath: uploadResponse.dropboxPath
+      // 9. Trigger edge function to extract metadata (optional)
+      if (dropboxPath) {
+        const { error: functionError } = await supabase.functions.invoke('extract-dicom-zip', {
+          body: {
+            caseId: newCase.id,
+            dropboxPath: dropboxPath
+          }
+        });
+        
+        if (functionError) {
+          console.error('Edge function error:', functionError);
+          // Don't fail - metadata extraction can be retried
         }
-      });
-      
-      if (functionError) {
-        console.error('Edge function error:', functionError);
-        // Don't fail - metadata extraction can be retried
       }
       
       setUploadProgress(100);
