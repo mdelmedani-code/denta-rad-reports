@@ -14,12 +14,7 @@ import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
 import UnifiedDashboard from "./pages/UnifiedDashboard";
 import BillingExport from "./pages/BillingExport";
-import ReportingPage from "./pages/ReportingPage";
 import ViewerPage from "./pages/ViewerPage";
-import PDFTemplateSettings from "./pages/PDFTemplateSettings";
-import TemplateManagement from "./pages/TemplateManagement";
-import TemplateEditor from "./pages/TemplateEditor";
-import AdminTemplates from "./pages/AdminTemplates";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
@@ -120,44 +115,6 @@ const App = () => (
                 <AppLayout>
                   <Invoices />
                 </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/reporter/case/:caseId" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <ReportingPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/pdf-templates" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <PDFTemplateSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/template-management" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <TemplateManagement />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/report-templates" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <TemplateManagement />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/template-editor" element={
-              <ProtectedRoute requiredRole="admin">
-                <TemplateEditor />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/templates" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminTemplates />
               </ProtectedRoute>
             } />
             

@@ -288,53 +288,14 @@ const Dashboard = () => {
                                 onDeleteSuccess={fetchCases}
                               />
                               {case_.status === 'report_ready' && (
-                                pdfTemplate && case_.reports?.[0]?.report_text ? (
-                                  <PDFDownloadButton
-                                    reportData={{
-                                      reportId: case_.reports[0].id,
-                                      caseData: {
-                                        patient_name: case_.patient_name,
-                                        patient_dob: case_.patient_dob,
-                                        patient_internal_id: case_.patient_internal_id,
-                                        field_of_view: case_.field_of_view,
-                                        urgency: case_.urgency,
-                                        clinical_question: case_.clinical_question,
-                                        upload_date: case_.upload_date,
-                                        clinic_name: case_.clinics?.name,
-                                        clinic_contact_email: case_.clinics?.contact_email
-                                      },
-                                      reportText: case_.reports[0].report_text,
-                                      signatureData: case_.reports[0].signed_off_by ? {
-                                        signatory_name: case_.reports[0].signatory_name!,
-                                        signatory_title: case_.reports[0].signatory_title!,
-                                        signatory_credentials: case_.reports[0].signatory_credentials!,
-                                        signature_statement: case_.reports[0].signature_statement!,
-                                        signed_off_at: case_.reports[0].signed_off_at!
-                                      } : undefined
-                                    }}
-                                    template={pdfTemplate}
-                                    fileName={`report-${case_.reports[0].id}.pdf`}
-                                  >
-                                    <Button variant="outline" size="sm">
-                                      <Download className="h-4 w-4 mr-2" />
-                                      Download PDF
-                                    </Button>
-                                  </PDFDownloadButton>
-                                ) : (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => generatePdfReport(case_)}
-                                    disabled={generatingPdf === case_.id}
-                                  >
-                                    {generatingPdf === case_.id ? (
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    ) : (
-                                      <Download className="h-4 w-4 mr-2" />
-                                    )}
-                                    {generatingPdf === case_.id ? 'Generating...' : 'Download Report'}
-                                  </Button>
-                                )
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => downloadReport(case_)}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download Report
+                                </Button>
                               )}
                             </div>
                           </td>
@@ -405,58 +366,15 @@ const Dashboard = () => {
                               />
                             </div>
                             {case_.status === 'report_ready' && (
-                              pdfTemplate && case_.reports?.[0]?.report_text ? (
-                                <PDFDownloadButton
-                                  reportData={{
-                                    reportId: case_.reports[0].id,
-                                    caseData: {
-                                      patient_name: case_.patient_name,
-                                      patient_dob: case_.patient_dob,
-                                      patient_internal_id: case_.patient_internal_id,
-                                      field_of_view: case_.field_of_view,
-                                      urgency: case_.urgency,
-                                      clinical_question: case_.clinical_question,
-                                      upload_date: case_.upload_date,
-                                      clinic_name: case_.clinics?.name,
-                                      clinic_contact_email: case_.clinics?.contact_email
-                                    },
-                                    reportText: case_.reports[0].report_text,
-                                    signatureData: case_.reports[0].signed_off_by ? {
-                                      signatory_name: case_.reports[0].signatory_name!,
-                                      signatory_title: case_.reports[0].signatory_title!,
-                                      signatory_credentials: case_.reports[0].signatory_credentials!,
-                                      signature_statement: case_.reports[0].signature_statement!,
-                                      signed_off_at: case_.reports[0].signed_off_at!
-                                    } : undefined
-                                  }}
-                                  template={pdfTemplate}
-                                  fileName={`report-${case_.reports[0].id}.pdf`}
-                                >
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="w-full sm:w-auto"
-                                  >
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download PDF
-                                  </Button>
-                                </PDFDownloadButton>
-                              ) : (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full sm:w-auto"
-                                  onClick={() => generatePdfReport(case_)}
-                                  disabled={generatingPdf === case_.id}
-                                >
-                                  {generatingPdf === case_.id ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Download className="h-4 w-4 mr-2" />
-                                  )}
-                                  {generatingPdf === case_.id ? 'Generating...' : 'Download Report'}
-                                </Button>
-                              )
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full sm:w-auto"
+                                onClick={() => downloadReport(case_)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download Report
+                              </Button>
                             )}
                           </div>
                         </div>
