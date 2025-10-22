@@ -11,6 +11,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -30,13 +32,38 @@ export function DeleteCaseDialog({
 }: DeleteCaseDialogProps) {
   const [deleting, setDeleting] = useState(false);
   const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
   const { toast } = useToast();
 
   const isInProgress = caseStatus !== 'uploaded';
 
   const handleDelete = async () => {
+    // Validate password
+    if (!password) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password to confirm deletion",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setDeleting(true);
     try {
+      // Verify user's password
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        throw new Error("User not found");
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password,
+      });
+
+      if (signInError) {
+        throw new Error("Incorrect password");
+      }
       // Get the file path first
       const { data: caseData, error: fetchError } = await supabase
         .from('cases')
@@ -71,6 +98,7 @@ export function DeleteCaseDialog({
         description: `Case for ${patientName} has been deleted.`,
       });
 
+      setPassword("");
       setOpen(false);
       onDeleteSuccess();
     } catch (error: any) {
@@ -80,13 +108,21 @@ export function DeleteCaseDialog({
         description: error.message || "Failed to delete case",
         variant: "destructive",
       });
+      setPassword("");
     } finally {
       setDeleting(false);
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setPassword("");
+    }
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"
@@ -126,6 +162,26 @@ export function DeleteCaseDialog({
             <p className="text-sm">
               This action cannot be undone. The scan files and all associated data will be permanently deleted.
             </p>
+            
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="password" className="text-sm font-semibold">
+                Confirm your password to delete
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={deleting}
+                className="w-full"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !deleting) {
+                    handleDelete();
+                  }
+                }}
+              />
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

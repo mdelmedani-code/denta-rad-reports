@@ -24,12 +24,25 @@ import {
   PoundSterling,
   Calendar,
   Trash2,
-  Database
+  Database,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Case {
   id: string;
@@ -68,6 +81,9 @@ const AdminDashboard = () => {
   const [monthlyStats, setMonthlyStats] = useState<IncomeStats | null>(null);
   const [selectedCases, setSelectedCases] = useState<string[]>([]);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [batchDeletePassword, setBatchDeletePassword] = useState("");
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -177,43 +193,37 @@ const AdminDashboard = () => {
     }
   };
 
-  const deleteCase = async (caseId: string) => {
-    if (!confirm('Are you sure you want to delete this case? This action cannot be undone.')) {
-      return;
-    }
+  const handleBatchDelete = async () => {
+    if (selectedCases.length === 0) return;
 
-    try {
-      const { error } = await supabase
-        .from('cases')
-        .delete()
-        .eq('id', caseId);
-
-      if (error) throw error;
-
+    // Validate password
+    if (!batchDeletePassword) {
       toast({
-        title: "Case deleted",
-        description: "Case has been permanently deleted",
-      });
-
-      fetchCases();
-      fetchIncomeStats(); // Refresh income stats after deletion
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to delete case: " + error.message,
+        title: "Password Required",
+        description: "Please enter your password to confirm deletion",
         variant: "destructive",
       });
-    }
-  };
-
-  const deleteSelectedCases = async () => {
-    if (selectedCases.length === 0) return;
-    
-    if (!confirm(`Are you sure you want to delete ${selectedCases.length} cases? This action cannot be undone.`)) {
       return;
     }
 
+    setIsDeletingBatch(true);
     try {
+      // Verify user's password
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        throw new Error("User not found");
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: batchDeletePassword,
+      });
+
+      if (signInError) {
+        throw new Error("Incorrect password");
+      }
+
+      // Delete cases
       const { error } = await supabase
         .from('cases')
         .delete()
@@ -227,14 +237,19 @@ const AdminDashboard = () => {
       });
 
       setSelectedCases([]);
+      setBatchDeletePassword("");
+      setBatchDeleteOpen(false);
       fetchCases();
       fetchIncomeStats();
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to delete cases: " + error.message,
+        title: "Delete Failed",
+        description: error.message || "Failed to delete cases",
         variant: "destructive",
       });
+      setBatchDeletePassword("");
+    } finally {
+      setIsDeletingBatch(false);
     }
   };
 
@@ -592,14 +607,76 @@ const AdminDashboard = () => {
                 </CardDescription>
               </div>
               {selectedCases.length > 0 && (
-                <Button 
-                  variant="destructive" 
-                  onClick={deleteSelectedCases}
-                  className="ml-4"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Selected ({selectedCases.length})
-                </Button>
+                <AlertDialog open={batchDeleteOpen} onOpenChange={(open) => {
+                  setBatchDeleteOpen(open);
+                  if (!open) setBatchDeletePassword("");
+                }}>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      className="ml-4"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Selected ({selectedCases.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <Trash2 className="h-5 w-5 text-destructive" />
+                        Delete {selectedCases.length} Cases?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-3">
+                        <p>
+                          Are you sure you want to delete <strong>{selectedCases.length}</strong> selected cases? This action cannot be undone.
+                        </p>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="batch-password" className="text-sm font-semibold">
+                            Confirm your password to delete
+                          </Label>
+                          <Input
+                            id="batch-password"
+                            type="password"
+                            placeholder="Enter your password"
+                            value={batchDeletePassword}
+                            onChange={(e) => setBatchDeletePassword(e.target.value)}
+                            disabled={isDeletingBatch}
+                            className="w-full"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !isDeletingBatch) {
+                                handleBatchDelete();
+                              }
+                            }}
+                          />
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeletingBatch}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleBatchDelete();
+                        }}
+                        disabled={isDeletingBatch}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeletingBatch ? (
+                          <>
+                            <Clock className="mr-2 h-4 w-4 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete {selectedCases.length} Cases
+                          </>
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </CardHeader>
@@ -747,13 +824,15 @@ const AdminDashboard = () => {
                               <Download className="w-4 h-4" />
                             </Button>
                             
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => deleteCase(case_.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <DeleteCaseDialog
+                              caseId={case_.id}
+                              caseStatus={case_.status}
+                              patientName={case_.patient_name}
+                              onDeleteSuccess={() => {
+                                fetchCases();
+                                fetchIncomeStats();
+                              }}
+                            />
                           </div>
                         </td>
                       </tr>
