@@ -12,6 +12,7 @@ interface Case {
   id: string;
   patient_name: string;
   patient_id: string;
+  patient_dob: string;
   created_at: string;
   clinical_question: string;
   field_of_view: string;
@@ -19,6 +20,8 @@ interface Case {
   status: string;
   completed_at?: string;
   dropbox_scan_path?: string;
+  simple_id?: number;
+  folder_name?: string;
 }
 
 export default function ReporterDashboard() {
@@ -82,9 +85,29 @@ export default function ReporterDashboard() {
 
   function openDropboxFolder(caseData: Case) {
     // Open /Uploads/ folder in Dropbox
-    const folderPath = `/DentaRad/Uploads/${caseData.patient_id}_${caseData.id}`;
+    const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
+    const folderPath = `/DentaRad/Uploads/${folderName}`;
     const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
     window.open(dropboxUrl, '_blank');
+  }
+
+  function openDropboxReportsFolder(caseData: Case) {
+    // Open /Reports/ folder in Dropbox
+    const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
+    const folderPath = `/DentaRad/Reports/${folderName}`;
+    const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
+    window.open(dropboxUrl, '_blank');
+  }
+
+  function formatCaseTitle(caseData: Case): string {
+    if (caseData.simple_id) {
+      const id = String(caseData.simple_id).padStart(5, '0');
+      const nameParts = caseData.patient_name.split(' ');
+      const lastName = nameParts[nameParts.length - 1].toUpperCase();
+      const firstName = nameParts[0].toUpperCase();
+      return `${id} - ${lastName}, ${firstName}`;
+    }
+    return caseData.patient_name;
   }
 
   async function markCompleted(caseId: string, caseData: Case) {
@@ -146,9 +169,12 @@ export default function ReporterDashboard() {
           {pendingCases.map(caseData => (
             <Card key={caseData.id}>
               <CardHeader>
-                <CardTitle>{caseData.patient_name}</CardTitle>
+                <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
                 <CardDescription>
-                  Patient ID: {caseData.patient_id} | Uploaded: {new Date(caseData.created_at).toLocaleDateString()}
+                  {caseData.folder_name && (
+                    <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
+                  )}
+                  Patient ID: {caseData.patient_id} | DOB: {caseData.patient_dob} | Uploaded: {new Date(caseData.created_at).toLocaleDateString()}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -191,7 +217,14 @@ export default function ReporterDashboard() {
                   variant="outline"
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  Open Dropbox Uploads Folder
+                  Open Uploads Folder
+                </Button>
+                <Button 
+                  onClick={() => openDropboxReportsFolder(caseData)} 
+                  variant="outline"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open Reports Folder
                 </Button>
               </CardFooter>
             </Card>

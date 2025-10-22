@@ -91,6 +91,7 @@ export type Database = {
           dropbox_scan_path: string | null
           field_of_view: Database["public"]["Enums"]["field_of_view"]
           file_path: string | null
+          folder_name: string | null
           id: string
           monthly_billed: boolean | null
           monthly_invoice_id: string | null
@@ -102,6 +103,7 @@ export type Database = {
           processed_at: string | null
           report_path: string | null
           series_count: number | null
+          simple_id: number | null
           status: Database["public"]["Enums"]["case_status"]
           synced_at: string | null
           synced_to_dropbox: boolean | null
@@ -121,6 +123,7 @@ export type Database = {
           dropbox_scan_path?: string | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
+          folder_name?: string | null
           id?: string
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
@@ -132,6 +135,7 @@ export type Database = {
           processed_at?: string | null
           report_path?: string | null
           series_count?: number | null
+          simple_id?: number | null
           status?: Database["public"]["Enums"]["case_status"]
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
@@ -151,6 +155,7 @@ export type Database = {
           dropbox_scan_path?: string | null
           field_of_view?: Database["public"]["Enums"]["field_of_view"]
           file_path?: string | null
+          folder_name?: string | null
           id?: string
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
@@ -162,6 +167,7 @@ export type Database = {
           processed_at?: string | null
           report_path?: string | null
           series_count?: number | null
+          simple_id?: number | null
           status?: Database["public"]["Enums"]["case_status"]
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
@@ -256,7 +262,7 @@ export type Database = {
           attempt_time: string | null
           email: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           successful: boolean | null
           user_agent: string | null
         }
@@ -264,7 +270,7 @@ export type Database = {
           attempt_time?: string | null
           email: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           successful?: boolean | null
           user_agent?: string | null
         }
@@ -272,7 +278,7 @@ export type Database = {
           attempt_time?: string | null
           email?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           successful?: boolean | null
           user_agent?: string | null
         }
@@ -653,36 +659,18 @@ export type Database = {
         }
         Returns: number
       }
-      check_upload_rate_limit: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      create_report_share: {
-        Args: { p_report_id: string }
-        Returns: string
-      }
+      check_upload_rate_limit: { Args: { _user_id: string }; Returns: boolean }
+      create_report_share: { Args: { p_report_id: string }; Returns: string }
       detect_indication_from_clinical_question: {
         Args: { clinical_question: string }
         Returns: string
       }
-      generate_invoice_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_backup_codes: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
-      get_current_user_clinic: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_invoice_number: { Args: never; Returns: string }
+      get_backup_codes: { Args: { p_user_id: string }; Returns: Json }
+      get_current_user_clinic: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
       get_monthly_income_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           income_so_far: number
           projected_income: number
@@ -705,7 +693,7 @@ export type Database = {
         }[]
       }
       get_weekly_income_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           income_so_far: number
           projected_income: number
@@ -779,7 +767,7 @@ export type Database = {
         Returns: boolean
       }
       test_rls_policies: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           policy_count: number
           rls_enabled: boolean

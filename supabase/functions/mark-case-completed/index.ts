@@ -78,9 +78,14 @@ serve(async (req) => {
 
     console.log('Case found:', caseData.patient_id);
 
-    // 5. Construct expected Dropbox report path in Reports folder
-    const patientId = caseData.patient_id;
-    const dropboxReportPath = `/DentaRad/Reports/${patientId}_${caseId}/report.pdf`;
+    // 5. Use folder_name from database
+    const folderName = caseData.folder_name;
+    if (!folderName) {
+      throw new Error('Folder name not found in database');
+    }
+
+    // Construct expected Dropbox report path
+    const dropboxReportPath = `/DentaRad/Reports/${folderName}/report.pdf`;
 
     console.log('Expected report path:', dropboxReportPath);
 
@@ -99,8 +104,13 @@ serve(async (req) => {
     } catch (error) {
       console.error('Report PDF not found in Dropbox:', error);
       throw new Error(
-        `Report PDF not found in Dropbox at: ${dropboxReportPath}\n\n` +
-        `Please export from FalconMD to /DentaRad/Reports/${patientId}_${caseId}/ first.`
+        `Report PDF not found at: ${dropboxReportPath}\n\n` +
+        `Please save your report PDF to this EXACT location:\n` +
+        `/DentaRad/Reports/${folderName}/report.pdf\n\n` +
+        `Make sure:\n` +
+        `1. File is in the correct folder: ${folderName}/\n` +
+        `2. Filename is exactly: report.pdf (lowercase)\n` +
+        `3. File has finished uploading to Dropbox (check sync status)`
       );
     }
 
@@ -142,6 +152,7 @@ serve(async (req) => {
       p_resource_type: 'case',
       p_resource_id: caseId,
       p_details: {
+        folder_name: folderName,
         dropbox_report_path: dropboxReportPath,
         completed_by: user.id,
       },
@@ -153,6 +164,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'Case marked as completed',
+        folder_name: folderName,
         dropbox_report_path: dropboxReportPath,
       }),
       {

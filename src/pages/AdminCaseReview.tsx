@@ -162,7 +162,22 @@ export default function AdminCaseReview() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Case Review</CardTitle>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl">
+                {caseData.simple_id 
+                  ? `Case ${String(caseData.simple_id).padStart(5, '0')} - ${caseData.patient_name}`
+                  : caseData.patient_name
+                }
+              </CardTitle>
+              {caseData.folder_name && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Folder: <code className="bg-muted px-2 py-1 rounded">{caseData.folder_name}</code>
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">Case ID: {caseId}</p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Case Information */}
@@ -216,7 +231,18 @@ export default function AdminCaseReview() {
               </Button>
               <Button onClick={openDropboxFolder} variant="outline">
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Open Dropbox Folder
+                Open Uploads Folder
+              </Button>
+              <Button
+                onClick={() => {
+                  const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
+                  const dropboxUrl = `https://www.dropbox.com/home/DentaRad/Reports/${folderName}`;
+                  window.open(dropboxUrl, '_blank');
+                }}
+                variant="outline"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open Reports Folder
               </Button>
             </div>
           </div>
@@ -230,18 +256,21 @@ export default function AdminCaseReview() {
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>FalconMD Workflow:</strong>
+                  <strong>Manual Export Workflow:</strong>
                   <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
-                    <li>Download DICOM from Uploads folder (button below)</li>
-                    <li>Open in FalconMD for review</li>
-                    <li>Create report in FalconMD</li>
-                    <li>Export from FalconMD to: <code className="bg-muted px-1 py-0.5 rounded text-xs break-all">{expectedReportPath}</code></li>
-                    <li>Return here to preview and release report to clinic</li>
+                    <li>Download DICOM and review in FalconMD</li>
+                    <li>Create diagnostic report in FalconMD</li>
+                    <li>Export report PDF from FalconMD (saves to Desktop/Downloads)</li>
+                    <li>Open Dropbox Reports folder using button below</li>
+                    <li>Drag your PDF into the folder</li>
+                    <li>Rename file to exactly: <code className="bg-muted px-1 py-0.5 rounded">report.pdf</code></li>
+                    <li>Return here to preview and release report</li>
                   </ol>
-                  <div className="mt-3 text-xs text-muted-foreground space-y-1">
-                    <p><strong>Scan location:</strong> <code className="bg-muted px-1 py-0.5 rounded">{expectedScanPath}</code></p>
-                    <p><strong>Report location:</strong> <code className="bg-muted px-1 py-0.5 rounded">{expectedReportPath}</code></p>
-                  </div>
+                  {caseData.folder_name && (
+                    <p className="mt-3 text-xs font-mono bg-muted p-2 rounded">
+                      Expected path: /DentaRad/Reports/{caseData.folder_name}/report.pdf
+                    </p>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
