@@ -52,28 +52,16 @@ export default function AdminCaseReview() {
     }
   }
 
-  async function downloadDICOM() {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
-        body: { caseId, fileType: 'scan' },
-      });
-
-      if (error) throw error;
-
-      const blob = new Blob([data]);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `case_${caseId}_scan.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('DICOM downloaded');
-    } catch (error) {
-      toast.error('Failed to download DICOM');
+  function downloadDICOM() {
+    if (!caseData.dropbox_scan_path) {
+      toast.error('Dropbox path not available');
+      return;
     }
+
+    // Convert Dropbox path to direct download link
+    const dropboxUrl = `https://www.dropbox.com/home${caseData.dropbox_scan_path}?preview=${caseData.dropbox_scan_path.split('/').pop()}`;
+    window.open(dropboxUrl, '_blank');
+    toast.success('Opening DICOM in Dropbox');
   }
 
   async function previewReport() {
