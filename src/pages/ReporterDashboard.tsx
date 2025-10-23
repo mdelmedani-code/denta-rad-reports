@@ -284,6 +284,17 @@ export default function ReporterDashboard() {
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Open Reports Folder
                 </Button>
+                <Button 
+                  onClick={() => markCompleted(caseData.id, caseData)}
+                  disabled={completingCase === caseData.id}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {completingCase === caseData.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    'Mark Report Ready'
+                  )}
+                </Button>
               </CardFooter>
             </Card>
           ))}
