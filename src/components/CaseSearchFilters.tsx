@@ -93,7 +93,6 @@ export default function CaseSearchFilters({ onFilterChange, onReset }: CaseSearc
               <SelectValue placeholder="All urgencies" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All urgencies</SelectItem>
               <SelectItem value="standard">Standard</SelectItem>
               <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
@@ -107,7 +106,6 @@ export default function CaseSearchFilters({ onFilterChange, onReset }: CaseSearc
               <SelectValue placeholder="All FOVs" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All FOVs</SelectItem>
               <SelectItem value="up_to_5x5">Up to 5x5 cm</SelectItem>
               <SelectItem value="up_to_8x5">Up to 8x5 cm</SelectItem>
               <SelectItem value="up_to_8x8">Up to 8x8 cm</SelectItem>
