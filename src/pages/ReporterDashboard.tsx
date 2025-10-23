@@ -92,9 +92,8 @@ export default function ReporterDashboard() {
   }
 
   function openDropboxReportsFolder(caseData: Case) {
-    // Open /Reports/ folder in Dropbox
-    const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
-    const folderPath = `/DentaRad/Reports/${folderName}`;
+    // Open /Reports/{patient_name}/ folder in Dropbox
+    const folderPath = `/DentaRad/Reports/${caseData.patient_name}`;
     const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
     window.open(dropboxUrl, '_blank');
   }

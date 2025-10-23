@@ -43,8 +43,19 @@ Deno.serve(async (req) => {
       clientSecret: Deno.env.get('DROPBOX_APP_SECRET'),
     });
 
-    const reportPath = `/DentaRad/Reports/${patientId}_${caseId}`;
-    const fullPath = `${reportPath}/${fileName}`;
+    // Get patient name from the request
+    const { data: caseData, error: caseError } = await supabaseClient
+      .from('cases')
+      .select('patient_name')
+      .eq('id', caseId)
+      .single();
+    
+    if (caseError || !caseData) {
+      throw new Error('Failed to fetch case data');
+    }
+
+    const reportPath = `/DentaRad/Reports/${caseData.patient_name}`;
+    const fullPath = `${reportPath}/report.pdf`;
 
     console.log(`Uploading report to: ${fullPath}`);
 
