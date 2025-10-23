@@ -17,3 +17,30 @@ verify_jwt = true
 
 [functions.backup-to-gcs]
 verify_jwt = true
+
+[functions.get-dropbox-upload-url]
+verify_jwt = true
+
+[functions.sync-case-to-dropbox]
+verify_jwt = true
+
+[functions.upload-report-to-dropbox]
+verify_jwt = true
+
+[functions.get-dropbox-file]
+verify_jwt = true
+
+[functions.mark-case-completed]
+verify_jwt = true
+
+[functions.check-dropbox-report]
+verify_jwt = true
+
+[functions.download-from-dropbox]
+verify_jwt = true
+
+[functions.pregenerate-case-zip]
+verify_jwt = true
+
+[functions.batch-pregenerate-zips]
+verify_jwt = true
