@@ -346,6 +346,16 @@ const UploadCase = () => {
   ) => {
     console.log('[Dropbox Sync] Starting background processing for case:', newCase.id);
     
+    // Get user session token for authorization
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('[Dropbox Sync] No valid session:', sessionError);
+      throw new Error('User session expired. Please log in again.');
+    }
+    
+    console.log('[Dropbox Sync] Session valid, user ID:', session.user.id);
+    
     // Get Dropbox upload credentials
     const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
       'get-dropbox-upload-url',
@@ -353,7 +363,10 @@ const UploadCase = () => {
         body: { 
           caseId: newCase.id, 
           fileName: zipFilename
-        } 
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       }
     );
 
@@ -404,9 +417,12 @@ const UploadCase = () => {
     await logCaseCreation(newCase.id);
     
     // Sync to Dropbox (create folders & metadata)
-    console.log('[Dropbox Sync] Calling sync-case-to-dropbox edge function...');
+    console.log('[Dropbox Sync] Calling sync-case-to-dropbox edge function with auth...');
     const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-case-to-dropbox', {
-      body: { caseId: newCase.id, dropboxPath }
+      body: { caseId: newCase.id, dropboxPath },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     });
     
     if (syncError) {
@@ -419,7 +435,10 @@ const UploadCase = () => {
     // Extract metadata
     console.log('[Dropbox Sync] Calling extract-dicom-zip edge function...');
     const { data: extractData, error: extractError } = await supabase.functions.invoke('extract-dicom-zip', {
-      body: { caseId: newCase.id, zipPath: storagePath }
+      body: { caseId: newCase.id, zipPath: storagePath },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     });
     
     if (extractError) {
