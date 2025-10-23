@@ -119,7 +119,7 @@ CASE DETAILS:
     await dbx.filesUpload({
       path: `${uploadBasePath}/REFERRAL-INFO.txt`,
       contents: new TextEncoder().encode(simpleReferralText),
-      mode: { '.tag': 'add' },
+      mode: { '.tag': 'overwrite' },
       autorename: false,
     });
     console.log('Referral info text file uploaded');
@@ -143,7 +143,7 @@ CASE DETAILS:
     await dbx.filesUpload({
       path: `${uploadBasePath}/cover-sheet.pdf`,
       contents: coverSheetPDF,
-      mode: { '.tag': 'add' },
+      mode: { '.tag': 'overwrite' },
       autorename: false,
     });
     console.log('PDF cover sheet uploaded');
@@ -192,7 +192,7 @@ IMPORTANT: Report filename MUST be exactly "report.pdf" (lowercase)
     await dbx.filesUpload({
       path: `${uploadBasePath}/referral-info.txt`,
       contents: detailedReferralText,
-      mode: { '.tag': 'add' },
+      mode: { '.tag': 'overwrite' },
       autorename: false,
     });
 
@@ -222,7 +222,7 @@ IMPORTANT: Report filename MUST be exactly "report.pdf" (lowercase)
     await dbx.filesUpload({
       path: `${uploadBasePath}/metadata.json`,
       contents: JSON.stringify(metadata, null, 2),
-      mode: { '.tag': 'add' },
+      mode: { '.tag': 'overwrite' },
       autorename: false,
     });
 
@@ -276,7 +276,7 @@ The webapp will look for this EXACT path. Any other filename will not work!
     await dbx.filesUpload({
       path: `${reportBasePath}/README.txt`,
       contents: readmeText,
-      mode: { '.tag': 'add' },
+      mode: { '.tag': 'overwrite' },
       autorename: false,
     });
 
