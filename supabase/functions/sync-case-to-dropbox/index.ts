@@ -17,12 +17,19 @@ serve(async (req) => {
     console.log('Sync case to Dropbox request received');
 
     // 1. Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    console.log('Authorization header present:', !!authHeader);
+    
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
@@ -32,9 +39,16 @@ serve(async (req) => {
       error: userError,
     } = await supabaseClient.auth.getUser();
 
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    if (userError) {
+      console.error('User auth error:', userError);
+      throw new Error(`Authentication failed: ${userError.message}`);
     }
+
+    if (!user) {
+      throw new Error('No user found');
+    }
+
+    console.log('User authenticated:', user.id);
 
     // 2. Get request parameters
     const { caseId, dropboxPath } = await req.json();
