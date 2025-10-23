@@ -320,9 +320,17 @@ const UploadCase = () => {
       
       // Start background processing (non-blocking)
       setPostUploadProcessing(true);
-      handleBackgroundProcessing(newCase, finalZipFile, zipFilename, storagePath).finally(() => {
-        setPostUploadProcessing(false);
-      });
+      handleBackgroundProcessing(newCase, finalZipFile, zipFilename, storagePath)
+        .then(() => {
+          sonnerToast.success('Dropbox sync complete!');
+        })
+        .catch((error) => {
+          console.error('Background processing failed:', error);
+          sonnerToast.error('Failed to sync to Dropbox: ' + error.message);
+        })
+        .finally(() => {
+          setPostUploadProcessing(false);
+        });
       
     } catch (error) {
       console.error('Upload failed:', error);
@@ -336,66 +344,92 @@ const UploadCase = () => {
     zipFilename: string,
     storagePath: string
   ) => {
-    try {
-      // Get Dropbox upload credentials
-      const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
-        'get-dropbox-upload-url',
-        { 
-          body: { 
-            caseId: newCase.id, 
-            fileName: zipFilename
-          } 
-        }
-      );
+    console.log('[Dropbox Sync] Starting background processing for case:', newCase.id);
+    
+    // Get Dropbox upload credentials
+    const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
+      'get-dropbox-upload-url',
+      { 
+        body: { 
+          caseId: newCase.id, 
+          fileName: zipFilename
+        } 
+      }
+    );
 
-      let dropboxPath: string | undefined;
-
-      if (!configError && uploadConfigData?.success) {
-        // Upload to Dropbox
-        await DropboxUploadService.uploadFile(
-          finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
-          uploadConfigData.uploadConfig,
-          (progress) => console.log(`Dropbox: ${progress.percentage}%`)
-        );
-        dropboxPath = uploadConfigData.uploadConfig.dropboxPath;
-      }
-      
-      // Update case with paths
-      if (dropboxPath) {
-        await supabase
-          .from('cases')
-          .update({
-            dropbox_path: dropboxPath,
-            file_path: dropboxPath
-          })
-          .eq('id', newCase.id);
-      }
-      
-      // Record upload
-      await recordUpload(
-        finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
-        'application/zip'
-      );
-      
-      // Log case creation
-      await logCaseCreation(newCase.id);
-      
-      // Sync to Dropbox (create folders & metadata)
-      if (dropboxPath) {
-        await supabase.functions.invoke('sync-case-to-dropbox', {
-          body: { caseId: newCase.id, dropboxPath }
-        });
-        
-        // Extract metadata
-        await supabase.functions.invoke('extract-dicom-zip', {
-          body: { caseId: newCase.id, dropboxPath }
-        });
-      }
-      
-      sonnerToast.success('Case processing complete!');
-    } catch (error) {
-      console.error('Background processing error:', error);
+    if (configError) {
+      console.error('[Dropbox Sync] Error getting upload config:', configError);
+      throw new Error('Failed to get Dropbox upload credentials: ' + configError.message);
     }
+
+    if (!uploadConfigData?.success) {
+      console.error('[Dropbox Sync] Upload config failed:', uploadConfigData);
+      throw new Error('Failed to get Dropbox upload credentials');
+    }
+
+    console.log('[Dropbox Sync] Upload config received:', {
+      folderName: uploadConfigData.uploadConfig.folderName,
+      dropboxPath: uploadConfigData.uploadConfig.dropboxPath
+    });
+
+    // Upload to Dropbox
+    console.log('[Dropbox Sync] Uploading file to Dropbox...');
+    await DropboxUploadService.uploadFile(
+      finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
+      uploadConfigData.uploadConfig,
+      (progress) => console.log(`[Dropbox Sync] Upload progress: ${progress.percentage}%`)
+    );
+    
+    const dropboxPath = uploadConfigData.uploadConfig.dropboxPath;
+    console.log('[Dropbox Sync] File uploaded to:', dropboxPath);
+    
+    // Update case with paths
+    await supabase
+      .from('cases')
+      .update({
+        dropbox_path: dropboxPath,
+        file_path: storagePath
+      })
+      .eq('id', newCase.id);
+    
+    console.log('[Dropbox Sync] Case updated with Dropbox path');
+    
+    // Record upload
+    await recordUpload(
+      finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
+      'application/zip'
+    );
+    
+    // Log case creation
+    await logCaseCreation(newCase.id);
+    
+    // Sync to Dropbox (create folders & metadata)
+    console.log('[Dropbox Sync] Calling sync-case-to-dropbox edge function...');
+    const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-case-to-dropbox', {
+      body: { caseId: newCase.id, dropboxPath }
+    });
+    
+    if (syncError) {
+      console.error('[Dropbox Sync] sync-case-to-dropbox error:', syncError);
+      throw new Error('Failed to sync case to Dropbox: ' + syncError.message);
+    }
+    
+    console.log('[Dropbox Sync] sync-case-to-dropbox response:', syncData);
+    
+    // Extract metadata
+    console.log('[Dropbox Sync] Calling extract-dicom-zip edge function...');
+    const { data: extractData, error: extractError } = await supabase.functions.invoke('extract-dicom-zip', {
+      body: { caseId: newCase.id, dropboxPath }
+    });
+    
+    if (extractError) {
+      console.error('[Dropbox Sync] extract-dicom-zip error:', extractError);
+      // Don't throw - this is optional
+    } else {
+      console.log('[Dropbox Sync] extract-dicom-zip response:', extractData);
+    }
+    
+    console.log('[Dropbox Sync] Background processing complete!');
   };
 
   const formatTime = (seconds: number): string => {
