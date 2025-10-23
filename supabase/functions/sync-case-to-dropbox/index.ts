@@ -441,8 +441,8 @@ async function generateCoverSheetPDF(caseData: any) {
   y -= 25;
 
   const patientFields = [
-    ['Patient Name:', caseData.patient_name],
-    ['Date of Birth:', caseData.patient_dob],
+    ['Patient Name:', caseData.patient_name || 'N/A'],
+    ['Date of Birth:', caseData.patient_dob || 'N/A'],
     ['Internal ID:', caseData.patient_id || 'N/A'],
   ];
 
@@ -453,7 +453,7 @@ async function generateCoverSheetPDF(caseData: any) {
       size: fontSize,
       color: rgb(0.4, 0.4, 0.4),
     });
-    page.drawText(value.toString(), {
+    page.drawText(String(value || 'N/A'), {
       x: margin + 120,
       y: y,
       size: fontSize,
@@ -514,8 +514,8 @@ async function generateCoverSheetPDF(caseData: any) {
   y -= 15;
 
   const scanFields = [
-    ['Field of View:', caseData.field_of_view],
-    ['Urgency:', caseData.urgency],
+    ['Field of View:', caseData.field_of_view || 'N/A'],
+    ['Urgency:', caseData.urgency || 'N/A'],
   ];
 
   for (const [label, value] of scanFields) {
@@ -525,7 +525,7 @@ async function generateCoverSheetPDF(caseData: any) {
       size: fontSize,
       color: rgb(0.4, 0.4, 0.4),
     });
-    page.drawText(value.toString(), {
+    page.drawText(String(value || 'N/A'), {
       x: margin + 120,
       y: y,
       size: fontSize,
@@ -557,7 +557,7 @@ async function generateCoverSheetPDF(caseData: any) {
       size: fontSize,
       color: rgb(0.4, 0.4, 0.4),
     });
-    page.drawText(value.toString(), {
+    page.drawText(String(value || 'N/A'), {
       x: margin + 120,
       y: y,
       size: fontSize,
