@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { validatePasswordStrength } from "@/utils/passwordStrength";
 
@@ -19,6 +20,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
   useEffect(() => {
     // Check if user is already logged in and route based on role to avoid loops
@@ -81,19 +83,16 @@ const Login = () => {
           description: "Please check your email to confirm your account.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        // Use the useAuth signIn method which includes rate limiting
+        const { data, error } = await signIn(email, password);
         
         if (error) throw error;
         
         // Determine role and route accordingly
-        const { data: { user } } = await supabase.auth.getUser();
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user!.id)
+          .eq('user_id', data?.user?.id)
           .maybeSingle();
         
         toast({
