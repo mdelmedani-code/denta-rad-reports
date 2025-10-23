@@ -75,39 +75,30 @@ serve(async (req) => {
     const reportBasePath = `/DentaRad/Reports/${folderName}`;
     console.log('Creating uploads folder:', uploadBasePath);
 
-    // 6. Generate DICOM Structured Report (skip for now due to library issues)
-    console.log('Skipping DICOM SR generation (using text + PDF instead)...');
-    
-    // Create simple text file with referral info instead
-    const referralText = `CBCT SCAN REFERRAL INFORMATION
-===============================
-
-Case ID: ${simpleId}
-Folder: ${folderName}
-Patient: ${caseData.patient_name}
-Date of Birth: ${caseData.patient_dob || 'N/A'}
-Patient ID: ${caseData.patient_id || simpleId}
-
-Clinical Information:
-${caseData.clinical_question}
-
-Field of View: ${caseData.field_of_view}
-Urgency: ${caseData.urgency.toUpperCase()}
-
-Referring Dentist: ${caseData.referring_dentist || 'N/A'}
-Clinic: ${clinicName}
-
-Study Date: ${new Date().toISOString().split('T')[0]}
-Study Time: ${new Date().toTimeString().split(' ')[0]}
-`;
+    // 6. Generate DICOM Structured Report
+    console.log('Generating DICOM SR...');
+    const dicomSR = await createDICOMStructuredReport({
+      simpleId: simpleId,
+      patientName: caseData.patient_name,
+      patientDOB: caseData.patient_dob,
+      patientID: caseData.patient_id || simpleId,
+      clinicalQuestion: caseData.clinical_question,
+      fieldOfView: caseData.field_of_view,
+      urgency: caseData.urgency,
+      referringDentist: caseData.referring_dentist,
+      clinicName: clinicName,
+      studyDate: new Date().toISOString().split('T')[0].replace(/-/g, ''),
+      studyTime: new Date().toTimeString().split(' ')[0].replace(/:/g, ''),
+      folderName: folderName,
+    });
 
     await dbx.filesUpload({
-      path: `${uploadBasePath}/REFERRAL-INFO.txt`,
-      contents: referralText,
+      path: `${uploadBasePath}/REFERRAL-INFO.dcm`,
+      contents: dicomSR,
       mode: { '.tag': 'add' },
       autorename: false,
     });
-    console.log('Referral info text file uploaded');
+    console.log('DICOM SR uploaded');
 
     // 7. Generate and upload cover sheet PDF
     console.log('Generating PDF cover sheet...');
@@ -355,66 +346,79 @@ async function createDICOMStructuredReport(referralData: any): Promise<Uint8Arra
   const seriesInstanceUID = generateDICOMUID();
   const sopInstanceUID = generateDICOMUID();
 
-  const now = new Date();
-  const studyDate = now.toISOString().split('T')[0].replace(/-/g, '');
-  const studyTime = now.toTimeString().split(' ')[0].replace(/:/g, '');
+  // Create dataset in denaturalized format (tag numbers, not names)
+  const dataset: any = {
+    '00080005': { vr: 'CS', Value: ['ISO_IR 100'] }, // SpecificCharacterSet
+    '00080016': { vr: 'UI', Value: ['1.2.840.10008.5.1.4.1.1.88.11'] }, // SOPClassUID - Basic Text SR
+    '00080018': { vr: 'UI', Value: [sopInstanceUID] }, // SOPInstanceUID
+    '00080020': { vr: 'DA', Value: [referralData.studyDate] }, // StudyDate
+    '00080030': { vr: 'TM', Value: [referralData.studyTime] }, // StudyTime
+    '00080050': { vr: 'SH', Value: [referralData.simpleId] }, // AccessionNumber
+    '00080060': { vr: 'CS', Value: ['SR'] }, // Modality
+    '00080064': { vr: 'CS', Value: ['DT'] }, // ConversionType
+    '00080090': { vr: 'PN', Value: [{ Alphabetic: referralData.referringDentist || 'UNKNOWN' }] }, // ReferringPhysicianName
+    '0020000D': { vr: 'UI', Value: [studyInstanceUID] }, // StudyInstanceUID
+    '0020000E': { vr: 'UI', Value: [seriesInstanceUID] }, // SeriesInstanceUID
+    '00200010': { vr: 'SH', Value: [referralData.simpleId] }, // StudyID
+    '00200011': { vr: 'IS', Value: ['999'] }, // SeriesNumber (high number so it appears after CBCT)
+    '00200013': { vr: 'IS', Value: ['1'] }, // InstanceNumber
+    '00100010': { vr: 'PN', Value: [{ Alphabetic: referralData.patientName }] }, // PatientName
+    '00100020': { vr: 'LO', Value: [referralData.patientID] }, // PatientID
+    '00100030': { vr: 'DA', Value: [referralData.patientDOB?.replace(/-/g, '') || ''] }, // PatientBirthDate
+    '0040A491': { vr: 'CS', Value: ['COMPLETE'] }, // CompletionFlag
+    '0040A493': { vr: 'CS', Value: ['UNVERIFIED'] }, // VerificationFlag
+    '0040A504': { vr: 'SQ', Value: [{ // ContentTemplateSequence
+      '0040DB00': { vr: 'CS', Value: ['DentaRad Referral'] },
+    }] },
+    '0040A730': { vr: 'SQ', Value: [{ // ContentSequence - the actual report content
+      '0040A010': { vr: 'CS', Value: ['CONTAINER'] },
+      '0040A040': { vr: 'CS', Value: ['SEPARATE'] },
+      '0040A043': { vr: 'SQ', Value: [{
+        '00080100': { vr: 'SH', Value: ['18782-3'] },
+        '00080102': { vr: 'SH', Value: ['LN'] },
+        '00080104': { vr: 'LO', Value: ['Radiology Study observation'] },
+      }] },
+      '0040A730': { vr: 'SQ', Value: [
+        {
+          '0040A010': { vr: 'CS', Value: ['TEXT'] },
+          '0040A040': { vr: 'CS', Value: ['SEPARATE'] },
+          '0040A043': { vr: 'SQ', Value: [{
+            '00080100': { vr: 'SH', Value: ['121109'] },
+            '00080102': { vr: 'SH', Value: ['DCM'] },
+            '00080104': { vr: 'LO', Value: ['Clinical Information'] },
+          }] },
+          '0040A160': { vr: 'UT', Value: [`
+CBCT SCAN REFERRAL - Case ${referralData.simpleId}
 
-  const dataset = {
-    '00100010': { vr: 'PN', Value: [{ Alphabetic: referralData.patientName }] },
-    '00100020': { vr: 'LO', Value: [referralData.patientID] },
-    '00100030': { vr: 'DA', Value: [referralData.patientDOB.replace(/-/g, '')] },
-    '00100040': { vr: 'CS', Value: ['O'] },
-    '0020000D': { vr: 'UI', Value: [studyInstanceUID] },
-    '00080020': { vr: 'DA', Value: [studyDate] },
-    '00080030': { vr: 'TM', Value: [studyTime] },
-    '00080050': { vr: 'SH', Value: [referralData.simpleId] },
-    '00080090': { vr: 'PN', Value: [{ Alphabetic: referralData.referringDentist || 'Unknown' }] },
-    '00081030': { vr: 'LO', Value: ['CBCT Scan'] },
-    '0020000E': { vr: 'UI', Value: [seriesInstanceUID] },
-    '00080060': { vr: 'CS', Value: ['SR'] },
-    '00200011': { vr: 'IS', Value: ['999'] },
-    '0008103E': { vr: 'LO', Value: ['Clinical Referral Information'] },
-    '00080016': { vr: 'UI', Value: ['1.2.840.10008.5.1.4.1.1.88.11'] },
-    '00080018': { vr: 'UI', Value: [sopInstanceUID] },
-    '00200013': { vr: 'IS', Value: ['1'] },
-    '0040A010': { vr: 'CS', Value: ['CONTAINER'] },
-    '0040A040': { vr: 'CS', Value: ['SEPARATE'] },
-    '0040A043': { 
-      vr: 'SQ', 
-      Value: [{
-        '00080100': { vr: 'SH', Value: ['REFERRAL'] },
-        '00080102': { vr: 'SH', Value: ['DentaRad'] },
-        '00080104': { vr: 'LO', Value: ['Clinical Referral Information'] },
-      }]
-    },
-    '0040A730': { 
-      vr: 'SQ',
-      Value: [
-        createTextContentItem('CASE_ID', 'Case ID', referralData.simpleId),
-        createTextContentItem('FOLDER', 'Folder Name', referralData.folderName),
-        createTextContentItem('CLINICAL_QUESTION', 'Clinical Question', referralData.clinicalQuestion),
-        createTextContentItem('FOV', 'Field of View', referralData.fieldOfView),
-        createTextContentItem('URGENCY', 'Urgency', referralData.urgency.toUpperCase()),
-        createTextContentItem('REFERRING', 'Referring Dentist', referralData.referringDentist || 'N/A'),
-        createTextContentItem('CLINIC', 'Referring Clinic', referralData.clinicName),
-      ]
-    },
+Patient: ${referralData.patientName}
+Date of Birth: ${referralData.patientDOB || 'N/A'}
+Patient ID: ${referralData.patientID}
+
+Clinical Question:
+${referralData.clinicalQuestion}
+
+Field of View: ${referralData.fieldOfView}
+Urgency: ${referralData.urgency.toUpperCase()}
+Referring Dentist: ${referralData.referringDentist || 'N/A'}
+Clinic: ${referralData.clinicName}
+`] },
+        },
+      ] },
+    }] },
   };
 
   const meta = {
-    FileMetaInformationVersion: new Uint8Array([0, 1]).buffer,
-    MediaStorageSOPClassUID: '1.2.840.10008.5.1.4.1.1.88.11',
-    MediaStorageSOPInstanceUID: sopInstanceUID,
-    TransferSyntaxUID: '1.2.840.10008.1.2.1',
-    ImplementationClassUID: '1.2.826.0.1.3680043.10.474',
-    ImplementationVersionName: 'DentaRad_v1',
+    '00020001': { vr: 'OB', Value: [new Uint8Array([0, 1]).buffer] }, // FileMetaInformationVersion
+    '00020002': { vr: 'UI', Value: ['1.2.840.10008.5.1.4.1.1.88.11'] }, // MediaStorageSOPClassUID
+    '00020003': { vr: 'UI', Value: [sopInstanceUID] }, // MediaStorageSOPInstanceUID
+    '00020010': { vr: 'UI', Value: ['1.2.840.10008.1.2.1'] }, // TransferSyntaxUID - Explicit VR Little Endian
+    '00020012': { vr: 'UI', Value: ['1.2.826.0.1.3680043.10.854'] }, // ImplementationClassUID
+    '00020013': { vr: 'SH', Value: ['DentaRad_v1'] }, // ImplementationVersionName
   };
 
-  // Create DICOM dataset directly without naturalizing
-  const dicomData: any = { ...dataset };
-  dicomData._meta = DicomMetaDictionary.denaturalizeDataset(meta);
+  dataset._meta = meta;
 
-  const buffer = dicomData.write();
+  const buffer = dcmjs.data.datasetToBlob(dataset);
   return new Uint8Array(buffer);
 }
 
