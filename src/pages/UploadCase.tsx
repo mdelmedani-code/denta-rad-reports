@@ -419,7 +419,7 @@ const UploadCase = () => {
     // Extract metadata
     console.log('[Dropbox Sync] Calling extract-dicom-zip edge function...');
     const { data: extractData, error: extractError } = await supabase.functions.invoke('extract-dicom-zip', {
-      body: { caseId: newCase.id, dropboxPath }
+      body: { caseId: newCase.id, zipPath: storagePath }
     });
     
     if (extractError) {

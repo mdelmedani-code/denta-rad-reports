@@ -26,11 +26,11 @@ serve(async (req) => {
     }
 
     const { caseId, fileName, patientId } = await req.json()
-    if (!caseId || !fileName || !patientId) {
-      throw new Error('Missing required fields: caseId, fileName, or patientId')
+    if (!caseId || !fileName) {
+      throw new Error('Missing required fields: caseId or fileName')
     }
 
-    console.log(`Getting Dropbox upload config for case ${caseId}, patient ${patientId}`)
+    console.log(`Getting Dropbox upload config for case ${caseId}, patient ${patientId ?? 'N/A'}`)
 
     // Get case details to generate folder name
     const { data: caseData, error: caseError } = await supabaseClient
