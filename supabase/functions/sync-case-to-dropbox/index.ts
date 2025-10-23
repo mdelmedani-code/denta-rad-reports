@@ -75,30 +75,39 @@ serve(async (req) => {
     const reportBasePath = `/DentaRad/Reports/${folderName}`;
     console.log('Creating uploads folder:', uploadBasePath);
 
-    // 6. Generate DICOM Structured Report
-    console.log('Generating DICOM SR...');
-    const dicomSR = await createDICOMStructuredReport({
-      simpleId: simpleId,
-      patientName: caseData.patient_name,
-      patientDOB: caseData.patient_dob,
-      patientID: caseData.patient_id || simpleId,
-      clinicalQuestion: caseData.clinical_question,
-      fieldOfView: caseData.field_of_view,
-      urgency: caseData.urgency,
-      referringDentist: caseData.referring_dentist,
-      clinicName: clinicName,
-      studyDate: new Date().toISOString().split('T')[0].replace(/-/g, ''),
-      studyTime: new Date().toTimeString().split(' ')[0].replace(/:/g, ''),
-      folderName: folderName,
-    });
+    // 6. Generate DICOM Structured Report (skip for now due to library issues)
+    console.log('Skipping DICOM SR generation (using text + PDF instead)...');
+    
+    // Create simple text file with referral info instead
+    const referralText = `CBCT SCAN REFERRAL INFORMATION
+===============================
+
+Case ID: ${simpleId}
+Folder: ${folderName}
+Patient: ${caseData.patient_name}
+Date of Birth: ${caseData.patient_dob || 'N/A'}
+Patient ID: ${caseData.patient_id || simpleId}
+
+Clinical Information:
+${caseData.clinical_question}
+
+Field of View: ${caseData.field_of_view}
+Urgency: ${caseData.urgency.toUpperCase()}
+
+Referring Dentist: ${caseData.referring_dentist || 'N/A'}
+Clinic: ${clinicName}
+
+Study Date: ${new Date().toISOString().split('T')[0]}
+Study Time: ${new Date().toTimeString().split(' ')[0]}
+`;
 
     await dbx.filesUpload({
-      path: `${uploadBasePath}/REFERRAL-INFO.dcm`,
-      contents: dicomSR,
+      path: `${uploadBasePath}/REFERRAL-INFO.txt`,
+      contents: referralText,
       mode: { '.tag': 'add' },
       autorename: false,
     });
-    console.log('DICOM SR uploaded');
+    console.log('Referral info text file uploaded');
 
     // 7. Generate and upload cover sheet PDF
     console.log('Generating PDF cover sheet...');
@@ -124,8 +133,8 @@ serve(async (req) => {
     });
     console.log('PDF cover sheet uploaded');
 
-    // 8. Create referral-info.txt
-    const referralText = `CBCT SCAN REFERRAL
+    // 8. Create detailed referral-info.txt for reporter
+    const detailedReferralText = `CBCT SCAN REFERRAL
 ==================
 
 Case ID: ${simpleId}
@@ -148,9 +157,9 @@ Uploaded: ${new Date(caseData.created_at).toLocaleString()}
 ═══════════════════════════════════════════════════════════════════
 
 REFERRAL INFO AVAILABLE IN:
-1. REFERRAL-INFO.dcm - DICOM Structured Report (opens in FalconMD)
+1. REFERRAL-INFO.txt - Quick reference (opens in any text editor)
 2. cover-sheet.pdf - PDF document (for printing/emailing)
-3. This text file - Quick reference
+3. referral-info.txt - Detailed instructions (this file)
 
 INSTRUCTIONS FOR REPORTER:
 1. Download this folder from Dropbox
@@ -167,7 +176,7 @@ IMPORTANT: Report filename MUST be exactly "report.pdf" (lowercase)
 
     await dbx.filesUpload({
       path: `${uploadBasePath}/referral-info.txt`,
-      contents: referralText,
+      contents: detailedReferralText,
       mode: { '.tag': 'add' },
       autorename: false,
     });
@@ -340,7 +349,7 @@ function generateFolderName(patientName: string, simpleId: number): string {
 // HELPER: Create DICOM Structured Report
 // ============================================================================
 async function createDICOMStructuredReport(referralData: any): Promise<Uint8Array> {
-  const { DicomMetaDictionary, DicomDict } = dcmjs.data;
+  const { DicomMetaDictionary } = dcmjs.data;
 
   const studyInstanceUID = generateDICOMUID();
   const seriesInstanceUID = generateDICOMUID();
@@ -392,7 +401,6 @@ async function createDICOMStructuredReport(referralData: any): Promise<Uint8Arra
     },
   };
 
-  const dicomDict = DicomDict.naturalizeDataset(dataset);
   const meta = {
     FileMetaInformationVersion: new Uint8Array([0, 1]).buffer,
     MediaStorageSOPClassUID: '1.2.840.10008.5.1.4.1.1.88.11',
@@ -402,8 +410,8 @@ async function createDICOMStructuredReport(referralData: any): Promise<Uint8Arra
     ImplementationVersionName: 'DentaRad_v1',
   };
 
-  const denaturalizedDataset = DicomMetaDictionary.denaturalizeDataset(dicomDict);
-  const dicomData = denaturalizedDataset;
+  // Create DICOM dataset directly without naturalizing
+  const dicomData: any = { ...dataset };
   dicomData._meta = DicomMetaDictionary.denaturalizeDataset(meta);
 
   const buffer = dicomData.write();
