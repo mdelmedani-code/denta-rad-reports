@@ -30,9 +30,8 @@ const AdminLogin = () => {
             .select('role')
             .eq('user_id', session.user.id)
             .maybeSingle();
-          
           if (roleData?.role === 'admin') {
-            navigate("/admin", { replace: true });
+            navigate("/reporter", { replace: true });
             return;
           }
         }
@@ -74,7 +73,7 @@ const AdminLogin = () => {
         title: "Admin login successful",
         description: "Welcome to the admin dashboard",
       });
-      navigate("/admin");
+      navigate("/reporter");
     } catch (error: any) {
       setError(error.message || "An error occurred");
     } finally {
