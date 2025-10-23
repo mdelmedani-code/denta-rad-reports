@@ -228,10 +228,27 @@ IMPORTANT: Report filename MUST be exactly "report.pdf" (lowercase)
 
     console.log('Metadata uploaded');
 
-    // === CREATE EMPTY REPORTS FOLDER ===
+    // === CREATE REPORTS FOLDER ===
     console.log('Creating reports folder:', reportBasePath);
 
-    // 10. Create README.txt in Reports folder
+    // 10. Explicitly create the Reports folder first
+    try {
+      await dbx.filesCreateFolderV2({
+        path: reportBasePath,
+        autorename: false
+      });
+      console.log('Reports folder created successfully:', reportBasePath);
+    } catch (error) {
+      // Ignore error if folder already exists (409 conflict)
+      if (error.status === 409) {
+        console.log('Reports folder already exists:', reportBasePath);
+      } else {
+        console.error('Error creating reports folder:', error);
+        throw error;
+      }
+    }
+
+    // 11. Create README.txt in Reports folder
     const readmeText = `CASE: ${caseData.patient_name} (ID: ${simpleId})
 FOLDER: ${folderName}
 ═══════════════════════════════════════════════════════════════════
@@ -273,16 +290,20 @@ The webapp will look for this EXACT path. Any other filename will not work!
 ═══════════════════════════════════════════════════════════════════
 `;
 
-    await dbx.filesUpload({
-      path: `${reportBasePath}/README.txt`,
-      contents: readmeText,
-      mode: { '.tag': 'overwrite' },
-      autorename: false,
-    });
+    try {
+      await dbx.filesUpload({
+        path: `${reportBasePath}/README.txt`,
+        contents: readmeText,
+        mode: { '.tag': 'overwrite' },
+        autorename: false,
+      });
+      console.log('README uploaded to Reports folder successfully');
+    } catch (error) {
+      console.error('Error uploading README to Reports folder:', error);
+      throw error;
+    }
 
-    console.log('README uploaded to Reports folder');
-
-    // 11. Update database with paths and folder name
+    // 12. Update database with paths and folder name
     const { error: updateError } = await supabaseClient
       .from('cases')
       .update({
