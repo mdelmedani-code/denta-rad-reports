@@ -38,6 +38,39 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_monitoring: {
+        Row: {
+          backup_date: string | null
+          backup_type: string
+          created_at: string | null
+          error_message: string | null
+          file_count: number | null
+          id: string
+          status: string
+          total_size: number | null
+        }
+        Insert: {
+          backup_date?: string | null
+          backup_type: string
+          created_at?: string | null
+          error_message?: string | null
+          file_count?: number | null
+          id?: string
+          status: string
+          total_size?: number | null
+        }
+        Update: {
+          backup_date?: string | null
+          backup_type?: string
+          created_at?: string | null
+          error_message?: string | null
+          file_count?: number | null
+          id?: string
+          status?: string
+          total_size?: number | null
+        }
+        Relationships: []
+      }
       case_annotations: {
         Row: {
           annotation_data: Json
@@ -104,6 +137,8 @@ export type Database = {
           report_path: string | null
           series_count: number | null
           simple_id: number | null
+          sr_validated: boolean | null
+          sr_validation_errors: Json | null
           status: Database["public"]["Enums"]["case_status"]
           synced_at: string | null
           synced_to_dropbox: boolean | null
@@ -136,6 +171,8 @@ export type Database = {
           report_path?: string | null
           series_count?: number | null
           simple_id?: number | null
+          sr_validated?: boolean | null
+          sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
@@ -168,6 +205,8 @@ export type Database = {
           report_path?: string | null
           series_count?: number | null
           simple_id?: number | null
+          sr_validated?: boolean | null
+          sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
@@ -207,6 +246,39 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      data_retention_policies: {
+        Row: {
+          archive_after_days: number | null
+          compliance_standard: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          resource_type: string
+          retention_days: number
+          updated_at: string | null
+        }
+        Insert: {
+          archive_after_days?: number | null
+          compliance_standard?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          resource_type: string
+          retention_days: number
+          updated_at?: string | null
+        }
+        Update: {
+          archive_after_days?: number | null
+          compliance_standard?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          resource_type?: string
+          retention_days?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -457,6 +529,42 @@ export type Database = {
         }
         Relationships: []
       }
+      report_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          indication_type: string
+          is_active: boolean | null
+          name: string
+          sections: Json
+          template_content: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          indication_type: string
+          is_active?: boolean | null
+          name: string
+          sections?: Json
+          template_content: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          indication_type?: string
+          is_active?: boolean | null
+          name?: string
+          sections?: Json
+          template_content?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           author_id: string | null
@@ -467,7 +575,9 @@ export type Database = {
           dropbox_path: string | null
           finalized_at: string | null
           id: string
+          is_latest: boolean | null
           pdf_url: string | null
+          previous_version_id: string | null
           report_text: string | null
           signatory_credentials: string | null
           signatory_name: string | null
@@ -475,6 +585,7 @@ export type Database = {
           signature_statement: string | null
           signed_off_at: string | null
           signed_off_by: string | null
+          version: number | null
         }
         Insert: {
           author_id?: string | null
@@ -485,7 +596,9 @@ export type Database = {
           dropbox_path?: string | null
           finalized_at?: string | null
           id?: string
+          is_latest?: boolean | null
           pdf_url?: string | null
+          previous_version_id?: string | null
           report_text?: string | null
           signatory_credentials?: string | null
           signatory_name?: string | null
@@ -493,6 +606,7 @@ export type Database = {
           signature_statement?: string | null
           signed_off_at?: string | null
           signed_off_by?: string | null
+          version?: number | null
         }
         Update: {
           author_id?: string | null
@@ -503,7 +617,9 @@ export type Database = {
           dropbox_path?: string | null
           finalized_at?: string | null
           id?: string
+          is_latest?: boolean | null
           pdf_url?: string | null
+          previous_version_id?: string | null
           report_text?: string | null
           signatory_credentials?: string | null
           signatory_name?: string | null
@@ -511,6 +627,7 @@ export type Database = {
           signature_statement?: string | null
           signed_off_at?: string | null
           signed_off_by?: string | null
+          version?: number | null
         }
         Relationships: [
           {
@@ -518,6 +635,20 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_previous_version_id_fkey"
+            columns: ["previous_version_id"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "reports_previous_version_id_fkey"
+            columns: ["previous_version_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
             referencedColumns: ["id"]
           },
         ]

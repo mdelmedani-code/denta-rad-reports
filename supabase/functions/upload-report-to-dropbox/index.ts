@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // Get patient name from the request
     const { data: caseData, error: caseError } = await supabaseClient
       .from('cases')
-      .select('patient_name')
+      .select('patient_name, upload_date')
       .eq('id', caseId)
       .single();
     
@@ -54,8 +54,28 @@ Deno.serve(async (req) => {
       throw new Error('Failed to fetch case data');
     }
 
+    // Get existing report count for versioning
+    const { data: existingReports, error: reportsError } = await supabaseClient
+      .from('reports')
+      .select('version')
+      .eq('case_id', caseId)
+      .order('version', { ascending: false })
+      .limit(1);
+
+    const nextVersion = existingReports && existingReports.length > 0 
+      ? (existingReports[0].version || 0) + 1 
+      : 1;
+
+    // Create versioned filename with timestamp
+    const uploadDate = new Date(caseData.upload_date);
+    const dateStr = uploadDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const versionedFilename = nextVersion === 1 
+      ? `${dateStr}_report.pdf` 
+      : `${dateStr}_report_v${nextVersion}_${timestamp}.pdf`;
+
     const reportPath = `/DentaRad/Reports/${caseData.patient_name}`;
-    const fullPath = `${reportPath}/report.pdf`;
+    const fullPath = `${reportPath}/${versionedFilename}`;
 
     console.log(`Uploading report to: ${fullPath}`);
 
@@ -82,6 +102,22 @@ Deno.serve(async (req) => {
     if (updateError) {
       console.error('Error updating case with report path:', updateError);
       throw updateError;
+    }
+
+    // Update or create report record with version info
+    const { error: reportError } = await supabaseClient
+      .from('reports')
+      .insert({
+        case_id: caseId,
+        author_id: user.id,
+        dropbox_path: fullPath,
+        version: nextVersion,
+        is_latest: true,
+        finalized_at: new Date().toISOString(),
+      });
+
+    if (reportError) {
+      console.error('Error creating report record:', reportError);
     }
 
     return new Response(

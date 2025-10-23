@@ -77,7 +77,7 @@ serve(async (req) => {
 
     // 6. Generate DICOM Structured Report
     console.log('Generating DICOM SR...');
-    const dicomSR = await createDICOMStructuredReport({
+    const referralData = {
       simpleId: simpleId,
       patientName: caseData.patient_name,
       patientDOB: caseData.patient_dob,
@@ -91,7 +91,48 @@ serve(async (req) => {
       studyTime: new Date().toTimeString().split(' ')[0].replace(/:/g, ''),
       folderName: folderName,
       existingStudyInstanceUID: caseData.dicom_metadata?.studyInstanceUID || undefined,
+    };
+    
+    const dicomSR = await createDICOMStructuredReport(referralData);
+    
+    // Validate the generated SR
+    const validation = validateDICOMSR({
+      SOPClassUID: '1.2.840.10008.5.1.4.1.1.88.11',
+      SOPInstanceUID: generateDICOMUID(),
+      PatientName: referralData.patientName,
+      PatientID: referralData.patientID,
+      StudyInstanceUID: referralData.existingStudyInstanceUID || generateDICOMUID(),
+      SeriesInstanceUID: generateDICOMUID(),
+      Modality: 'SR',
+      StudyDate: referralData.studyDate,
+      StudyTime: referralData.studyTime,
+      ContentDate: referralData.studyDate,
+      ContentTime: referralData.studyTime,
     });
+    
+    if (!validation.valid) {
+      console.error('SR validation failed:', validation.errors);
+      
+      // Update case with validation errors
+      await supabaseClient
+        .from('cases')
+        .update({
+          sr_validated: false,
+          sr_validation_errors: { errors: validation.errors },
+        })
+        .eq('id', caseId);
+    } else {
+      console.log('SR validation passed');
+      
+      // Mark SR as validated
+      await supabaseClient
+        .from('cases')
+        .update({
+          sr_validated: true,
+          sr_validation_errors: null,
+        })
+        .eq('id', caseId);
+    }
 
     await dbx.filesUpload({
       path: `${uploadBasePath}/REFERRAL-INFO.dcm`,
@@ -308,6 +349,56 @@ The webapp will look for this EXACT path. Any other filename will not work!
     );
   }
 });
+
+// ============================================================================
+// HELPER: Validate DICOM SR
+// ============================================================================
+function validateDICOMSR(dataset: any): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Required DICOM SR fields
+  const required = [
+    { key: 'SOPClassUID', name: 'SOPClassUID' },
+    { key: 'SOPInstanceUID', name: 'SOPInstanceUID' },
+    { key: 'PatientName', name: 'PatientName' },
+    { key: 'PatientID', name: 'PatientID' },
+    { key: 'StudyInstanceUID', name: 'StudyInstanceUID' },
+    { key: 'SeriesInstanceUID', name: 'SeriesInstanceUID' },
+    { key: 'Modality', name: 'Modality' },
+  ];
+
+  for (const field of required) {
+    if (!dataset[field.key]) {
+      errors.push(`Missing required field: ${field.name}`);
+    }
+  }
+
+  // Validate SR specific fields
+  if (dataset.Modality && dataset.Modality !== 'SR') {
+    errors.push('Modality must be SR for structured reports');
+  }
+
+  // Validate date formats (YYYYMMDD)
+  const dateFields = ['StudyDate', 'ContentDate'];
+  for (const field of dateFields) {
+    if (dataset[field] && !/^\d{8}$/.test(dataset[field])) {
+      errors.push(`Invalid date format for ${field}: must be YYYYMMDD`);
+    }
+  }
+
+  // Validate time formats (HHMMSS)
+  const timeFields = ['StudyTime', 'ContentTime'];
+  for (const field of timeFields) {
+    if (dataset[field] && !/^\d{6}(\.\d{1,6})?$/.test(dataset[field])) {
+      errors.push(`Invalid time format for ${field}: must be HHMMSS[.ffffff]`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
 
 // ============================================================================
 // HELPER: Generate folder name from patient name and ID

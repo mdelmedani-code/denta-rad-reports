@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, ExternalLink, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import CaseSearchFilters from '@/components/CaseSearchFilters';
 
 interface Case {
   id: string;
@@ -31,6 +32,14 @@ export default function ReporterDashboard() {
   const [loading, setLoading] = useState(true);
   const [downloadingCase, setDownloadingCase] = useState<string | null>(null);
   const [completingCase, setCompletingCase] = useState<string | null>(null);
+  const [searchFilters, setSearchFilters] = useState({
+    patientName: '',
+    patientId: '',
+    dateFrom: '',
+    dateTo: '',
+    urgency: '',
+    fieldOfView: '',
+  });
 
   useEffect(() => {
     fetchCases();
@@ -139,8 +148,46 @@ export default function ReporterDashboard() {
     }
   }
 
-  const pendingCases = cases.filter(c => c.status === 'uploaded' || c.status === 'in_progress');
-  const completedCases = cases.filter(c => c.status === 'report_ready');
+  // Filter cases based on search criteria
+  const filteredCases = useMemo(() => {
+    return cases.filter(caseData => {
+      // Patient name filter
+      if (searchFilters.patientName && 
+          !caseData.patient_name.toLowerCase().includes(searchFilters.patientName.toLowerCase())) {
+        return false;
+      }
+
+      // Patient ID filter
+      if (searchFilters.patientId && 
+          !caseData.patient_id.toLowerCase().includes(searchFilters.patientId.toLowerCase())) {
+        return false;
+      }
+
+      // Date range filter
+      const caseDate = new Date(caseData.created_at);
+      if (searchFilters.dateFrom && caseDate < new Date(searchFilters.dateFrom)) {
+        return false;
+      }
+      if (searchFilters.dateTo && caseDate > new Date(searchFilters.dateTo)) {
+        return false;
+      }
+
+      // Urgency filter
+      if (searchFilters.urgency && caseData.urgency !== searchFilters.urgency) {
+        return false;
+      }
+
+      // Field of view filter
+      if (searchFilters.fieldOfView && caseData.field_of_view !== searchFilters.fieldOfView) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [cases, searchFilters]);
+
+  const pendingCases = filteredCases.filter(c => c.status === 'uploaded' || c.status === 'in_progress');
+  const completedCases = filteredCases.filter(c => c.status === 'report_ready');
 
   if (loading) {
     return (
@@ -153,6 +200,18 @@ export default function ReporterDashboard() {
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Reporter Dashboard</h1>
+
+      <CaseSearchFilters 
+        onFilterChange={setSearchFilters}
+        onReset={() => setSearchFilters({
+          patientName: '',
+          patientId: '',
+          dateFrom: '',
+          dateTo: '',
+          urgency: '',
+          fieldOfView: '',
+        })}
+      />
 
       <Tabs defaultValue="pending" className="w-full">
         <TabsList>
