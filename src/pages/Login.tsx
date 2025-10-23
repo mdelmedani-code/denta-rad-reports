@@ -18,6 +18,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signIn } = useAuth();
@@ -42,7 +43,7 @@ const Login = () => {
 
       if (roleData?.role === 'admin') {
         // Send admins to admin area to prevent /login <> /dashboard loop
-        navigate("/admin");
+        navigate("/reporter", { replace: true });
         return;
       }
 
@@ -52,6 +53,15 @@ const Login = () => {
     };
     checkUser();
   }, [navigate]);
+
+  // Ensure the login page waits for initial auth state to settle
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().finally(() => {
+      if (mounted) setIsCheckingAuth(false);
+    });
+    return () => { mounted = false; };
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +109,7 @@ const Login = () => {
           title: "Login successful",
           description: "Welcome back!",
         });
-        navigate(roleData?.role === 'admin' ? "/admin" : "/dashboard");
+        navigate(roleData?.role === 'admin' ? "/reporter" : "/dashboard", { replace: true });
       }
     } catch (error: any) {
       setError(error.message || "An error occurred");
@@ -129,6 +139,14 @@ const Login = () => {
       setError(error.message || "An error occurred");
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
