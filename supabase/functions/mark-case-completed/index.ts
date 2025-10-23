@@ -160,6 +160,46 @@ serve(async (req) => {
 
     console.log('Case marked as completed successfully');
 
+    // 11. Get clinic user email to send notification
+    const { data: clinicData, error: clinicError } = await supabaseClient
+      .from('clinics')
+      .select('id')
+      .eq('id', caseData.clinic_id)
+      .single();
+
+    if (!clinicError && clinicData) {
+      // Get clinic user profile
+      const { data: profileData } = await supabaseClient
+        .from('profiles')
+        .select('id, email')
+        .eq('clinic_id', clinicData.id)
+        .single();
+
+      if (profileData) {
+        console.log('Sending notification to clinic user:', profileData.email);
+        
+        // Send notification via edge function
+        try {
+          await supabaseClient.functions.invoke('send-notification', {
+            body: {
+              type: 'report_ready',
+              recipientId: profileData.id,
+              data: {
+                caseId: caseId,
+                patientName: caseData.patient_name,
+                patientId: caseData.patient_id,
+                clinicalQuestion: caseData.clinical_question,
+              },
+            },
+          });
+          console.log('Email notification sent successfully');
+        } catch (notifError) {
+          console.warn('Failed to send email notification:', notifError);
+          // Don't fail the request if email fails
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

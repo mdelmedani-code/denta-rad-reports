@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  type: 'new_case' | 'status_change' | 'urgent_case' | 'daily_summary';
+  type: 'new_case' | 'status_change' | 'urgent_case' | 'daily_summary' | 'report_ready';
   recipientId: string;
   data: {
     caseId?: string;
@@ -23,6 +23,7 @@ interface NotificationRequest {
     newStatus?: string;
     urgency?: string;
     clinicalQuestion?: string;
+    patientId?: string;
   };
 }
 
@@ -101,6 +102,21 @@ const handler = async (req: Request): Promise<Response> => {
           <p><strong>Clinical Question:</strong> ${data.clinicalQuestion}</p>
           <p style="color: #dc2626; font-weight: bold;">This case requires immediate attention.</p>
           <p><a href="${supabaseUrl.replace('/rest/v1', '')}/admin" style="background-color: #dc2626; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Immediately</a></p>
+        `;
+        break;
+
+      case 'report_ready':
+        subject = `Report Ready: ${data.patientName}`;
+        htmlContent = `
+          <h2>Your CBCT Report is Ready</h2>
+          <p>The diagnostic report for the following case is now available:</p>
+          <p><strong>Patient:</strong> ${data.patientName}</p>
+          ${data.patientId ? `<p><strong>Patient ID:</strong> ${data.patientId}</p>` : ''}
+          ${data.clinicalQuestion ? `<p><strong>Clinical Question:</strong> ${data.clinicalQuestion}</p>` : ''}
+          <p>Please log in to your DentaRad portal to securely download the report.</p>
+          <p><a href="${supabaseUrl.replace('/rest/v1', '')}/login" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Log In to Portal</a></p>
+          <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="font-size: 12px; color: #6b7280;">For security and compliance, reports are only accessible through the secure portal. Please do not forward this email to unauthorized parties.</p>
         `;
         break;
 
