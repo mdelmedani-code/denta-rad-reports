@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Dropbox } from 'https://esm.sh/dropbox@10.34.0';
-import dcmjs from 'https://esm.sh/dcmjs@0.29.7';
+import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,72 +75,40 @@ serve(async (req) => {
     const reportBasePath = `/DentaRad/Reports/${folderName}`;
     console.log('Creating uploads folder:', uploadBasePath);
 
-    // 6. Generate DICOM Structured Report
-    console.log('Generating DICOM SR...');
-    const referralData = {
-      simpleId: simpleId,
-      patientName: caseData.patient_name,
-      patientDOB: caseData.patient_dob,
-      patientID: caseData.patient_id || simpleId,
-      clinicalQuestion: caseData.clinical_question,
-      fieldOfView: caseData.field_of_view,
-      urgency: caseData.urgency,
-      referringDentist: caseData.referring_dentist,
-      clinicName: clinicName,
-      studyDate: new Date().toISOString().split('T')[0].replace(/-/g, ''),
-      studyTime: new Date().toTimeString().split(' ')[0].replace(/:/g, ''),
-      folderName: folderName,
-      existingStudyInstanceUID: caseData.dicom_metadata?.studyInstanceUID || undefined,
-    };
-    
-    const dicomSR = await createDICOMStructuredReport(referralData);
-    
-    // Validate the generated SR
-    const validation = validateDICOMSR({
-      SOPClassUID: '1.2.840.10008.5.1.4.1.1.88.11',
-      SOPInstanceUID: generateDICOMUID(),
-      PatientName: referralData.patientName,
-      PatientID: referralData.patientID,
-      StudyInstanceUID: referralData.existingStudyInstanceUID || generateDICOMUID(),
-      SeriesInstanceUID: generateDICOMUID(),
-      Modality: 'SR',
-      StudyDate: referralData.studyDate,
-      StudyTime: referralData.studyTime,
-      ContentDate: referralData.studyDate,
-      ContentTime: referralData.studyTime,
-    });
-    
-    if (!validation.valid) {
-      console.error('SR validation failed:', validation.errors);
-      
-      // Update case with validation errors
-      await supabaseClient
-        .from('cases')
-        .update({
-          sr_validated: false,
-          sr_validation_errors: { errors: validation.errors },
-        })
-        .eq('id', caseId);
-    } else {
-      console.log('SR validation passed');
-      
-      // Mark SR as validated
-      await supabaseClient
-        .from('cases')
-        .update({
-          sr_validated: true,
-          sr_validation_errors: null,
-        })
-        .eq('id', caseId);
-    }
+    // 6. Create simple text-based referral info (DICOM SR removed due to complexity)
+    console.log('Creating referral information text file...');
+    const simpleReferralText = `CBCT SCAN REFERRAL INFORMATION
+═══════════════════════════════════════════════════════════════════
+
+PATIENT INFORMATION:
+  Name: ${caseData.patient_name}
+  ID: ${caseData.patient_id || `CASE-${String(simpleId).padStart(7, '0')}`}
+  Date of Birth: ${caseData.patient_dob || 'Not provided'}
+
+CLINICAL DETAILS:
+  Clinical Question: ${caseData.clinical_question}
+  Field of View: ${caseData.field_of_view}
+  Urgency: ${caseData.urgency}
+  Referring Dentist: ${caseData.referring_dentist || 'N/A'}
+  Clinic: ${clinicName}
+
+CASE DETAILS:
+  Case ID: ${caseId}
+  Simple ID: ${simpleId}
+  Folder Name: ${folderName}
+  Upload Date: ${new Date(caseData.created_at).toLocaleString()}
+  Generated: ${new Date().toISOString()}
+
+═══════════════════════════════════════════════════════════════════
+`;
 
     await dbx.filesUpload({
-      path: `${uploadBasePath}/REFERRAL-INFO.dcm`,
-      contents: dicomSR,
+      path: `${uploadBasePath}/REFERRAL-INFO.txt`,
+      contents: new TextEncoder().encode(simpleReferralText),
       mode: { '.tag': 'add' },
       autorename: false,
     });
-    console.log('DICOM SR uploaded');
+    console.log('Referral info text file uploaded');
 
     // 7. Generate and upload cover sheet PDF
     console.log('Generating PDF cover sheet...');
@@ -190,14 +158,14 @@ Uploaded: ${new Date(caseData.created_at).toLocaleString()}
 ═══════════════════════════════════════════════════════════════════
 
 REFERRAL INFO AVAILABLE IN:
-1. REFERRAL-INFO.txt - Quick reference (opens in any text editor)
+1. REFERRAL-INFO.txt - Patient and clinical information
 2. cover-sheet.pdf - PDF document (for printing/emailing)
 3. referral-info.txt - Detailed instructions (this file)
 
 INSTRUCTIONS FOR REPORTER:
 1. Download this folder from Dropbox
-2. Import to FalconMD (folder contains DICOM SR + images)
-3. FalconMD will show clinical info alongside images
+2. Import DICOM images to FalconMD
+3. Review clinical information from REFERRAL-INFO.txt or cover-sheet.pdf
 4. Create diagnostic report in FalconMD
 5. Export report PDF from FalconMD
 6. Save report to: /DentaRad/Reports/${folderName}/report.pdf
@@ -232,7 +200,7 @@ IMPORTANT: Report filename MUST be exactly "report.pdf" (lowercase)
       clinicId: caseData.clinic_id,
       clinicName: clinicName,
       uploadPath: `${uploadBasePath}/scan.zip`,
-      dicomSRPath: `${uploadBasePath}/REFERRAL-INFO.dcm`,
+      referralInfoPath: `${uploadBasePath}/REFERRAL-INFO.txt`,
       pdfCoverSheetPath: `${uploadBasePath}/cover-sheet.pdf`,
       reportPath: `/DentaRad/Reports/${folderName}/report.pdf`
     };
@@ -275,9 +243,9 @@ Referring Dentist: ${caseData.referring_dentist || 'N/A'}
 Uploaded: ${new Date(caseData.created_at).toLocaleString()}
 
 REFERRAL INFO AVAILABLE IN:
-• /Uploads/${folderName}/REFERRAL-INFO.dcm (DICOM - opens in FalconMD)
+• /Uploads/${folderName}/REFERRAL-INFO.txt (Text file - quick reference)
 • /Uploads/${folderName}/cover-sheet.pdf (PDF - for printing)
-• /Uploads/${folderName}/referral-info.txt (Text - quick reference)
+• /Uploads/${folderName}/referral-info.txt (Detailed instructions)
 
 ═══════════════════════════════════════════════════════════════════
 
@@ -321,13 +289,13 @@ The webapp will look for this EXACT path. Any other filename will not work!
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Case synced to Dropbox with DICOM SR and auto-generated folders',
+        message: 'Case synced to Dropbox with referral info and auto-generated folders',
         folderName: folderName,
         simpleId: caseData.simple_id,
         uploadsPath: uploadBasePath,
         reportsPath: reportBasePath,
         dropbox_scan_path: dropboxPath,
-        dicomSRCreated: true,
+        referralInfoCreated: true,
         pdfCreated: true,
       }),
       {
@@ -349,56 +317,6 @@ The webapp will look for this EXACT path. Any other filename will not work!
     );
   }
 });
-
-// ============================================================================
-// HELPER: Validate DICOM SR
-// ============================================================================
-function validateDICOMSR(dataset: any): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  
-  // Required DICOM SR fields
-  const required = [
-    { key: 'SOPClassUID', name: 'SOPClassUID' },
-    { key: 'SOPInstanceUID', name: 'SOPInstanceUID' },
-    { key: 'PatientName', name: 'PatientName' },
-    { key: 'PatientID', name: 'PatientID' },
-    { key: 'StudyInstanceUID', name: 'StudyInstanceUID' },
-    { key: 'SeriesInstanceUID', name: 'SeriesInstanceUID' },
-    { key: 'Modality', name: 'Modality' },
-  ];
-
-  for (const field of required) {
-    if (!dataset[field.key]) {
-      errors.push(`Missing required field: ${field.name}`);
-    }
-  }
-
-  // Validate SR specific fields
-  if (dataset.Modality && dataset.Modality !== 'SR') {
-    errors.push('Modality must be SR for structured reports');
-  }
-
-  // Validate date formats (YYYYMMDD)
-  const dateFields = ['StudyDate', 'ContentDate'];
-  for (const field of dateFields) {
-    if (dataset[field] && !/^\d{8}$/.test(dataset[field])) {
-      errors.push(`Invalid date format for ${field}: must be YYYYMMDD`);
-    }
-  }
-
-  // Validate time formats (HHMMSS)
-  const timeFields = ['StudyTime', 'ContentTime'];
-  for (const field of timeFields) {
-    if (dataset[field] && !/^\d{6}(\.\d{1,6})?$/.test(dataset[field])) {
-      errors.push(`Invalid time format for ${field}: must be HHMMSS[.ffffff]`);
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors
-  };
-}
 
 // ============================================================================
 // HELPER: Generate folder name from patient name and ID
@@ -426,106 +344,6 @@ function generateFolderName(patientName: string, simpleId: number): string {
   const idFormatted = String(simpleId).padStart(5, '0');
 
   return `${lastName}_${firstName}_${idFormatted}`;
-}
-
-// ============================================================================
-// HELPER: Create DICOM Structured Report
-// ============================================================================
-async function createDICOMStructuredReport(referralData: any): Promise<Uint8Array> {
-  const { DicomMetaDictionary, DicomDict } = dcmjs.data;
-
-  const studyInstanceUID = referralData.existingStudyInstanceUID || generateDICOMUID();
-  const seriesInstanceUID = generateDICOMUID();
-  const sopInstanceUID = generateDICOMUID();
-
-  const now = new Date();
-  const studyDate = referralData.studyDate || now.toISOString().slice(0, 10).replace(/-/g, '');
-  const studyTime = referralData.studyTime || now.toTimeString().slice(0, 8).replace(/:/g, '');
-
-  // Build a valid Basic Text SR (Part 3, A.35.1) using naturalized dataset
-  const natural: any = {
-    SpecificCharacterSet: ['ISO_IR 100'],
-    SOPClassUID: '1.2.840.10008.5.1.4.1.1.88.11',
-    SOPInstanceUID: sopInstanceUID,
-    StudyInstanceUID: studyInstanceUID,
-    SeriesInstanceUID: seriesInstanceUID,
-    StudyDate: studyDate,
-    StudyTime: studyTime,
-    ContentDate: studyDate,
-    ContentTime: studyTime,
-    Modality: 'SR',
-    AccessionNumber: String(referralData.simpleId),
-    StudyID: String(referralData.simpleId),
-    SeriesNumber: 999,
-    InstanceNumber: 1,
-    SeriesDescription: 'Referral Information',
-    PatientName: { Alphabetic: referralData.patientName || 'UNKNOWN' },
-    PatientID: referralData.patientID || String(referralData.simpleId),
-    PatientBirthDate: referralData.patientDOB ? referralData.patientDOB.replace(/-/g, '') : undefined,
-    CompletionFlag: 'COMPLETE',
-    VerificationFlag: 'UNVERIFIED',
-    ContinuityOfContent: 'SEPARATE',
-    ContentSequence: [
-      {
-        ValueType: 'CONTAINER',
-        ConceptNameCodeSequence: [
-          { CodeValue: '121113', CodingSchemeDesignator: 'DCM', CodeMeaning: 'Imaging Report' },
-        ],
-        ContentSequence: [
-          {
-            RelationshipType: 'CONTAINS',
-            ValueType: 'TEXT',
-            ConceptNameCodeSequence: [
-              { CodeValue: '121106', CodingSchemeDesignator: 'DCM', CodeMeaning: 'Indications for Procedure' },
-            ],
-            TextValue: referralData.clinicalQuestion || 'N/A',
-          },
-          {
-            RelationshipType: 'CONTAINS',
-            ValueType: 'TEXT',
-            ConceptNameCodeSequence: [
-              { CodeValue: '121008', CodingSchemeDesignator: 'DCM', CodeMeaning: 'Patient Clinical Information' },
-            ],
-            TextValue: `Field of View: ${referralData.fieldOfView}; Urgency: ${String(referralData.urgency).toUpperCase()}; Referring Dentist: ${referralData.referringDentist || 'N/A'}; Clinic: ${referralData.clinicName || 'N/A'}`,
-          },
-        ],
-      },
-    ],
-  };
-
-  // Remove undefined properties to keep dataset clean
-  Object.keys(natural).forEach((k) => (natural[k] === undefined ? delete natural[k] : undefined));
-
-  // Denaturalize and write Part 10 file
-  const denat = DicomMetaDictionary.denaturalizeDataset(natural);
-  const meta = DicomMetaDictionary.createMeta(denat);
-  const dict = new DicomDict(meta);
-  dict.dict = denat;
-  const part10 = dict.write();
-  return new Uint8Array(part10);
-}
-
-function createTextContentItem(conceptCode: string, conceptName: string, textValue: string) {
-  return {
-    '0040A010': { vr: 'CS', Value: ['TEXT'] },
-    '0040A040': { vr: 'CS', Value: ['SEPARATE'] },
-    '0040A043': { 
-      vr: 'SQ', 
-      Value: [{
-        '00080100': { vr: 'SH', Value: [conceptCode] },
-        '00080102': { vr: 'SH', Value: ['DentaRad'] },
-        '00080104': { vr: 'LO', Value: [conceptName] },
-      }]
-    },
-    '0040A160': { vr: 'UT', Value: [textValue] },
-  };
-}
-
-function generateDICOMUID(): string {
-  const root = '1.2.826.0.1.3680043.10.474';
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000000);
-  return `${root}.${timestamp}.${random}`;
 }
 
 // ============================================================================
