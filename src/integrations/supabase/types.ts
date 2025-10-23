@@ -38,39 +38,6 @@ export type Database = {
         }
         Relationships: []
       }
-      backup_monitoring: {
-        Row: {
-          backup_date: string | null
-          backup_type: string
-          created_at: string | null
-          error_message: string | null
-          file_count: number | null
-          id: string
-          status: string
-          total_size: number | null
-        }
-        Insert: {
-          backup_date?: string | null
-          backup_type: string
-          created_at?: string | null
-          error_message?: string | null
-          file_count?: number | null
-          id?: string
-          status: string
-          total_size?: number | null
-        }
-        Update: {
-          backup_date?: string | null
-          backup_type?: string
-          created_at?: string | null
-          error_message?: string | null
-          file_count?: number | null
-          id?: string
-          status?: string
-          total_size?: number | null
-        }
-        Relationships: []
-      }
       case_annotations: {
         Row: {
           annotation_data: Json
@@ -246,39 +213,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
-        }
-        Relationships: []
-      }
-      data_retention_policies: {
-        Row: {
-          archive_after_days: number | null
-          compliance_standard: string | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          resource_type: string
-          retention_days: number
-          updated_at: string | null
-        }
-        Insert: {
-          archive_after_days?: number | null
-          compliance_standard?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          resource_type: string
-          retention_days: number
-          updated_at?: string | null
-        }
-        Update: {
-          archive_after_days?: number | null
-          compliance_standard?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          resource_type?: string
-          retention_days?: number
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -526,42 +460,6 @@ export type Database = {
           id?: string
           report_id?: string
           share_token?: string
-        }
-        Relationships: []
-      }
-      report_templates: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          indication_type: string
-          is_active: boolean | null
-          name: string
-          sections: Json
-          template_content: Json
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          indication_type: string
-          is_active?: boolean | null
-          name: string
-          sections?: Json
-          template_content: Json
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          indication_type?: string
-          is_active?: boolean | null
-          name?: string
-          sections?: Json
-          template_content?: Json
-          updated_at?: string | null
         }
         Relationships: []
       }
