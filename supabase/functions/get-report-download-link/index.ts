@@ -58,7 +58,7 @@ serve(async (req) => {
       profile.role === 'reporter' || 
       profile.clinic_id === caseData.clinic_id;
 
-    if (!isAuthorized) throw new Error('Forbidden - cannot access other clinic's reports');
+    if (!isAuthorized) throw new Error("Forbidden - cannot access other clinic's reports");
 
     console.log('[get-report-download-link] ✅ Clinic authorized');
 
