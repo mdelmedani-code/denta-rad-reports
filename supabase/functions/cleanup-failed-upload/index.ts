@@ -30,21 +30,31 @@ serve(async (req) => {
 
     console.log('[cleanup-failed-upload] Cleaning case:', caseId);
 
-    // ✅ ENHANCEMENT 4: Log cleanup action for GDPR audit trail
+    // ✅ FIX #3: Log cleanup action for GDPR audit trail (direct table insert)
     try {
-      await supabase.from('security_audit_log').insert({
-        user_id: user.id,
-        action: 'delete_case',
-        table_name: 'case',
-        details: {
-          case_id: caseId,
-          reason: 'upload_failed',
-          dropbox_paths: dropboxPaths,
-          storage_path: storagePath,
-          cleanup_timestamp: new Date().toISOString()
-        }
-      });
-      console.log('[cleanup-failed-upload] ✅ Audit log created');
+      const { error: auditError } = await supabase
+        .from('security_audit_log')
+        .insert({
+          user_id: user.id,
+          action: 'delete_case',
+          table_name: 'cases',
+          details: {
+            resource_id: caseId,
+            reason: 'upload_failed_rollback',
+            dropbox_paths_provided: dropboxPaths ? true : false,
+            storage_path_provided: storagePath ? true : false,
+            cleanup_timestamp: new Date().toISOString()
+          },
+          ip_address: req.headers.get('x-forwarded-for') || null,
+          user_agent: req.headers.get('user-agent') || null
+        });
+      
+      if (auditError) {
+        console.error('[cleanup-failed-upload] ⚠️ Failed to create audit log:', auditError);
+        // Don't fail cleanup if audit logging fails
+      } else {
+        console.log('[cleanup-failed-upload] ✅ Audit log created');
+      }
     } catch (auditError) {
       console.error('[cleanup-failed-upload] Failed to log audit:', auditError);
       // Continue with cleanup even if audit fails

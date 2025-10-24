@@ -30,7 +30,7 @@ serve(async (req) => {
 
     const body = await req.json();
 
-    // ✅ ENHANCEMENT 1: Check rate limiting (20 uploads per hour per CLINIC)
+    // ✅ FIX #1: Check rate limiting (20 uploads per hour per CLINIC, not user)
     console.log('[prepare-case-upload] Checking rate limit for clinic:', body.clinicId);
     
     const { data: rateLimitOk, error: rateLimitError } = await supabase.rpc(
@@ -39,20 +39,27 @@ serve(async (req) => {
     );
 
     if (rateLimitError) {
-      console.error('[prepare-case-upload] Rate limit check error:', rateLimitError);
-      throw new Error('Failed to check rate limit');
-    }
-
-    if (!rateLimitOk) {
-      console.warn('[prepare-case-upload] Rate limit exceeded for clinic:', body.clinicId);
+      console.error('[prepare-case-upload] Rate limit check failed:', rateLimitError);
+      // Don't fail upload if rate limit check errors (fail open)
+      console.warn('[prepare-case-upload] Proceeding with upload despite rate limit error');
+    } else if (rateLimitOk === false) {
+      console.warn('[prepare-case-upload] ⚠️ Rate limit exceeded for clinic:', body.clinicId);
       return new Response(
         JSON.stringify({
           error: {
             code: 'RATE_LIMIT_EXCEEDED',
-            message: 'Upload limit exceeded. Your clinic can upload maximum 20 cases per hour. Please try again later.'
+            message: 'Upload limit exceeded. Your clinic can upload a maximum of 20 cases per hour. Please try again later.',
+            retry_after: '1 hour'
           }
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          status: 429, // HTTP 429 Too Many Requests
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': '3600' // 1 hour in seconds
+          }
+        }
       );
     }
 
@@ -174,21 +181,6 @@ serve(async (req) => {
       newCase = insertedCase;
       console.log('[prepare-case-upload] ✅ Case created:', newCase.id);
 
-      // ✅ ENHANCEMENT 1: Record upload for rate limiting
-      try {
-        await supabase
-          .from('upload_rate_limits')
-          .insert({
-            user_id: user.id,
-            file_size: body.fileSize,
-            file_type: 'dicom_zip'
-          });
-        console.log('[prepare-case-upload] ✅ Upload recorded for rate limiting');
-      } catch (rateLimitRecordError) {
-        console.error('[prepare-case-upload] Failed to record upload:', rateLimitRecordError);
-        // Continue anyway - not critical
-      }
-
     } finally {
       // Always release lock
       console.log('[prepare-case-upload] Releasing lock...');
@@ -233,25 +225,25 @@ serve(async (req) => {
   }
 });
 
-// ✅ FIX 5 + ENHANCEMENT 3: Sanitization functions (now allows numbers)
+// ✅ FIX #5: Patient name sanitization with proper validation
 function sanitizePatientName(name: string): string {
   const cleaned = name
     .trim()
     .toUpperCase()
     .normalize('NFD') // Decompose accented characters (Müller → Muller)
     .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-    .replace(/[^A-Z0-9\s\-']/g, '') // ✅ ENHANCEMENT 3: Allow numbers (e.g., "JOHN II")
+    .replace(/[^A-Z0-9\s\-']/g, '') // Allow numbers (e.g., "JOHN II")
     .replace(/'+/g, "'") // Collapse multiple apostrophes
     .replace(/-+/g, "-") // Collapse multiple hyphens
     .replace(/\s+/g, ' ') // Collapse multiple spaces
     .substring(0, 50); // Limit length
   
-  // ✅ Check for empty string first
+  // ✅ FIX #5: Check for empty string FIRST (catches "!!!" → "")
   if (!cleaned || cleaned.length === 0) {
-    throw new Error('Patient name cannot be empty');
+    throw new Error('Patient name cannot be empty after sanitization');
   }
   
-  // ✅ Ensure at least 1 letter
+  // ✅ Ensure at least 1 letter (catches "123" with no letters)
   if (!/[A-Z]/.test(cleaned)) {
     throw new Error('Patient name must contain at least one letter');
   }

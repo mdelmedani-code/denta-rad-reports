@@ -39,7 +39,7 @@ serve(async (req) => {
 
     console.log('[monitor-system-health] Admin verified:', user.id);
 
-    // Run health checks directly
+    // ✅ FIX #4: Run health checks directly (no RPC calls)
     const healthIssues: any[] = [];
 
     // Check 1: Orphaned uploads (created but never completed, >24h)
@@ -133,7 +133,7 @@ serve(async (req) => {
     const totalIssues = criticalIssues + highIssues + mediumIssues + lowIssues;
     const systemHealthy = totalIssues === 0;
 
-    // Only send notification for critical or high severity issues (not medium/low)
+    // ✅ FIX #4: Only send notification for critical or high severity issues (not medium/low)
     if (criticalIssues > 0 || highIssues > 0) {
       console.log('[monitor-system-health] ⚠️ Critical/High issues detected, sending alert...');
       
