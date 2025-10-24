@@ -6,6 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Health check thresholds (named constants for maintainability)
+const HEALTH_THRESHOLDS = {
+  ORPHANED_HOURS: 24,        // Cases with incomplete uploads
+  STALE_HOURS: 1,            // Uploaded but not synced to Dropbox
+  UNPROCESSED_HOURS: 48,     // Still in uploaded status
+  FAILED_SYNC_DAYS: 7        // Lookback window for sync warnings
+} as const;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -39,75 +47,61 @@ serve(async (req) => {
 
     console.log('[monitor-system-health] Admin verified:', user.id);
 
-    // ✅ FIX #4: Run health checks directly (no RPC calls)
+    // ✅ FIX #4 + PERFORMANCE OPTIMIZATION: Single optimized query for all health checks
+    console.log('[monitor-system-health] Running health metrics query...');
+    const { data: metricsData, error: metricsError } = await supabase
+      .rpc('get_health_metrics');
+
+    if (metricsError) {
+      console.error('[monitor-system-health] Metrics query failed:', metricsError);
+      throw new Error(`Health metrics query failed: ${metricsError.message}`);
+    }
+
+    console.log('[monitor-system-health] Metrics retrieved:', metricsData);
+
     const healthIssues: any[] = [];
 
-    // Check 1: Orphaned uploads (created but never completed, >24h)
-    const { data: orphanedUploads, error: orphanError } = await supabase
-      .from('cases')
-      .select('id, folder_name, created_at')
-      .eq('upload_completed', false)
-      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-    if (!orphanError && orphanedUploads && orphanedUploads.length > 0) {
+    // Check 1: Orphaned uploads
+    if (metricsData.orphaned_uploads?.total_count > 0) {
       healthIssues.push({
         type: 'orphaned_uploads',
         severity: 'medium',
-        count: orphanedUploads.length,
-        message: `${orphanedUploads.length} cases with incomplete uploads (>24 hours)`,
-        cases: orphanedUploads.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name }))
+        count: metricsData.orphaned_uploads.total_count,
+        message: `${metricsData.orphaned_uploads.total_count} cases with incomplete uploads (>${HEALTH_THRESHOLDS.ORPHANED_HOURS} hours)`,
+        cases: metricsData.orphaned_uploads.cases || []
       });
     }
 
-    // Check 2: Failed syncs (cases with sync warnings)
-    const { data: failedSyncs, error: syncError } = await supabase
-      .from('cases')
-      .select('id, folder_name, sync_warnings')
-      .not('sync_warnings', 'is', null)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-    if (!syncError && failedSyncs && failedSyncs.length > 0) {
+    // Check 2: Failed syncs
+    if (metricsData.failed_syncs?.total_count > 0) {
       healthIssues.push({
         type: 'failed_syncs',
         severity: 'medium',
-        count: failedSyncs.length,
-        message: `${failedSyncs.length} cases with sync warnings in last 7 days`,
-        cases: failedSyncs.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name, warning: c.sync_warnings }))
+        count: metricsData.failed_syncs.total_count,
+        message: `${metricsData.failed_syncs.total_count} cases with sync warnings in last ${HEALTH_THRESHOLDS.FAILED_SYNC_DAYS} days`,
+        cases: metricsData.failed_syncs.cases || []
       });
     }
 
-    // Check 3: Stale cases (uploaded but not synced >1h)
-    const { data: staleCases, error: staleError } = await supabase
-      .from('cases')
-      .select('id, folder_name, created_at')
-      .eq('synced_to_dropbox', false)
-      .eq('status', 'uploaded')
-      .lt('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
-
-    if (!staleError && staleCases && staleCases.length > 0) {
+    // Check 3: Stale cases
+    if (metricsData.stale_cases?.total_count > 0) {
       healthIssues.push({
         type: 'stale_cases',
         severity: 'low',
-        count: staleCases.length,
-        message: `${staleCases.length} cases uploaded but not synced (>1 hour)`,
-        cases: staleCases.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name }))
+        count: metricsData.stale_cases.total_count,
+        message: `${metricsData.stale_cases.total_count} cases uploaded but not synced (>${HEALTH_THRESHOLDS.STALE_HOURS} hour)`,
+        cases: metricsData.stale_cases.cases || []
       });
     }
 
-    // Check 4: Unprocessed uploads (>48h still uploaded status)
-    const { data: unprocessedCases, error: unprocessedError } = await supabase
-      .from('cases')
-      .select('id, folder_name, created_at')
-      .eq('status', 'uploaded')
-      .lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
-
-    if (!unprocessedError && unprocessedCases && unprocessedCases.length > 0) {
+    // Check 4: Unprocessed uploads
+    if (metricsData.unprocessed_uploads?.total_count > 0) {
       healthIssues.push({
         type: 'unprocessed_uploads',
         severity: 'high',
-        count: unprocessedCases.length,
-        message: `${unprocessedCases.length} cases uploaded >48 hours ago still not processed`,
-        cases: unprocessedCases.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name }))
+        count: metricsData.unprocessed_uploads.total_count,
+        message: `${metricsData.unprocessed_uploads.total_count} cases uploaded >${HEALTH_THRESHOLDS.UNPROCESSED_HOURS} hours ago still not processed`,
+        cases: metricsData.unprocessed_uploads.cases || []
       });
     }
 

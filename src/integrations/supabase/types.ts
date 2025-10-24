@@ -709,6 +709,7 @@ export type Database = {
       get_backup_codes: { Args: { p_user_id: string }; Returns: Json }
       get_current_user_clinic: { Args: never; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
+      get_health_metrics: { Args: never; Returns: Json }
       get_monthly_income_stats: {
         Args: never
         Returns: {
