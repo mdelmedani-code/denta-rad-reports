@@ -40,72 +40,130 @@ serve(async (req) => {
       }
     }
 
-    const firstName = body.patientFirstName.trim().toUpperCase();
-    const lastName = body.patientLastName.trim().toUpperCase();
+    // ✅ FIX 4: Sanitize patient names
+    const firstName = sanitizePatientName(body.patientFirstName);
+    const lastName = sanitizePatientName(body.patientLastName);
 
-    console.log('[prepare-case-upload] Patient:', lastName, firstName);
+    console.log('[prepare-case-upload] Processing case for patient');
 
-    // Get highest counter for this patient
-    const { data: existingCases, error: queryError } = await supabase
-      .from('cases')
-      .select('folder_name')
-      .eq('patient_last_name', lastName)
-      .eq('patient_first_name', firstName)
-      .order('created_at', { ascending: false });
+    // ✅ FIX 1: Retry logic for race condition
+    const maxAttempts = 5;
+    let attempts = 0;
+    let newCase = null;
+    let folderName = '';
+    let scanPath = '';
+    let reportPath = '';
 
-    if (queryError) throw new Error('Failed to query existing cases');
+    while (attempts < maxAttempts) {
+      try {
+        // Get highest counter for this patient
+        const { data: existingCases, error: queryError } = await supabase
+          .from('cases')
+          .select('folder_name')
+          .eq('patient_last_name', lastName)
+          .eq('patient_first_name', firstName)
+          .order('created_at', { ascending: false });
 
-    let maxCounter = 0;
-    if (existingCases && existingCases.length > 0) {
-      for (const c of existingCases) {
-        const match = c.folder_name?.match(/_(\d{5})$/);
-        if (match) {
-          const counter = parseInt(match[1], 10);
-          if (counter > maxCounter) maxCounter = counter;
+        if (queryError) throw new Error('Failed to query existing cases');
+
+        let maxCounter = 0;
+        if (existingCases && existingCases.length > 0) {
+          for (const c of existingCases) {
+            const match = c.folder_name?.match(/_(\d{5})$/);
+            if (match) {
+              const counter = parseInt(match[1], 10);
+              if (counter > maxCounter) maxCounter = counter;
+            }
+          }
         }
+
+        const newCounter = maxCounter + 1;
+        const paddedCounter = String(newCounter).padStart(5, '0');
+        folderName = `${lastName}_${firstName}_${paddedCounter}`;
+
+        console.log('[prepare-case-upload] Attempting folder name:', folderName);
+
+        scanPath = `/DentaRad/Uploads/${folderName}/`;
+        reportPath = `/DentaRad/Reports/${folderName}/`;
+
+        // Try to insert with this folder name
+        const { data: insertedCase, error: insertError } = await supabase
+          .from('cases')
+          .insert({
+            clinic_id: body.clinicId,
+            patient_first_name: firstName,
+            patient_last_name: lastName,
+            patient_id: body.patientId.trim(),
+            patient_dob: body.patientDob,
+            clinical_question: body.clinicalQuestion,
+            field_of_view: body.fieldOfView,
+            urgency: body.urgency,
+            folder_name: folderName,
+            dropbox_scan_path: scanPath,
+            dropbox_report_path: reportPath,
+            status: 'uploaded',
+            synced_to_dropbox: false,
+            upload_completed: false
+          })
+          .select('id')
+          .single();
+
+        // Check for unique constraint violation
+        if (insertError?.code === '23505') {
+          console.log('[prepare-case-upload] Folder name conflict, retrying...', attempts + 1);
+          attempts++;
+          continue; // Retry with incremented counter
+        }
+
+        if (insertError) throw insertError;
+
+        newCase = insertedCase;
+        break; // Success!
+
+      } catch (error) {
+        if (error.code === '23505' && attempts < maxAttempts - 1) {
+          attempts++;
+          continue;
+        }
+        throw error;
       }
     }
 
-    const newCounter = maxCounter + 1;
-    const paddedCounter = String(newCounter).padStart(5, '0');
-    const folderName = `${lastName}_${firstName}_${paddedCounter}`;
-
-    console.log('[prepare-case-upload] Generated folder name:', folderName);
-
-    const scanPath = `/DentaRad/Uploads/${folderName}/`;
-    const reportPath = `/DentaRad/Reports/${folderName}/`;
-    const uploadPath = `${scanPath}scan.zip`;
-
-    // Get Dropbox access token
-    const dropboxToken = await getDropboxAccessToken();
-    
-    console.log('[prepare-case-upload] Dropbox token acquired');
-
-    // Create case record
-    const { data: newCase, error: insertError } = await supabase
-      .from('cases')
-      .insert({
-        clinic_id: body.clinicId,
-        patient_first_name: firstName,
-        patient_last_name: lastName,
-        patient_name: `${firstName} ${lastName}`,
-        patient_id: body.patientId.trim(),
-        patient_dob: body.patientDob,
-        clinical_question: body.clinicalQuestion,
-        field_of_view: body.fieldOfView,
-        urgency: body.urgency,
-        folder_name: folderName,
-        dropbox_scan_path: scanPath,
-        dropbox_report_path: reportPath,
-        status: 'uploaded',
-        synced_to_dropbox: false
-      })
-      .select('id')
-      .single();
-
-    if (insertError) throw new Error('Failed to create case record');
+    if (!newCase) {
+      throw new Error('Failed to generate unique folder name after multiple attempts');
+    }
 
     console.log('[prepare-case-upload] Case created:', newCase.id);
+
+    // ✅ FIX 3: Get presigned upload URL instead of token
+    const dropboxToken = await getDropboxAccessToken();
+    const uploadPath = `${scanPath}scan.zip`;
+
+    // Get single-use upload URL from Dropbox
+    const uploadLinkResponse = await fetch('https://content.dropboxapi.com/2/files/get_temporary_upload_link', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${dropboxToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        commit_info: {
+          path: uploadPath,
+          mode: 'add',
+          autorename: false
+        },
+        duration: 14400
+      })
+    });
+
+    if (!uploadLinkResponse.ok) {
+      const error = await uploadLinkResponse.json();
+      throw new Error(`Failed to get upload URL: ${JSON.stringify(error)}`);
+    }
+
+    const { link: uploadUrl } = await uploadLinkResponse.json();
+
+    console.log('[prepare-case-upload] Upload URL generated');
     console.log('[prepare-case-upload] SUCCESS');
 
     return new Response(
@@ -113,8 +171,7 @@ serve(async (req) => {
         success: true,
         caseId: newCase.id,
         folderName: folderName,
-        dropboxToken: dropboxToken,
-        uploadPath: uploadPath,
+        uploadUrl: uploadUrl, // ✅ Single-use URL instead of token
         scanFolderPath: scanPath,
         reportFolderPath: reportPath
       }),
@@ -134,6 +191,18 @@ serve(async (req) => {
     );
   }
 });
+
+// ✅ FIX 4: Sanitization function
+function sanitizePatientName(name: string): string {
+  return name
+    .trim()
+    .toUpperCase()
+    .normalize('NFD') // Decompose accented characters (Müller → Muller)
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^A-Z\s\-']/g, '') // Allow: letters, spaces, hyphens, apostrophes
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .substring(0, 50); // Limit length
+}
 
 async function getDropboxAccessToken(): Promise<string> {
   const appKey = Deno.env.get('DROPBOX_APP_KEY')!;

@@ -56,39 +56,83 @@ serve(async (req) => {
     await createDropboxFolder(accessToken, caseData.dropbox_report_path);
     console.log('[sync-case-folders] ✅ Reports folder created');
 
-    // Upload referral-info.txt
-    console.log('[sync-case-folders] Uploading referral-info.txt...');
-    const referralText = generateReferralText(caseData);
-    await uploadToDropbox(accessToken, `${caseData.dropbox_scan_path}referral-info.txt`, referralText);
-    console.log('[sync-case-folders] ✅ referral-info.txt uploaded');
+    // ✅ FIX 6: Make file uploads resilient (non-blocking)
+    const uploadResults = {
+      referralInfo: false,
+      metadata: false,
+      readme: false
+    };
 
-    // Upload metadata.json
-    console.log('[sync-case-folders] Uploading metadata.json...');
-    const metadata = generateMetadata(caseData);
-    await uploadToDropbox(accessToken, `${caseData.dropbox_scan_path}metadata.json`, metadata);
-    console.log('[sync-case-folders] ✅ metadata.json uploaded');
+    // Upload referral-info.txt (non-critical)
+    try {
+      console.log('[sync-case-folders] Uploading referral-info.txt...');
+      const referralText = generateReferralText(caseData);
+      await uploadToDropbox(accessToken, `${caseData.dropbox_scan_path}referral-info.txt`, referralText);
+      uploadResults.referralInfo = true;
+      console.log('[sync-case-folders] ✅ referral-info.txt uploaded');
+    } catch (error) {
+      console.error('[sync-case-folders] ⚠️ Failed referral-info.txt:', error.message);
+      // Continue anyway - not critical
+    }
 
-    // Upload README.txt to Reports folder
-    console.log('[sync-case-folders] Uploading README.txt...');
-    const readme = generateReadme(caseData);
-    await uploadToDropbox(accessToken, `${caseData.dropbox_report_path}README.txt`, readme);
-    console.log('[sync-case-folders] ✅ README.txt uploaded');
+    // Upload metadata.json (non-critical)
+    try {
+      console.log('[sync-case-folders] Uploading metadata.json...');
+      const metadata = generateMetadata(caseData);
+      await uploadToDropbox(accessToken, `${caseData.dropbox_scan_path}metadata.json`, metadata);
+      uploadResults.metadata = true;
+      console.log('[sync-case-folders] ✅ metadata.json uploaded');
+    } catch (error) {
+      console.error('[sync-case-folders] ⚠️ Failed metadata.json:', error.message);
+      // Continue anyway - not critical
+    }
 
-    // Update database
+    // Upload README.txt (non-critical)
+    try {
+      console.log('[sync-case-folders] Uploading README.txt...');
+      const readme = generateReadme(caseData);
+      await uploadToDropbox(accessToken, `${caseData.dropbox_report_path}README.txt`, readme);
+      uploadResults.readme = true;
+      console.log('[sync-case-folders] ✅ README.txt uploaded');
+    } catch (error) {
+      console.error('[sync-case-folders] ⚠️ Failed README.txt:', error.message);
+      // Continue anyway - not critical
+    }
+
+    // Build warnings message
+    const failedFiles = [];
+    if (!uploadResults.referralInfo) failedFiles.push('referral-info.txt');
+    if (!uploadResults.metadata) failedFiles.push('metadata.json');
+    if (!uploadResults.readme) failedFiles.push('README.txt');
+
+    const syncWarnings = failedFiles.length > 0 
+      ? `Failed to upload: ${failedFiles.join(', ')}`
+      : null;
+
+    // Update database - mark as synced even if some files failed
     const { error: updateError } = await supabase
       .from('cases')
-      .update({ synced_to_dropbox: true, updated_at: new Date().toISOString() })
+      .update({ 
+        synced_to_dropbox: true,
+        sync_warnings: syncWarnings,
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', caseId);
 
     if (updateError) throw new Error('Failed to update database');
 
     console.log('[sync-case-folders] SUCCESS - Sync complete');
+    if (syncWarnings) {
+      console.log('[sync-case-folders] ⚠️ Warnings:', syncWarnings);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         caseId: caseId,
-        folderName: caseData.folder_name
+        folderName: caseData.folder_name,
+        uploadResults: uploadResults,
+        warnings: syncWarnings
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

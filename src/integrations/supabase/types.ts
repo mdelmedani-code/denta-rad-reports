@@ -109,9 +109,11 @@ export type Database = {
           sr_validated: boolean | null
           sr_validation_errors: Json | null
           status: Database["public"]["Enums"]["case_status"]
+          sync_warnings: string | null
           synced_at: string | null
           synced_to_dropbox: boolean | null
           updated_at: string | null
+          upload_completed: boolean | null
           upload_date: string | null
           urgency: Database["public"]["Enums"]["urgency_level"]
           zip_generation_status: string | null
@@ -145,9 +147,11 @@ export type Database = {
           sr_validated?: boolean | null
           sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
+          sync_warnings?: string | null
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
           updated_at?: string | null
+          upload_completed?: boolean | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
           zip_generation_status?: string | null
@@ -181,9 +185,11 @@ export type Database = {
           sr_validated?: boolean | null
           sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
+          sync_warnings?: string | null
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
           updated_at?: string | null
+          upload_completed?: boolean | null
           upload_date?: string | null
           urgency?: Database["public"]["Enums"]["urgency_level"]
           zip_generation_status?: string | null
