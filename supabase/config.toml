@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.get-report-download-link]
 verify_jwt = true
+
+[functions.cleanup-failed-upload]
+verify_jwt = true

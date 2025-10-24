@@ -23,16 +23,31 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
+    // ✅ FIX 4: Add authorization check
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('Unauthorized');
+
+    console.log('[sync-case-folders] User authenticated:', user.id);
+
     const { caseId } = await req.json();
     if (!caseId) throw new Error('Case ID is required');
 
     console.log('[sync-case-folders] Case ID:', caseId);
 
+    // Get user's role and clinic
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('clinic_id, role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) throw new Error('Profile not found');
+
     // Get case data
     const { data: caseData, error: caseError } = await supabase
       .from('cases')
       .select(`
-        id, folder_name, dropbox_scan_path, dropbox_report_path,
+        id, folder_name, dropbox_scan_path, dropbox_report_path, clinic_id,
         patient_first_name, patient_last_name, patient_id, patient_dob,
         clinical_question, field_of_view, urgency, created_at,
         clinics(name, email, address)
@@ -42,6 +57,17 @@ serve(async (req) => {
 
     if (caseError || !caseData) throw new Error(`Case not found: ${caseError?.message}`);
 
+    // ✅ FIX 4: Verify authorization
+    const isAuthorized = 
+      profile.role === 'admin' || 
+      profile.role === 'reporter' || 
+      profile.clinic_id === caseData.clinic_id;
+
+    if (!isAuthorized) {
+      throw new Error('Unauthorized - cannot sync cases from other clinics');
+    }
+
+    console.log('[sync-case-folders] ✅ Authorization verified');
     console.log('[sync-case-folders] Case:', caseData.folder_name);
 
     const accessToken = await getDropboxAccessToken();
@@ -56,7 +82,7 @@ serve(async (req) => {
     await createDropboxFolder(accessToken, caseData.dropbox_report_path);
     console.log('[sync-case-folders] ✅ Reports folder created');
 
-    // ✅ FIX 6: Make file uploads resilient (non-blocking)
+    // Upload metadata files (non-blocking)
     const uploadResults = {
       referralInfo: false,
       metadata: false,
@@ -72,7 +98,6 @@ serve(async (req) => {
       console.log('[sync-case-folders] ✅ referral-info.txt uploaded');
     } catch (error) {
       console.error('[sync-case-folders] ⚠️ Failed referral-info.txt:', error.message);
-      // Continue anyway - not critical
     }
 
     // Upload metadata.json (non-critical)
@@ -84,7 +109,6 @@ serve(async (req) => {
       console.log('[sync-case-folders] ✅ metadata.json uploaded');
     } catch (error) {
       console.error('[sync-case-folders] ⚠️ Failed metadata.json:', error.message);
-      // Continue anyway - not critical
     }
 
     // Upload README.txt (non-critical)
@@ -96,7 +120,6 @@ serve(async (req) => {
       console.log('[sync-case-folders] ✅ README.txt uploaded');
     } catch (error) {
       console.error('[sync-case-folders] ⚠️ Failed README.txt:', error.message);
-      // Continue anyway - not critical
     }
 
     // Build warnings message
@@ -139,11 +162,16 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[sync-case-folders] ERROR:', error);
+    
+    let statusCode = 500;
+    if (error.message.includes('Unauthorized')) statusCode = 403;
+    if (error.message.includes('not found')) statusCode = 404;
+    
     return new Response(
       JSON.stringify({
         error: { code: 'SYNC_FAILED', message: error.message || 'Failed to sync folders' }
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: statusCode, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

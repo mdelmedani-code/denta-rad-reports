@@ -85,6 +85,8 @@ export type Database = {
           clinical_question: string
           completed_at: string | null
           created_at: string | null
+          deleted_at: string | null
+          deletion_reason: string | null
           dicom_metadata: Json | null
           dropbox_path: string | null
           dropbox_report_path: string | null
@@ -123,6 +125,8 @@ export type Database = {
           clinical_question: string
           completed_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deletion_reason?: string | null
           dicom_metadata?: Json | null
           dropbox_path?: string | null
           dropbox_report_path?: string | null
@@ -161,6 +165,8 @@ export type Database = {
           clinical_question?: string
           completed_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deletion_reason?: string | null
           dicom_metadata?: Json | null
           dropbox_path?: string | null
           dropbox_report_path?: string | null
@@ -695,6 +701,11 @@ export type Database = {
       }
     }
     Functions: {
+      acquire_case_lock: {
+        Args: { p_patient_first_name: string; p_patient_last_name: string }
+        Returns: boolean
+      }
+      auto_pseudonymize_old_cases: { Args: never; Returns: number }
       calculate_case_price: {
         Args: {
           p_addons?: string[]
@@ -795,6 +806,10 @@ export type Database = {
           p_user_agent?: string
         }
         Returns: undefined
+      }
+      release_case_lock: {
+        Args: { p_patient_first_name: string; p_patient_last_name: string }
+        Returns: boolean
       }
       sign_off_report: {
         Args: {

@@ -282,6 +282,8 @@ const UploadCase = () => {
     let uploadSucceeded = false;
     let syncSucceeded = false;
     let createdCase: any = null;
+    let prepData: any = null;
+    let storagePath: string = '';
     
     try {
       setUploadSuccess(false);
@@ -342,7 +344,7 @@ const UploadCase = () => {
       }
       
       // 4. Upload to Supabase Storage using TUS chunked upload
-      const storagePath = `${newCase.clinic_id}/${newCase.id}/${zipFilename}`;
+      storagePath = `${newCase.clinic_id}/${newCase.id}/${zipFilename}`;
       
       try {
         await upload(finalZipFile, storagePath);
@@ -383,12 +385,27 @@ const UploadCase = () => {
     } catch (error) {
       console.error('Upload failed:', error);
       
-      // ✅ FIX 2: Rollback on failure
+      // ✅ FIX 2: Complete rollback with cleanup function
       if (createdCase && !uploadSucceeded) {
-        // Upload never succeeded - delete case record
-        console.log('🔄 Rolling back: Deleting case record');
-        await supabase.from('cases').delete().eq('id', createdCase.id);
-        sonnerToast.error('Upload failed. Please try again.');
+        console.log('🔄 Rolling back: Comprehensive cleanup');
+        
+        try {
+          await supabase.functions.invoke('cleanup-failed-upload', {
+            body: {
+              caseId: createdCase.id,
+              dropboxPaths: prepData ? {
+                scanPath: prepData.scanFolderPath,
+                reportPath: prepData.reportFolderPath
+              } : null,
+              storagePath: storagePath || null
+            }
+          });
+          
+          sonnerToast.error('Upload failed. All resources cleaned up.');
+        } catch (cleanupError) {
+          console.error('Cleanup failed:', cleanupError);
+          sonnerToast.error('Upload failed. Please contact support.');
+        }
       }
       
       sonnerToast.error(error instanceof Error ? error.message : 'Upload failed');
@@ -413,7 +430,7 @@ const UploadCase = () => {
     
     console.log('[Dropbox Sync] Session valid, user ID:', session.user.id);
     
-    // Get Dropbox upload token and paths using new function
+    // ✅ FIX 6: Send file size to backend
     const { data: prepData, error: prepError } = await supabase.functions.invoke(
       'prepare-case-upload',
       { 
@@ -425,7 +442,8 @@ const UploadCase = () => {
           clinicalQuestion: newCase.clinical_question,
           fieldOfView: newCase.field_of_view,
           urgency: newCase.urgency,
-          clinicId: newCase.clinic_id
+          clinicId: newCase.clinic_id,
+          fileSize: finalZipFile.size // ✅ Added file size validation
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`
@@ -440,17 +458,23 @@ const UploadCase = () => {
 
     console.log('[Dropbox Sync] Upload prepared:', {
       folderName: prepData.folderName,
-      uploadUrl: prepData.uploadUrl
+      uploadPath: prepData.uploadPath
     });
 
-    // ✅ FIX 3: Upload using presigned URL instead of token
-    console.log('[Dropbox Sync] Uploading file to Dropbox using presigned URL...');
-    const uploadResponse = await fetch(prepData.uploadUrl, {
+    // ✅ FIX 3: Upload using token (working approach)
+    console.log('[Dropbox Sync] Uploading file to Dropbox...');
+    const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
-      body: finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
       headers: {
+        'Authorization': `Bearer ${prepData.dropboxToken}`, // ✅ Using token
+        'Dropbox-API-Arg': JSON.stringify({
+          path: prepData.uploadPath,
+          mode: 'add',
+          autorename: false
+        }),
         'Content-Type': 'application/octet-stream'
-      }
+      },
+      body: finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename)
     });
 
     if (!uploadResponse.ok) {
