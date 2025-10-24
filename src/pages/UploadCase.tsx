@@ -25,7 +25,7 @@ import { DropboxUploadService } from "@/services/dropboxUploadService";
 type UploadMode = 'zip' | 'individual';
 
 const UploadCase = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -409,11 +409,9 @@ const UploadCase = () => {
   ) => {
     console.log('[Dropbox Sync] Starting background processing for case:', newCase.id);
     
-    // Get user session token for authorization
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      console.error('[Dropbox Sync] No valid session:', sessionError);
+    // Use session from auth hook (already auto-refreshed)
+    if (!session) {
+      console.error('[Dropbox Sync] No valid session');
       throw new Error('User session expired. Please log in again.');
     }
     
