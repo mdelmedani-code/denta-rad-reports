@@ -30,6 +30,25 @@ serve(async (req) => {
 
     console.log('[cleanup-failed-upload] Cleaning case:', caseId);
 
+    // ✅ ENHANCEMENT 4: Log cleanup action for GDPR audit trail
+    try {
+      await supabase.rpc('log_audit_event_secure', {
+        p_action: 'delete_case',
+        p_resource_type: 'case',
+        p_resource_id: caseId,
+        p_details: {
+          reason: 'upload_failed',
+          dropbox_paths: dropboxPaths,
+          storage_path: storagePath,
+          cleanup_timestamp: new Date().toISOString()
+        }
+      });
+      console.log('[cleanup-failed-upload] ✅ Audit log created');
+    } catch (auditError) {
+      console.error('[cleanup-failed-upload] Failed to log audit:', auditError);
+      // Continue with cleanup even if audit fails
+    }
+
     const results = {
       dropboxCleaned: false,
       storageCleaned: false,

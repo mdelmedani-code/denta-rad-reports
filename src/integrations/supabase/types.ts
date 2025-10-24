@@ -714,6 +714,15 @@ export type Database = {
         }
         Returns: number
       }
+      check_system_health: {
+        Args: never
+        Returns: {
+          count: number
+          details: string
+          issue_type: string
+          severity: string
+        }[]
+      }
       check_upload_rate_limit: { Args: { _user_id: string }; Returns: boolean }
       create_report_share: { Args: { p_report_id: string }; Returns: string }
       detect_indication_from_clinical_question: {

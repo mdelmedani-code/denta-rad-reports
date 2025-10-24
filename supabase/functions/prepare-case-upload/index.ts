@@ -28,6 +28,32 @@ serve(async (req) => {
 
     console.log('[prepare-case-upload] User authenticated:', user.id);
 
+    // ✅ ENHANCEMENT 1: Check rate limiting (20 uploads per hour)
+    const { data: rateLimitOk, error: rateLimitError } = await supabase.rpc(
+      'check_upload_rate_limit',
+      { _user_id: user.id }
+    );
+
+    if (rateLimitError) {
+      console.error('[prepare-case-upload] Rate limit check error:', rateLimitError);
+      throw new Error('Failed to check rate limit');
+    }
+
+    if (!rateLimitOk) {
+      console.warn('[prepare-case-upload] Rate limit exceeded for user:', user.id);
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: 'Upload limit exceeded. Maximum 20 uploads per hour.'
+          }
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[prepare-case-upload] ✅ Rate limit check passed');
+
     const body = await req.json();
 
     // ✅ FIX 6: Validate file size on backend
@@ -146,6 +172,21 @@ serve(async (req) => {
       newCase = insertedCase;
       console.log('[prepare-case-upload] ✅ Case created:', newCase.id);
 
+      // ✅ ENHANCEMENT 1: Record upload for rate limiting
+      try {
+        await supabase
+          .from('upload_rate_limits')
+          .insert({
+            user_id: user.id,
+            file_size: body.fileSize,
+            file_type: 'dicom_zip'
+          });
+        console.log('[prepare-case-upload] ✅ Upload recorded for rate limiting');
+      } catch (rateLimitRecordError) {
+        console.error('[prepare-case-upload] Failed to record upload:', rateLimitRecordError);
+        // Continue anyway - not critical
+      }
+
     } finally {
       // Always release lock
       console.log('[prepare-case-upload] Releasing lock...');
@@ -190,14 +231,14 @@ serve(async (req) => {
   }
 });
 
-// ✅ FIX 5: Sanitization functions
+// ✅ FIX 5 + ENHANCEMENT 3: Sanitization functions (now allows numbers)
 function sanitizePatientName(name: string): string {
   const cleaned = name
     .trim()
     .toUpperCase()
     .normalize('NFD') // Decompose accented characters (Müller → Muller)
     .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-    .replace(/[^A-Z\s\-']/g, '') // Allow: letters, spaces, hyphens, apostrophes
+    .replace(/[^A-Z0-9\s\-']/g, '') // ✅ ENHANCEMENT 3: Allow numbers (e.g., "JOHN II")
     .replace(/'+/g, "'") // Collapse multiple apostrophes
     .replace(/-+/g, "-") // Collapse multiple hyphens
     .replace(/\s+/g, ' ') // Collapse multiple spaces
