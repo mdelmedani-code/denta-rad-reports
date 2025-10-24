@@ -449,6 +449,9 @@ const UploadCase = () => {
 
     // ✅ FIX 3: Upload using token (working approach)
     console.log('[Dropbox Sync] Uploading file to Dropbox...');
+    console.log('[Dropbox Sync] Upload path:', prepData.uploadPath);
+    console.log('[Dropbox Sync] File size:', finalZipFile.size, 'bytes');
+    
     const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
       headers: {
@@ -463,12 +466,16 @@ const UploadCase = () => {
       body: finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename)
     });
 
+    console.log('[Dropbox Sync] Upload response status:', uploadResponse.status);
+    
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      throw new Error(`Dropbox upload failed: ${errorText}`);
+      console.error('[Dropbox Sync] Upload error response:', errorText);
+      throw new Error(`Dropbox upload failed (${uploadResponse.status}): ${errorText}`);
     }
     
-    console.log('[Dropbox Sync] File uploaded successfully');
+    const uploadResult = await uploadResponse.json();
+    console.log('[Dropbox Sync] File uploaded successfully:', uploadResult);
     
     // Update case with paths
     await supabase
