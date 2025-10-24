@@ -96,8 +96,10 @@ export type Database = {
           monthly_billed: boolean | null
           monthly_invoice_id: string | null
           patient_dob: string | null
+          patient_first_name: string | null
           patient_id: string | null
           patient_internal_id: string | null
+          patient_last_name: string | null
           patient_name: string
           pregenerated_zip_path: string | null
           processed_at: string | null
@@ -130,8 +132,10 @@ export type Database = {
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
           patient_dob?: string | null
+          patient_first_name?: string | null
           patient_id?: string | null
           patient_internal_id?: string | null
+          patient_last_name?: string | null
           patient_name: string
           pregenerated_zip_path?: string | null
           processed_at?: string | null
@@ -164,8 +168,10 @@ export type Database = {
           monthly_billed?: boolean | null
           monthly_invoice_id?: string | null
           patient_dob?: string | null
+          patient_first_name?: string | null
           patient_id?: string | null
           patient_internal_id?: string | null
+          patient_last_name?: string | null
           patient_name?: string
           pregenerated_zip_path?: string | null
           processed_at?: string | null
@@ -469,6 +475,7 @@ export type Database = {
           billed: boolean | null
           billed_date: string | null
           case_id: string
+          completed_at: string | null
           created_at: string | null
           dropbox_path: string | null
           finalized_at: string | null
@@ -490,6 +497,7 @@ export type Database = {
           billed?: boolean | null
           billed_date?: string | null
           case_id: string
+          completed_at?: string | null
           created_at?: string | null
           dropbox_path?: string | null
           finalized_at?: string | null
@@ -511,6 +519,7 @@ export type Database = {
           billed?: boolean | null
           billed_date?: string | null
           case_id?: string
+          completed_at?: string | null
           created_at?: string | null
           dropbox_path?: string | null
           finalized_at?: string | null
