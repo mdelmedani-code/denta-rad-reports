@@ -19,13 +19,11 @@ import { getCSRFToken } from "@/utils/csrf";
 import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
 import { Progress } from "@/components/ui/progress";
-import { useChunkedUpload } from "@/hooks/useChunkedUpload";
-import { DropboxUploadService } from "@/services/dropboxUploadService";
 
 type UploadMode = 'zip' | 'individual';
 
 const UploadCase = () => {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -37,14 +35,8 @@ const UploadCase = () => {
   const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
   const [createdSimpleId, setCreatedSimpleId] = useState<string | null>(null);
   const [createdPatientName, setCreatedPatientName] = useState<string>('');
-  const [postUploadProcessing, setPostUploadProcessing] = useState(false);
-
-  const { upload, cancel, uploading, progress } = useChunkedUpload({
-    bucketName: 'cbct-scans',
-    onError: (error) => {
-      sonnerToast.error(`Upload failed: ${error.message}`);
-    }
-  });
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -63,7 +55,6 @@ const UploadCase = () => {
     
     setValidating(true);
     try {
-      // Validate file comprehensively
       const validation = await validateDICOMZip(file);
       
       if (!validation.valid) {
@@ -74,13 +65,11 @@ const UploadCase = () => {
           duration: 8000
         });
         
-        // Clear the file input
         e.target.value = '';
         setZipFile(null);
         return;
       }
 
-      // Show warnings if any
       if (validation.warnings && validation.warnings.length > 0) {
         toast({
           title: 'File Validation Warnings',
@@ -90,7 +79,6 @@ const UploadCase = () => {
         });
       }
 
-      // File is valid
       setZipFile(file);
       
       const statsMessage = validation.stats 
@@ -207,6 +195,38 @@ const UploadCase = () => {
     }
   };
 
+  const generateFolderName = async (patientName: string, patientId: string): Promise<string> => {
+    // Sanitize name: uppercase, remove special chars, replace spaces with underscores
+    const cleanName = patientName
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .trim();
+
+    // Get highest counter for this patient
+    const { data: existingCases } = await supabase
+      .from('cases')
+      .select('folder_name')
+      .ilike('folder_name', `${cleanName}_%`)
+      .order('created_at', { ascending: false });
+
+    let maxCounter = 0;
+    if (existingCases && existingCases.length > 0) {
+      for (const c of existingCases) {
+        const match = c.folder_name?.match(/_(\d{5})$/);
+        if (match) {
+          const counter = parseInt(match[1], 10);
+          if (counter > maxCounter) maxCounter = counter;
+        }
+      }
+    }
+
+    const newCounter = maxCounter + 1;
+    const paddedCounter = String(newCounter).padStart(5, '0');
+    
+    return `${cleanName}_${paddedCounter}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -228,7 +248,7 @@ const UploadCase = () => {
       return;
     }
 
-    // ✅ FIX 5: Validate file size before upload
+    // Validate file size
     const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
     const MIN_FILE_SIZE = 1024; // 1KB
     
@@ -253,7 +273,7 @@ const UploadCase = () => {
       }
     }
     
-    // Sanitize inputs before validation
+    // Sanitize inputs
     const sanitizedPatientName = sanitizeText(formData.patientName);
     const sanitizedPatientInternalId = formData.patientInternalId ? sanitizePatientRef(formData.patientInternalId) : '';
     const sanitizedClinicalQuestion = sanitizeText(formData.clinicalQuestion);
@@ -267,21 +287,15 @@ const UploadCase = () => {
       return;
     }
     
-    // ✅ FIX 2: Add rollback logic for partial failures
-    let uploadSucceeded = false;
-    let syncSucceeded = false;
     let createdCase: any = null;
-    let prepData: any = null;
-    let storagePath: string = '';
     
     try {
+      setUploading(true);
+      setUploadProgress(0);
       setUploadSuccess(false);
       setCreatedPatientName(sanitizedPatientName);
       
-      // Get CSRF token for security
-      const csrfToken = await getCSRFToken();
-      
-      // 1. Get user and clinic
+      // Get user and clinic
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       if (authError || !authUser) {
         throw new Error('Not authenticated');
@@ -296,7 +310,10 @@ const UploadCase = () => {
       if (profileError) throw profileError;
       if (!profile?.clinic_id) throw new Error('No clinic associated with your account');
       
-      // 2. Create case record with sanitized data
+      // Generate unique folder name
+      const folderName = await generateFolderName(sanitizedPatientName, sanitizedPatientInternalId || 'UNKNOWN');
+      
+      // Create case record
       const { data: newCase, error: caseError } = await supabase
         .from('cases')
         .insert({
@@ -307,6 +324,7 @@ const UploadCase = () => {
           clinical_question: sanitizedClinicalQuestion,
           field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
+          folder_name: folderName,
           status: 'uploaded'
         })
         .select()
@@ -318,662 +336,381 @@ const UploadCase = () => {
       setCreatedCaseId(newCase.id);
       setCreatedSimpleId(String(newCase.simple_id).padStart(5, '0'));
       
-      // 3. Prepare ZIP
+      setUploadProgress(20);
+      
+      // Prepare ZIP file
       let finalZipFile: File | Blob;
       let zipFilename: string;
       
       if (uploadMode === 'zip') {
         finalZipFile = zipFile!;
-        zipFilename = zipFile!.name;
+        zipFilename = 'scan.zip';
       } else {
         sonnerToast.info(`Compressing ${dicomFiles.length} DICOM files...`);
         const zipBlob = await createZipFromFiles(dicomFiles);
         finalZipFile = zipBlob;
-        zipFilename = `case_${newCase.id}_dicom.zip`;
+        zipFilename = 'scan.zip';
       }
       
-      // 4. Upload to Supabase Storage using TUS chunked upload
-      storagePath = `${newCase.clinic_id}/${newCase.id}/${zipFilename}`;
+      setUploadProgress(40);
       
-      try {
-        await upload(finalZipFile, storagePath);
-        uploadSucceeded = true;
-      } catch (uploadError) {
-        console.error('Storage upload failed:', uploadError);
-        throw new Error('Failed to upload file to storage');
-      }
+      // Upload to Supabase Storage
+      const storagePath = `${folderName}/${zipFilename}`;
       
-      // Upload completed - show success
-      setUploadSuccess(true);
+      console.log('[Upload] Uploading to Supabase Storage:', storagePath);
       
-      // Start background processing (non-blocking)
-      setPostUploadProcessing(true);
-      handleBackgroundProcessing(newCase, finalZipFile, zipFilename, storagePath)
-        .then(() => {
-          syncSucceeded = true;
-          sonnerToast.success('Dropbox sync complete!');
-          
-          // Mark upload as completed
-          supabase.from('cases').update({
-            upload_completed: true
-          }).eq('id', newCase.id);
-        })
-        .catch((error) => {
-          console.error('Background processing failed:', error);
-          sonnerToast.error('Failed to sync to Dropbox: ' + error.message);
-          
-          // Mark sync failure in warnings field
-          supabase.from('cases').update({
-            sync_warnings: 'Sync failed - needs manual retry'
-          }).eq('id', newCase.id);
-        })
-        .finally(() => {
-          setPostUploadProcessing(false);
+      const { error: uploadError } = await supabase.storage
+        .from('cbct-scans')
+        .upload(storagePath, finalZipFile, {
+          contentType: 'application/zip',
+          upsert: false
         });
+      
+      if (uploadError) {
+        console.error('[Upload] Storage upload failed:', uploadError);
+        throw new Error(`Failed to upload scan: ${uploadError.message}`);
+      }
+      
+      setUploadProgress(80);
+      
+      console.log('[Upload] File uploaded successfully');
+      
+      // Update case with success flag
+      await supabase
+        .from('cases')
+        .update({
+          upload_completed: true
+        })
+        .eq('id', newCase.id);
+      
+      setUploadProgress(100);
+      
+      // Log case creation
+      await logCaseCreation(newCase.id);
+      
+      setUploadSuccess(true);
+      sonnerToast.success('Case uploaded successfully!');
+      
+      // Navigate after brief delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
       
     } catch (error) {
       console.error('Upload failed:', error);
       
-      // ✅ FIX 2: Complete rollback with cleanup function
-      if (createdCase && !uploadSucceeded) {
-        console.log('🔄 Rolling back: Comprehensive cleanup');
-        
-        try {
-          await supabase.functions.invoke('cleanup-failed-upload', {
-            body: {
-              caseId: createdCase.id,
-              dropboxPaths: prepData ? {
-                scanPath: prepData.scanFolderPath,
-                reportPath: prepData.reportFolderPath
-              } : null,
-              storagePath: storagePath || null
-            }
-          });
-          
-          sonnerToast.error('Upload failed. All resources cleaned up.');
-        } catch (cleanupError) {
-          console.error('Cleanup failed:', cleanupError);
-          sonnerToast.error('Upload failed. Please contact support.');
-        }
+      // Rollback: delete case if upload failed
+      if (createdCase) {
+        console.log('Rolling back: deleting case record');
+        await supabase.from('cases').delete().eq('id', createdCase.id);
       }
       
       sonnerToast.error(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setUploading(false);
     }
   };
-
-  const handleBackgroundProcessing = async (
-    newCase: any,
-    finalZipFile: File | Blob,
-    zipFilename: string,
-    storagePath: string
-  ) => {
-    console.log('[Dropbox Sync] Starting background processing for case:', newCase.id);
-    
-    // Use session from auth hook (already auto-refreshed)
-    if (!session) {
-      console.error('[Dropbox Sync] No valid session');
-      throw new Error('User session expired. Please log in again.');
-    }
-    
-    console.log('[Dropbox Sync] Session valid, user ID:', session.user.id);
-    
-    // ✅ FIX 6: Send file size to backend
-    const { data: prepData, error: prepError } = await supabase.functions.invoke(
-      'prepare-case-upload',
-      { 
-        body: { 
-          patientName: newCase.patient_name,
-          patientId: newCase.patient_id || '',
-          patientDob: newCase.patient_dob || '',
-          clinicalQuestion: newCase.clinical_question,
-          fieldOfView: newCase.field_of_view,
-          urgency: newCase.urgency,
-          clinicId: newCase.clinic_id,
-          fileSize: finalZipFile.size // ✅ Added file size validation
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      }
-    );
-
-    if (prepError) {
-      console.error('[Dropbox Sync] Error preparing upload:', prepError);
-      throw new Error('Failed to prepare Dropbox upload: ' + prepError.message);
-    }
-
-    console.log('[Dropbox Sync] Upload prepared:', {
-      folderName: prepData.folderName,
-      uploadPath: prepData.uploadPath
-    });
-
-    // ✅ FIX 3: Upload using token (working approach)
-    console.log('[Dropbox Sync] Uploading file to Dropbox...');
-    console.log('[Dropbox Sync] Upload path:', prepData.uploadPath);
-    console.log('[Dropbox Sync] File size:', finalZipFile.size, 'bytes');
-    
-    const uploadResponse = await fetch('https://content.dropboxapi.com/2/files/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${prepData.dropboxToken}`, // ✅ Using token
-        'Dropbox-API-Arg': JSON.stringify({
-          path: prepData.uploadPath,
-          mode: 'add',
-          autorename: false
-        }),
-        'Content-Type': 'application/octet-stream'
-      },
-      body: finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename)
-    });
-
-    console.log('[Dropbox Sync] Upload response status:', uploadResponse.status);
-    
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('[Dropbox Sync] Upload error response:', errorText);
-      throw new Error(`Dropbox upload failed (${uploadResponse.status}): ${errorText}`);
-    }
-    
-    const uploadResult = await uploadResponse.json();
-    console.log('[Dropbox Sync] File uploaded successfully:', uploadResult);
-    
-    // Update case with paths
-    await supabase
-      .from('cases')
-      .update({
-        dropbox_scan_path: prepData.scanFolderPath,
-        dropbox_report_path: prepData.reportFolderPath,
-        folder_name: prepData.folderName,
-        file_path: storagePath
-      })
-      .eq('id', newCase.id);
-    
-    console.log('[Dropbox Sync] Case updated with Dropbox paths');
-    
-    // Log case creation
-    await logCaseCreation(newCase.id);
-    
-    // Sync folders and metadata to Dropbox
-    console.log('[Dropbox Sync] Calling sync-case-folders edge function...');
-    const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-case-folders', {
-      body: { caseId: newCase.id },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      }
-    });
-    
-    if (syncError) {
-      console.error('[Dropbox Sync] sync-case-folders error:', syncError);
-      throw new Error('Failed to sync case folders: ' + syncError.message);
-    }
-    
-    console.log('[Dropbox Sync] sync-case-folders response:', syncData);
-    
-    // Extract metadata
-    console.log('[Dropbox Sync] Calling extract-dicom-zip edge function...');
-    const { data: extractData, error: extractError } = await supabase.functions.invoke('extract-dicom-zip', {
-      body: { caseId: newCase.id, zipPath: storagePath },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      }
-    });
-    
-    if (extractError) {
-      console.error('[Dropbox Sync] extract-dicom-zip error:', extractError);
-      // Don't throw - this is optional
-    } else {
-      console.log('[Dropbox Sync] extract-dicom-zip response:', extractData);
-    }
-    
-    console.log('[Dropbox Sync] Background processing complete!');
-  };
-
-  const formatTime = (seconds: number): string => {
-    if (seconds < 60) {
-      return `${seconds}s`;
-    }
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (remainingSeconds === 0) {
-      return `${minutes}m`;
-    }
-    return `${minutes}m ${remainingSeconds}s`;
-  };
-
-  const resetForm = () => {
-    setFormData({
-      patientName: "",
-      patientInternalId: "",
-      patientDob: "",
-      clinicalQuestion: "",
-      fieldOfView: "up_to_5x5",
-      urgency: "standard"
-    });
-    setZipFile(null);
-    setDicomFiles([]);
-    setUploadSuccess(false);
-    setCreatedCaseId(null);
-    setCreatedSimpleId(null);
-    setCreatedPatientName('');
-  };
-
-  const canSubmit = !uploading && 
-    !processingFiles &&
-    formData.patientName.trim() !== '' && 
-    formData.clinicalQuestion.trim() !== '' &&
-    (uploadMode === 'zip' ? zipFile !== null : dicomFiles.length > 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/10 py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
           <Button
             variant="ghost"
             onClick={() => navigate('/dashboard')}
-            className="mb-4"
+            className="mb-4 hover:bg-secondary/50"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
-          <h1 className="text-3xl font-bold">Upload New Case</h1>
-          <p className="text-muted-foreground">Upload DICOM files for radiological analysis</p>
-        </div>
+          
+          <h1 className="text-4xl font-bold text-foreground mb-2">Upload New Case</h1>
+          <p className="text-muted-foreground">
+            Submit CBCT scans for expert analysis
+          </p>
+        </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Upload Mode Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Method</CardTitle>
-              <CardDescription>Choose how you want to upload DICOM files</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setUploadMode('zip')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    uploadMode === 'zip' 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <FileArchive className="w-8 h-8 mb-2 mx-auto text-primary" />
-                  <div className="font-semibold">Upload ZIP</div>
-                  <div className="text-sm text-muted-foreground">Pre-packaged DICOM files</div>
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => setUploadMode('individual')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    uploadMode === 'individual' 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <Files className="w-8 h-8 mb-2 mx-auto text-primary" />
-                  <div className="font-semibold">Select Files</div>
-                  <div className="text-sm text-muted-foreground">Auto-zip individual DICOMs</div>
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Success Message */}
+        {uploadSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-6"
+          >
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <AlertDescription className="text-green-800">
+                <div className="font-semibold mb-1">Upload Successful!</div>
+                <div className="text-sm">
+                  Case #{createdSimpleId} for {createdPatientName} has been uploaded.
+                  You'll be redirected to your dashboard shortly.
+                </div>
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
 
-          {/* Patient Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Patient Information</CardTitle>
-              <CardDescription>Basic patient details for this case</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="patientName">Patient Name *</Label>
-                  <Input
-                    id="patientName"
-                    value={formData.patientName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, patientName: e.target.value }))}
-                    placeholder="Enter patient name"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="patientInternalId">Patient ID (Optional)</Label>
-                  <Input
-                    id="patientInternalId"
-                    value={formData.patientInternalId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, patientInternalId: e.target.value }))}
-                    placeholder="Internal patient ID"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="patientDob">Date of Birth (Optional)</Label>
-                <Input
-                  id="patientDob"
-                  type="date"
-                  value={formData.patientDob}
-                  onChange={(e) => setFormData(prev => ({ ...prev, patientDob: e.target.value }))}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Clinical Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Clinical Information</CardTitle>
-              <CardDescription>Details about the scan and clinical requirements</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="clinicalQuestion">Clinical Question *</Label>
-                <Textarea
-                  id="clinicalQuestion"
-                  value={formData.clinicalQuestion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, clinicalQuestion: e.target.value }))}
-                  placeholder="Describe the clinical question or indication for this scan"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="fieldOfView">Field of View</Label>
-                  <Select
-                    value={formData.fieldOfView}
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, fieldOfView: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="up_to_5x5">Up to 5x5 cm</SelectItem>
-                      <SelectItem value="up_to_8x5">Up to 8x5 cm</SelectItem>
-                      <SelectItem value="up_to_8x8">Up to 8x8 cm</SelectItem>
-                      <SelectItem value="over_8x8">Over 8x8 cm</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="urgency">Urgency</Label>
-                  <Select
-                    value={formData.urgency}
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, urgency: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="standard">Standard (3-5 days)</SelectItem>
-                      <SelectItem value="urgent">Urgent (24 hours)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* File Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle>DICOM Files</CardTitle>
-              <CardDescription>
-                {uploadMode === 'zip' 
-                  ? 'Select a ZIP file containing DICOM files' 
-                  : 'Select individual DICOM files (will be auto-zipped)'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {uploadMode === 'zip' ? (
-                <div>
-                  <Input
-                    type="file"
-                    accept=".zip"
-                    onChange={handleZipSelect}
-                    disabled={uploading || validating}
-                    className="cursor-pointer"
-                  />
-                  {validating && (
-                    <p className="text-sm text-blue-600 mt-2">
-                      Validating file contents...
-                    </p>
-                  )}
-                  {zipFile && (
-                    <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <p className="font-medium">{zipFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(zipFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
+        {/* Main Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <form onSubmit={handleSubmit}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileArchive className="w-5 h-5 mr-2" />
+                  Case Information
+                </CardTitle>
+                <CardDescription>
+                  Provide patient details and upload DICOM files
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Patient Information */}
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="individual-files" className="text-sm font-medium">
-                      Select Individual Files
+                    <Label htmlFor="patientName">
+                      Patient Name <span className="text-destructive">*</span>
                     </Label>
                     <Input
-                      id="individual-files"
-                      type="file"
-                      multiple
-                      accept=".dcm,.dicom"
-                      onChange={handleDicomFilesSelect}
-                      className="cursor-pointer mt-2"
+                      id="patientName"
+                      placeholder="John Smith"
+                      value={formData.patientName}
+                      onChange={(e) => setFormData({...formData, patientName: e.target.value})}
+                      required
+                      disabled={uploading}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Hold Ctrl/Cmd to select multiple files
-                    </p>
-                  </div>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">Or</span>
-                    </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="folder-input" className="text-sm font-medium">
-                      Select Entire Folder
+                    <Label htmlFor="patientInternalId">
+                      Patient Internal ID
                     </Label>
                     <Input
-                      id="folder-input"
-                      type="file"
-                      {...({ webkitdirectory: "", directory: "" } as any)}
-                      multiple
-                      onChange={handleFolderSelect}
-                      className="cursor-pointer mt-2"
+                      id="patientInternalId"
+                      placeholder="Optional clinic reference"
+                      value={formData.patientInternalId}
+                      onChange={(e) => setFormData({...formData, patientInternalId: e.target.value})}
+                      disabled={uploading}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Choose a folder containing DICOM files
-                    </p>
                   </div>
 
-                  {dicomFiles.length > 0 && (
-                    <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <h4 className="font-medium mb-2">
-                        Selected Files ({dicomFiles.length})
-                      </h4>
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {dicomFiles.slice(0, 5).map((file, index) => (
-                          <p key={index} className="text-sm text-muted-foreground">
-                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                          </p>
-                        ))}
-                        {dicomFiles.length > 5 && (
-                          <p className="text-sm text-muted-foreground font-medium">
-                            ...and {dicomFiles.length - 5} more files
-                          </p>
-                        )}
+                  <div>
+                    <Label htmlFor="patientDob">Date of Birth</Label>
+                    <Input
+                      id="patientDob"
+                      type="date"
+                      value={formData.patientDob}
+                      onChange={(e) => setFormData({...formData, patientDob: e.target.value})}
+                      disabled={uploading}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="clinicalQuestion">
+                      Clinical Question <span className="text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="clinicalQuestion"
+                      placeholder="What specific information are you seeking?"
+                      value={formData.clinicalQuestion}
+                      onChange={(e) => setFormData({...formData, clinicalQuestion: e.target.value})}
+                      required
+                      disabled={uploading}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fieldOfView">Field of View</Label>
+                      <Select 
+                        value={formData.fieldOfView} 
+                        onValueChange={(value: any) => setFormData({...formData, fieldOfView: value})}
+                        disabled={uploading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="up_to_5x5">Up to 5x5</SelectItem>
+                          <SelectItem value="up_to_8x5">Up to 8x5</SelectItem>
+                          <SelectItem value="up_to_8x8">Up to 8x8</SelectItem>
+                          <SelectItem value="over_8x8">Over 8x8</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="urgency">Urgency</Label>
+                      <Select 
+                        value={formData.urgency} 
+                        onValueChange={(value: any) => setFormData({...formData, urgency: value})}
+                        disabled={uploading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upload Mode Selection */}
+                <div className="space-y-4 pt-4 border-t">
+                  <Label>Upload Method</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      type="button"
+                      variant={uploadMode === 'zip' ? 'default' : 'outline'}
+                      onClick={() => setUploadMode('zip')}
+                      className="h-auto py-4"
+                      disabled={uploading}
+                    >
+                      <div className="text-center">
+                        <FileArchive className="w-6 h-6 mx-auto mb-2" />
+                        <div className="font-semibold">ZIP File</div>
+                        <div className="text-xs text-muted-foreground">
+                          Pre-packaged archive
+                        </div>
                       </div>
-                      <p className="text-sm font-medium mt-2">
-                        Total: {(dicomFiles.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <div className="flex gap-2">
-                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-900 dark:text-blue-100">
-                    <p className="font-medium mb-1">File Requirements:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Maximum file size: 500MB</li>
-                      <li>Accepted formats: .dcm, .dicom, or ZIP archives</li>
-                      <li>Individual files will be automatically compressed into a ZIP</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Upload Progress */}
-          {uploading && !uploadSuccess && (
-            <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold mb-1">
-                    Uploading CBCT Scan...
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {createdPatientName}
-                  </p>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="space-y-3">
-                  <Progress 
-                    value={progress.percentage} 
-                    className="h-3 transition-all duration-150 ease-out" 
-                  />
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-primary">
-                      {Math.round(progress.percentage)}%
-                    </p>
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant={uploadMode === 'individual' ? 'default' : 'outline'}
+                      onClick={() => setUploadMode('individual')}
+                      className="h-auto py-4"
+                      disabled={uploading}
+                    >
+                      <div className="text-center">
+                        <Files className="w-6 h-6 mx-auto mb-2" />
+                        <div className="font-semibold">DICOM Files</div>
+                        <div className="text-xs text-muted-foreground">
+                          Individual files/folder
+                        </div>
+                      </div>
+                    </Button>
                   </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                  <div className="space-y-1">
-                    <Activity className="h-5 w-5 mx-auto text-blue-500" />
-                    <p className="text-xs text-muted-foreground">Speed</p>
-                    <p className="font-semibold">{progress.speedMBps} MB/s</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Clock className="h-5 w-5 mx-auto text-orange-500" />
-                    <p className="text-xs text-muted-foreground">Remaining</p>
-                    <p className="font-semibold">{formatTime(progress.etaSeconds)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Upload className="h-5 w-5 mx-auto text-green-500" />
-                    <p className="text-xs text-muted-foreground">Uploaded</p>
-                    <p className="font-semibold">
-                      {progress.uploadedMB} / {progress.totalMB} MB
-                    </p>
-                  </div>
-                </div>
-
-                {/* Cancel Button */}
-                <div className="text-center">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={cancel}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel Upload
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Success Animation */}
-          {uploadSuccess && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-                <CardContent className="pt-6 text-center space-y-6">
-                  {/* Animated Checkmark */}
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 15,
-                      duration: 0.5,
-                    }}
-                  >
-                    <CheckCircle2 className="h-20 w-20 mx-auto text-green-600" />
-                  </motion.div>
-
-                  {/* Success Message */}
+                {/* File Upload */}
+                {uploadMode === 'zip' && (
                   <div>
-                    <h3 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-2">
-                      Upload Complete!
-                    </h3>
-                    <p className="text-green-700 dark:text-green-300">
-                      Your case has been submitted successfully.
-                    </p>
-                    {createdSimpleId && (
-                      <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                        Case ID: {createdSimpleId} - {createdPatientName}
+                    <Label htmlFor="zipFile">
+                      Upload ZIP File <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="zipFile"
+                      type="file"
+                      accept=".zip"
+                      onChange={handleZipSelect}
+                      disabled={uploading || validating}
+                      required
+                    />
+                    {validating && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        <Clock className="w-4 h-4 inline animate-spin mr-1" />
+                        Validating file...
+                      </p>
+                    )}
+                    {zipFile && !validating && (
+                      <p className="text-sm text-green-600 mt-2">
+                        <CheckCircle2 className="w-4 h-4 inline mr-1" />
+                        {zipFile.name} ({getReadableFileSize(zipFile.size)})
                       </p>
                     )}
                   </div>
+                )}
 
-                  {/* Background Processing Notice */}
-                  <Alert className="bg-white/60 dark:bg-white/10 border-green-300 dark:border-green-700">
-                    <AlertDescription className="text-left">
-                      <p className="font-semibold text-green-900 dark:text-green-100 mb-2">
-                        ⏳ Processing your scan in the background
-                      </p>
-                      <p className="text-sm text-green-800 dark:text-green-200">
-                        We're generating your referral documents (DICOM SR, PDF cover sheet).
-                        You'll receive an email when your report is ready (usually 1-2 days).
-                      </p>
-                      <p className="text-sm text-green-700 dark:text-green-300 mt-2">
-                        You can safely close this page.
-                      </p>
-                    </AlertDescription>
-                  </Alert>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 justify-center pt-4">
-                    <Button onClick={() => navigate('/dashboard')}>
-                      View My Cases
-                    </Button>
-                    <Button variant="outline" onClick={resetForm}>
-                      Upload Another
-                    </Button>
+                {uploadMode === 'individual' && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="dicomFiles">Upload DICOM Files</Label>
+                      <Input
+                        id="dicomFiles"
+                        type="file"
+                        multiple
+                        accept=".dcm,.dicom"
+                        onChange={handleDicomFilesSelect}
+                        disabled={uploading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="dicomFolder">Or Select Folder</Label>
+                      <Input
+                        id="dicomFolder"
+                        type="file"
+                        // @ts-ignore
+                        webkitdirectory=""
+                        directory=""
+                        multiple
+                        onChange={handleFolderSelect}
+                        disabled={uploading}
+                      />
+                    </div>
+                    {dicomFiles.length > 0 && (
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          {dicomFiles.length} DICOM file(s) selected
+                          ({getReadableFileSize(dicomFiles.reduce((sum, f) => sum + f.size, 0))})
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+                )}
 
-          {/* Submit Button */}
-          <div className="flex justify-center">
-            <Button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-full md:w-auto px-8"
-            >
-              {processingFiles ? 'Creating ZIP...' : uploading ? 'Uploading...' : 'Upload Case'}
-            </Button>
-          </div>
-        </form>
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Uploading...</span>
+                      <span className="font-medium">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} />
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  size="lg"
+                  disabled={uploading || validating || processingFiles}
+                >
+                  {uploading ? (
+                    <>
+                      <Activity className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : processingFiles ? (
+                    <>
+                      <Activity className="w-4 h-4 mr-2 animate-spin" />
+                      Processing Files...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Case
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </form>
+        </motion.div>
       </div>
     </div>
   );

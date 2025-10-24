@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Settings, Download, Loader2 } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Download, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
-// PDF components removed - reports now downloaded from Dropbox
 import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
-
+import { toast as sonnerToast } from "sonner";
 
 interface Case {
   id: string;
@@ -22,30 +21,18 @@ interface Case {
   status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
   urgency: 'standard' | 'urgent';
   field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
-  synced_to_dropbox?: boolean;
+  folder_name?: string;
   clinics?: {
     name: string;
     contact_email: string;
   };
-  reports?: {
-    id: string;
-    pdf_url: string | null;
-    report_text: string | null;
-    signed_off_by?: string | null;
-    signed_off_at?: string | null;
-    signatory_name?: string | null;
-    signatory_title?: string | null;
-    signatory_credentials?: string | null;
-    signature_statement?: string | null;
-  }[];
 }
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
-  // PDF template state removed - using Dropbox for reports
+  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -62,17 +49,6 @@ const Dashboard = () => {
           clinics (
             name,
             contact_email
-          ),
-          reports (
-            id,
-            report_text,
-            pdf_url,
-            signed_off_by,
-            signed_off_at,
-            signatory_name,
-            signatory_title,
-            signatory_credentials,
-            signature_statement
           )
         `)
         .order('upload_date', { ascending: false });
@@ -89,8 +65,6 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-
-  // PDF template fetching removed - reports now come from Dropbox
 
   const handleSignOut = async () => {
     await signOut();
@@ -113,77 +87,40 @@ const Dashboard = () => {
     ).join(' ');
   };
 
-  const handleReupload = (caseId: string) => {
-    navigate(`/upload-case?reupload=${caseId}`);
-  };
-
   const downloadReport = async (caseData: Case) => {
-    setGeneratingPdf(caseData.id);
+    setDownloadingReport(caseData.id);
+    
     try {
-      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
-        body: { caseId: caseData.id, fileType: 'report' },
-      });
+      sonnerToast.info('Downloading report...');
 
-      if (error) throw error;
+      // Download from Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('reports')
+        .download(`${caseData.folder_name}/report.pdf`);
 
-      // Create blob and download
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      if (error) {
+        console.error('Download error:', error);
+        throw new Error(`Failed to download report: ${error.message}`);
+      }
+
+      // Trigger browser download
+      const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `report_${caseData.patient_name}_${caseData.id}.pdf`;
+      a.download = `${caseData.folder_name}_report.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download started",
-        description: "Your report PDF is downloading now.",
-      });
+      sonnerToast.success('Report downloaded successfully');
     } catch (error: any) {
       console.error('Error downloading report:', error);
-      toast({
-        title: "Error",
-        description: "Failed to download report: " + error.message,
-        variant: "destructive",
-      });
+      sonnerToast.error(error.message || 'Failed to download report');
     } finally {
-      setGeneratingPdf(null);
+      setDownloadingReport(null);
     }
   };
-
-  const retryDropboxSync = async (caseId: string) => {
-    try {
-      toast({
-        title: "Syncing to Dropbox",
-        description: "Attempting to sync case to Dropbox...",
-      });
-
-      const { data, error } = await supabase.functions.invoke('sync-case-folders', {
-        body: { caseId }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Sync Successful",
-        description: "Case has been synced to Dropbox!",
-      });
-
-      // Refresh cases
-      await fetchCases();
-    } catch (error: any) {
-      console.error('Error syncing to Dropbox:', error);
-      toast({
-        title: "Sync Failed",
-        description: error.message || "Failed to sync to Dropbox",
-        variant: "destructive",
-      });
-    }
-  };
-
-
 
   return (
     <div className="min-h-screen bg-background">
@@ -240,7 +177,7 @@ const Dashboard = () => {
           <NotificationPreferences />
         </div>
 
-        {/* Cases Section - Mobile Optimized */}
+        {/* Cases Section */}
         <Card id="cases-section">
           <CardHeader>
             <CardTitle>Your Cases</CardTitle>
@@ -304,27 +241,26 @@ const Dashboard = () => {
                               {formatStatus(case_.status)}
                             </Badge>
                           </td>
-                           <td className="py-2">
+                          <td className="py-2">
                             <div className="flex gap-2 flex-wrap">
-                              {!case_.synced_to_dropbox && (
-                                <Button
-                                  variant="secondary"
+                              {case_.status === 'report_ready' ? (
+                                <Button 
+                                  variant="outline" 
                                   size="sm"
-                                  onClick={() => retryDropboxSync(case_.id)}
+                                  onClick={() => downloadReport(case_)}
+                                  disabled={downloadingReport === case_.id}
                                 >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Retry Sync
+                                  {downloadingReport === case_.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4 mr-2" />
+                                  )}
+                                  Download Report
                                 </Button>
-                              )}
-                              {case_.status === 'uploaded' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleReupload(case_.id)}
-                                >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Reupload
-                                </Button>
+                              ) : (
+                                <span className="text-sm text-muted-foreground py-2">
+                                  Report in progress...
+                                </span>
                               )}
                               <DeleteCaseDialog
                                 caseId={case_.id}
@@ -332,16 +268,6 @@ const Dashboard = () => {
                                 patientName={case_.patient_name}
                                 onDeleteSuccess={fetchCases}
                               />
-                              {case_.status === 'report_ready' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => downloadReport(case_)}
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download Report
-                                </Button>
-                              )}
                             </div>
                           </td>
                         </tr>
@@ -391,47 +317,32 @@ const Dashboard = () => {
 
                           {/* Mobile Actions */}
                           <div className="flex flex-col gap-2 pt-2">
-                            {!case_.synced_to_dropbox && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => retryDropboxSync(case_.id)}
-                                className="w-full"
-                              >
-                                <Upload className="h-4 w-4 mr-2" />
-                                Retry Dropbox Sync
-                              </Button>
-                            )}
-                            <div className="flex gap-2">
-                              {case_.status === 'uploaded' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleReupload(case_.id)}
-                                  className="flex-1"
-                                >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Reupload
-                                </Button>
-                              )}
-                              <DeleteCaseDialog
-                                caseId={case_.id}
-                                caseStatus={case_.status}
-                                patientName={case_.patient_name}
-                                onDeleteSuccess={fetchCases}
-                              />
-                            </div>
-                            {case_.status === 'report_ready' && (
+                            {case_.status === 'report_ready' ? (
                               <Button 
                                 variant="outline" 
                                 size="sm" 
                                 className="w-full"
                                 onClick={() => downloadReport(case_)}
+                                disabled={downloadingReport === case_.id}
                               >
-                                <Download className="h-4 w-4 mr-2" />
+                                {downloadingReport === case_.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 mr-2" />
+                                )}
                                 Download Report
                               </Button>
+                            ) : (
+                              <p className="text-sm text-muted-foreground text-center py-2">
+                                Report in progress...
+                              </p>
                             )}
+                            <DeleteCaseDialog
+                              caseId={case_.id}
+                              caseStatus={case_.status}
+                              patientName={case_.patient_name}
+                              onDeleteSuccess={fetchCases}
+                            />
                           </div>
                         </div>
                       </CardContent>
@@ -443,7 +354,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-
     </div>
   );
 };

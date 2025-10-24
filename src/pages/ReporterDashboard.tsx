@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, ExternalLink, Eye, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Download, Upload, Eye, Loader2, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
 
@@ -20,7 +21,6 @@ interface Case {
   urgency: string;
   status: string;
   completed_at?: string;
-  dropbox_scan_path?: string;
   simple_id?: number;
   folder_name?: string;
 }
@@ -31,7 +31,7 @@ export default function ReporterDashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingCase, setDownloadingCase] = useState<string | null>(null);
-  const [completingCase, setCompletingCase] = useState<string | null>(null);
+  const [uploadingReport, setUploadingReport] = useState<string | null>(null);
   const [searchFilters, setSearchFilters] = useState({
     patientName: '',
     patientId: '',
@@ -63,48 +63,101 @@ export default function ReporterDashboard() {
     }
   }
 
-  async function downloadDICOM(caseId: string, folderName: string) {
+  async function downloadScan(caseId: string, folderName: string) {
     setDownloadingCase(caseId);
     try {
-      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
-        body: { caseId, fileType: 'scan' },
-      });
+      toast.info('Downloading scan...');
 
-      if (error) throw error;
+      // Download from Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('cbct-scans')
+        .download(`${folderName}/scan.zip`);
 
-      // Create blob and download
-      const blob = new Blob([data]);
-      const url = URL.createObjectURL(blob);
+      if (error) {
+        console.error('Download error:', error);
+        throw new Error(`Failed to download scan: ${error.message}`);
+      }
+
+      // Trigger browser download
+      const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${folderName}_scan.zip`;
+      a.download = `${folderName}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success('DICOM scan downloaded successfully');
+      toast.success('Scan downloaded successfully');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to download DICOM scan');
+      toast.error(error.message || 'Failed to download scan');
       console.error('Download error:', error);
     } finally {
       setDownloadingCase(null);
     }
   }
 
-  function openDropboxFolder(caseData: Case) {
-    // Open /Uploads/ folder in Dropbox
-    const folderName = caseData.folder_name || `${caseData.patient_id}_${caseData.id}`;
-    const folderPath = `/DentaRad/Uploads/${folderName}`;
-    const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
-    window.open(dropboxUrl, '_blank');
-  }
+  async function uploadReport(caseId: string, folderName: string) {
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf';
 
-  function openDropboxReportsFolder(caseData: Case) {
-    // Open /Reports/{patient_name}/ folder in Dropbox
-    const folderPath = `/DentaRad/Reports/${caseData.patient_name}`;
-    const dropboxUrl = `https://www.dropbox.com/home${folderPath}`;
-    window.open(dropboxUrl, '_blank');
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      if (file.type !== 'application/pdf') {
+        toast.error('Please upload a PDF file');
+        return;
+      }
+
+      setUploadingReport(caseId);
+      
+      try {
+        toast.info('Uploading report...');
+
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('reports')
+          .upload(`${folderName}/report.pdf`, file, {
+            contentType: 'application/pdf',
+            upsert: true // Allow overwriting if reporter uploads again
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`Failed to upload report: ${uploadError.message}`);
+        }
+
+        // Update case status
+        const { error: updateError } = await supabase
+          .from('cases')
+          .update({
+            status: 'report_ready',
+            updated_at: new Date().toISOString(),
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', caseId);
+
+        if (updateError) {
+          throw new Error('Failed to update case status');
+        }
+
+        toast.success('Report uploaded successfully!');
+        
+        // Refresh case list
+        await fetchCases();
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to upload report');
+        console.error('Upload error:', error);
+      } finally {
+        setUploadingReport(null);
+      }
+    };
+
+    input.click();
   }
 
   function formatCaseTitle(caseData: Case): string {
@@ -118,52 +171,49 @@ export default function ReporterDashboard() {
     return caseData.patient_name;
   }
 
-  async function markCompleted(caseId: string, caseData: Case) {
-    const expectedPath = caseData.dropbox_scan_path?.replace('/scan.zip', '/report.pdf') || 
-                        `/DentaRad/Cases/${caseData.patient_id}_${caseId}/report.pdf`;
-    
-    const confirmed = confirm(
-      `Have you uploaded the report PDF to Dropbox?\n\n` +
-      `Expected location:\n${expectedPath}\n\n` +
-      `Click OK to mark this case as completed.`
+  function CaseStatusBadge({ status }: { status: string }) {
+    const statusConfig: Record<string, { label: string; variant: any; icon: any }> = {
+      uploaded: {
+        label: 'Awaiting Report',
+        variant: 'secondary',
+        icon: Clock
+      },
+      in_progress: {
+        label: 'In Progress',
+        variant: 'default',
+        icon: Clock
+      },
+      report_ready: {
+        label: 'Report Ready',
+        variant: 'default',
+        icon: CheckCircle
+      }
+    };
+
+    const config = statusConfig[status] || statusConfig.uploaded;
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="gap-1">
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
     );
-
-    if (!confirmed) return;
-
-    setCompletingCase(caseId);
-    try {
-      const { data, error } = await supabase.functions.invoke('mark-case-completed', {
-        body: { caseId },
-      });
-
-      if (error) throw error;
-
-      toast.success('Case marked as completed!');
-      fetchCases(); // Refresh list
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to mark as completed');
-      console.error('Mark completed error:', error);
-    } finally {
-      setCompletingCase(null);
-    }
   }
 
-  // Filter cases based on search criteria
+  // Filter cases
   const filteredCases = useMemo(() => {
     return cases.filter(caseData => {
-      // Patient name filter
       if (searchFilters.patientName && 
           !caseData.patient_name.toLowerCase().includes(searchFilters.patientName.toLowerCase())) {
         return false;
       }
 
-      // Patient ID filter
       if (searchFilters.patientId && 
           !caseData.patient_id.toLowerCase().includes(searchFilters.patientId.toLowerCase())) {
         return false;
       }
 
-      // Date range filter
       const caseDate = new Date(caseData.created_at);
       if (searchFilters.dateFrom && caseDate < new Date(searchFilters.dateFrom)) {
         return false;
@@ -172,12 +222,10 @@ export default function ReporterDashboard() {
         return false;
       }
 
-      // Urgency filter
       if (searchFilters.urgency && caseData.urgency !== searchFilters.urgency) {
         return false;
       }
 
-      // Field of view filter
       if (searchFilters.fieldOfView && caseData.field_of_view !== searchFilters.fieldOfView) {
         return false;
       }
@@ -227,13 +275,18 @@ export default function ReporterDashboard() {
           {pendingCases.map(caseData => (
             <Card key={caseData.id}>
               <CardHeader>
-                <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
-                <CardDescription>
-                  {caseData.folder_name && (
-                    <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
-                  )}
-                  Patient ID: {caseData.patient_id} | DOB: {caseData.patient_dob} | Uploaded: {new Date(caseData.created_at).toLocaleDateString()}
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
+                    <CardDescription>
+                      {caseData.folder_name && (
+                        <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
+                      )}
+                      Patient ID: {caseData.patient_id} | DOB: {caseData.patient_dob} | Uploaded: {new Date(caseData.created_at).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
+                  <CaseStatusBadge status={caseData.status} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div>
@@ -253,47 +306,30 @@ export default function ReporterDashboard() {
               </CardContent>
               <CardFooter className="flex flex-wrap gap-2">
                 <Button 
-                  onClick={() => navigate(`/reporter/case/${caseData.id}`)}
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Review Case
-                </Button>
-                <Button 
-                  onClick={() => downloadDICOM(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
                   disabled={downloadingCase === caseData.id}
                   variant="outline"
+                  size="sm"
                 >
                   {downloadingCase === caseData.id ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="h-4 w-4 mr-2" />
                   )}
                   Download DICOM
                 </Button>
+
                 <Button 
-                  onClick={() => openDropboxFolder(caseData)} 
-                  variant="outline"
+                  onClick={() => uploadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  disabled={uploadingReport === caseData.id}
+                  size="sm"
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Open Uploads Folder
-                </Button>
-                <Button 
-                  onClick={() => openDropboxReportsFolder(caseData)} 
-                  variant="outline"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Open Reports Folder
-                </Button>
-                <Button 
-                  onClick={() => markCompleted(caseData.id, caseData)}
-                  disabled={completingCase === caseData.id}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {completingCase === caseData.id ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {uploadingReport === caseData.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    'Mark Report Ready'
+                    <Upload className="h-4 w-4 mr-2" />
                   )}
+                  Upload Report
                 </Button>
               </CardFooter>
             </Card>
@@ -310,10 +346,15 @@ export default function ReporterDashboard() {
           {completedCases.map(caseData => (
             <Card key={caseData.id}>
               <CardHeader>
-                <CardTitle>{caseData.patient_name}</CardTitle>
-                <CardDescription>
-                  Completed: {caseData.completed_at ? new Date(caseData.completed_at).toLocaleDateString() : 'Unknown'}
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
+                    <CardDescription>
+                      Completed: {caseData.completed_at ? new Date(caseData.completed_at).toLocaleDateString() : 'Unknown'}
+                    </CardDescription>
+                  </div>
+                  <CaseStatusBadge status={caseData.status} />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{caseData.clinical_question}</p>
