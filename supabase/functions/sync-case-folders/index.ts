@@ -100,8 +100,8 @@ serve(async (req) => {
       console.log('[sync-case-folders] ⚠️ Missing folder structure, generating...');
       
       const folderName = generateFolderName(caseData.patient_name, caseData.patient_id);
-      const uploadPath = `/DentaRad/Uploads/${folderName}`;
-      const reportPath = `/DentaRad/Reports/${caseData.patient_name}`;
+      const uploadPath = `/dentarad/upload/${folderName}`;
+      const reportPath = `/dentarad/reports/${folderName}`;
       
       // Update database with generated paths
       const { error: pathUpdateError } = await supabase
