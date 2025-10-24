@@ -22,6 +22,7 @@ interface Case {
   status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
   urgency: 'standard' | 'urgent';
   field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
+  synced_to_dropbox?: boolean;
   clinics?: {
     name: string;
     contact_email: string;
@@ -152,6 +153,36 @@ const Dashboard = () => {
     }
   };
 
+  const retryDropboxSync = async (caseId: string) => {
+    try {
+      toast({
+        title: "Syncing to Dropbox",
+        description: "Attempting to sync case to Dropbox...",
+      });
+
+      const { data, error } = await supabase.functions.invoke('sync-case-folders', {
+        body: { caseId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sync Successful",
+        description: "Case has been synced to Dropbox!",
+      });
+
+      // Refresh cases
+      await fetchCases();
+    } catch (error: any) {
+      console.error('Error syncing to Dropbox:', error);
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync to Dropbox",
+        variant: "destructive",
+      });
+    }
+  };
+
 
 
   return (
@@ -273,8 +304,18 @@ const Dashboard = () => {
                               {formatStatus(case_.status)}
                             </Badge>
                           </td>
-                          <td className="py-2">
-                            <div className="flex gap-2">
+                           <td className="py-2">
+                            <div className="flex gap-2 flex-wrap">
+                              {!case_.synced_to_dropbox && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => retryDropboxSync(case_.id)}
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Retry Sync
+                                </Button>
+                              )}
                               {case_.status === 'uploaded' && (
                                 <Button
                                   variant="outline"
@@ -349,8 +390,19 @@ const Dashboard = () => {
                           </div>
 
                           {/* Mobile Actions */}
-                          <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                            <div className="flex gap-2 flex-1">
+                          <div className="flex flex-col gap-2 pt-2">
+                            {!case_.synced_to_dropbox && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => retryDropboxSync(case_.id)}
+                                className="w-full"
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Retry Dropbox Sync
+                              </Button>
+                            )}
+                            <div className="flex gap-2">
                               {case_.status === 'uploaded' && (
                                 <Button
                                   variant="outline"
@@ -373,7 +425,7 @@ const Dashboard = () => {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="w-full sm:w-auto"
+                                className="w-full"
                                 onClick={() => downloadReport(case_)}
                               >
                                 <Download className="h-4 w-4 mr-2" />
