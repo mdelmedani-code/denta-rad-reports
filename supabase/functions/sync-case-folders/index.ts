@@ -107,6 +107,58 @@ serve(async (req) => {
     await createDropboxFolder(accessToken, caseData.dropbox_report_path);
     console.log('[sync-case-folders] ✅ Reports folder created');
 
+    // Verify scan.zip was uploaded by client
+    console.log('[sync-case-folders] Verifying scan upload...');
+    const scanPath = `${caseData.dropbox_scan_path}scan.zip`;
+    const scanExists = await checkDropboxFileExists(accessToken, scanPath);
+
+    if (!scanExists) {
+      console.log('[sync-case-folders] ⚠️ scan.zip not found in Dropbox');
+      console.log('[sync-case-folders] Checking Supabase Storage for fallback upload...');
+      
+      // Check if file exists in Supabase Storage
+      const { data: storageFiles, error: listError } = await supabase.storage
+        .from('cbct-scans')
+        .list(caseData.folder_name || '');
+      
+      if (listError) {
+        console.error('[sync-case-folders] Storage check failed:', listError);
+        throw new Error(`Failed to check storage: ${listError.message}`);
+      }
+      
+      const scanFile = storageFiles?.find(f => f.name.endsWith('.zip'));
+      
+      if (!scanFile) {
+        // No scan in Dropbox OR Storage - upload failed completely
+        const errorMsg = 'Scan file not found in Dropbox or Storage. Client upload may have failed. Please retry upload.';
+        console.error('[sync-case-folders]', errorMsg);
+        throw new Error(errorMsg);
+      }
+      
+      console.log('[sync-case-folders] ✅ Found scan in Storage:', scanFile.name);
+      console.log('[sync-case-folders] Downloading from Storage for fallback upload...');
+      
+      // Download from Supabase Storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('cbct-scans')
+        .download(`${caseData.folder_name}/${scanFile.name}`);
+      
+      if (downloadError || !fileData) {
+        throw new Error(`Failed to download from storage: ${downloadError?.message}`);
+      }
+      
+      console.log('[sync-case-folders] Downloaded from Storage, size:', 
+        (fileData.size / 1024 / 1024).toFixed(2), 'MB');
+      
+      // Upload to Dropbox using chunked upload for reliability
+      console.log('[sync-case-folders] Uploading to Dropbox (with chunking support)...');
+      await uploadLargeFileToDropbox(accessToken, scanPath, fileData);
+      
+      console.log('[sync-case-folders] ✅ Scan uploaded to Dropbox via fallback');
+    } else {
+      console.log('[sync-case-folders] ✅ Scan already in Dropbox');
+    }
+
     // Upload metadata files (non-blocking)
     const uploadResults = {
       referralInfo: false,
@@ -157,11 +209,13 @@ serve(async (req) => {
       ? `Failed to upload: ${failedFiles.join(', ')}`
       : null;
 
-    // Update database - mark as synced even if some files failed
+    // Update database - mark as synced and scan uploaded
     const { error: updateError } = await supabase
       .from('cases')
       .update({ 
         synced_to_dropbox: true,
+        scan_uploaded_to_dropbox: true,
+        scan_upload_verified_at: new Date().toISOString(),
         sync_warnings: syncWarnings,
         updated_at: new Date().toISOString() 
       })
@@ -356,4 +410,158 @@ ${caseData.clinical_question}
 
 NOTE: This file is for REPORTER only. Clinicians will NOT see this.
 `;
+}
+
+async function checkDropboxFileExists(
+  accessToken: string, 
+  path: string
+): Promise<boolean> {
+  try {
+    const response = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data['.tag'] === 'file';
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('[checkDropboxFileExists] Error:', error);
+    return false;
+  }
+}
+
+async function uploadLargeFileToDropbox(
+  accessToken: string,
+  path: string,
+  fileData: Blob
+): Promise<void> {
+  const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB chunks
+  const fileSize = fileData.size;
+  
+  console.log(`[uploadLargeFileToDropbox] File size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+  
+  // For files < 150MB, use regular upload
+  if (fileSize < 150 * 1024 * 1024) {
+    console.log('[uploadLargeFileToDropbox] Using regular upload API');
+    const arrayBuffer = await fileData.arrayBuffer();
+    const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({
+          path: path,
+          mode: 'overwrite',
+          autorename: false
+        })
+      },
+      body: arrayBuffer
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Upload failed: ${error}`);
+    }
+    
+    console.log('[uploadLargeFileToDropbox] ✅ Upload complete');
+    return;
+  }
+  
+  // For files >= 150MB, use upload session (chunked)
+  console.log('[uploadLargeFileToDropbox] Using chunked upload session');
+  
+  // 1. Start upload session
+  const startResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/start', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/octet-stream',
+      'Dropbox-API-Arg': JSON.stringify({ close: false })
+    },
+    body: new ArrayBuffer(0)
+  });
+  
+  if (!startResponse.ok) {
+    throw new Error('Failed to start upload session');
+  }
+  
+  const { session_id } = await startResponse.json();
+  console.log('[uploadLargeFileToDropbox] Session started:', session_id);
+  
+  // 2. Upload chunks
+  const arrayBuffer = await fileData.arrayBuffer();
+  let offset = 0;
+  let chunkNum = 0;
+  
+  while (offset < fileSize) {
+    const chunkSize = Math.min(CHUNK_SIZE, fileSize - offset);
+    const chunk = arrayBuffer.slice(offset, offset + chunkSize);
+    chunkNum++;
+    
+    console.log(`[uploadLargeFileToDropbox] Uploading chunk ${chunkNum} (${(chunkSize / 1024 / 1024).toFixed(2)} MB)...`);
+    
+    const appendResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/append_v2', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({
+          cursor: {
+            session_id: session_id,
+            offset: offset
+          },
+          close: false
+        })
+      },
+      body: chunk
+    });
+    
+    if (!appendResponse.ok) {
+      const error = await appendResponse.text();
+      throw new Error(`Chunk upload failed: ${error}`);
+    }
+    
+    offset += chunkSize;
+    
+    const progress = ((offset / fileSize) * 100).toFixed(1);
+    console.log(`[uploadLargeFileToDropbox] Progress: ${progress}%`);
+  }
+  
+  // 3. Finish upload session
+  console.log('[uploadLargeFileToDropbox] Finalizing upload...');
+  
+  const finishResponse = await fetch('https://content.dropboxapi.com/2/files/upload_session/finish', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/octet-stream',
+      'Dropbox-API-Arg': JSON.stringify({
+        cursor: {
+          session_id: session_id,
+          offset: offset
+        },
+        commit: {
+          path: path,
+          mode: 'overwrite',
+          autorename: false
+        }
+      })
+    },
+    body: new ArrayBuffer(0)
+  });
+  
+  if (!finishResponse.ok) {
+    const error = await finishResponse.text();
+    throw new Error(`Failed to finish upload: ${error}`);
+  }
+  
+  console.log('[uploadLargeFileToDropbox] ✅ Chunked upload complete');
 }

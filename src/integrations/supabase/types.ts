@@ -106,6 +106,8 @@ export type Database = {
           pregenerated_zip_path: string | null
           processed_at: string | null
           report_path: string | null
+          scan_upload_verified_at: string | null
+          scan_uploaded_to_dropbox: boolean | null
           series_count: number | null
           simple_id: number | null
           sr_validated: boolean | null
@@ -146,6 +148,8 @@ export type Database = {
           pregenerated_zip_path?: string | null
           processed_at?: string | null
           report_path?: string | null
+          scan_upload_verified_at?: string | null
+          scan_uploaded_to_dropbox?: boolean | null
           series_count?: number | null
           simple_id?: number | null
           sr_validated?: boolean | null
@@ -186,6 +190,8 @@ export type Database = {
           pregenerated_zip_path?: string | null
           processed_at?: string | null
           report_path?: string | null
+          scan_upload_verified_at?: string | null
+          scan_uploaded_to_dropbox?: boolean | null
           series_count?: number | null
           simple_id?: number | null
           sr_validated?: boolean | null
