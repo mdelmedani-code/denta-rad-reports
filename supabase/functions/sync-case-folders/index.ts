@@ -333,6 +333,9 @@ async function getDropboxAccessToken(): Promise<string> {
 }
 
 async function createDropboxFolder(accessToken: string, path: string): Promise<void> {
+  // Remove trailing slash - Dropbox doesn't accept it for folders
+  const cleanPath = path.replace(/\/$/, '');
+  
   try {
     const checkResponse = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
       method: 'POST',
@@ -340,7 +343,7 @@ async function createDropboxFolder(accessToken: string, path: string): Promise<v
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ path })
+      body: JSON.stringify({ path: cleanPath })
     });
 
     if (checkResponse.ok) {
@@ -362,7 +365,7 @@ async function createDropboxFolder(accessToken: string, path: string): Promise<v
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ path: path, autorename: false })
+    body: JSON.stringify({ path: cleanPath, autorename: false })
   });
 
   if (!createResponse.ok) {
@@ -375,10 +378,10 @@ async function createDropboxFolder(accessToken: string, path: string): Promise<v
       if (error.error?.['.tag'] === 'path' && error.error?.path?.['.tag'] === 'conflict') {
         return; // Already exists
       }
-      throw new Error(`Failed to create folder at ${path}: ${JSON.stringify(error)}`);
+      throw new Error(`Failed to create folder at ${cleanPath}: ${JSON.stringify(error)}`);
     } catch (e) {
       // Not JSON, throw the raw error
-      throw new Error(`Failed to create folder at ${path}: ${errorText}`);
+      throw new Error(`Failed to create folder at ${cleanPath}: ${errorText}`);
     }
   }
 }
