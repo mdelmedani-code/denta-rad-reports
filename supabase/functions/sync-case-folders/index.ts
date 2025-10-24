@@ -95,6 +95,36 @@ serve(async (req) => {
     console.log('[sync-case-folders] ✅ Authorization verified');
     console.log('[sync-case-folders] Case:', caseData.folder_name);
 
+    // Generate folder name and paths if missing (for old cases)
+    if (!caseData.folder_name || !caseData.dropbox_scan_path || !caseData.dropbox_report_path) {
+      console.log('[sync-case-folders] ⚠️ Missing folder structure, generating...');
+      
+      const folderName = generateFolderName(caseData.patient_name, caseData.patient_id);
+      const uploadPath = `/DentaRad/Uploads/${folderName}`;
+      const reportPath = `/DentaRad/Reports/${caseData.patient_name}`;
+      
+      // Update database with generated paths
+      const { error: pathUpdateError } = await supabase
+        .from('cases')
+        .update({
+          folder_name: folderName,
+          dropbox_scan_path: `${uploadPath}/`,
+          dropbox_report_path: `${reportPath}/`
+        })
+        .eq('id', caseId);
+      
+      if (pathUpdateError) {
+        throw new Error(`Failed to update paths: ${pathUpdateError.message}`);
+      }
+      
+      // Update local caseData object
+      caseData.folder_name = folderName;
+      caseData.dropbox_scan_path = `${uploadPath}/`;
+      caseData.dropbox_report_path = `${reportPath}/`;
+      
+      console.log('[sync-case-folders] ✅ Generated folder:', folderName);
+    }
+
     const accessToken = await getDropboxAccessToken();
 
     // Create Uploads folder
@@ -254,6 +284,24 @@ serve(async (req) => {
     );
   }
 });
+
+function generateFolderName(patientName: string, patientId: string): string {
+  const cleanName = patientName
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^A-Z\s]/g, '') // Keep only letters and spaces
+    .trim();
+  
+  const parts = cleanName.split(/\s+/);
+  const lastName = parts[0] || 'PATIENT';
+  const firstName = parts.slice(1).join('_') || 'NAME';
+  
+  // Extract numeric ID from patient_id (e.g., "CASE-0000123" -> "00123")
+  const numericId = patientId.replace(/\D/g, '').padStart(5, '0').slice(-5);
+  
+  return `${lastName}_${firstName}_${numericId}`;
+}
 
 async function getDropboxAccessToken(): Promise<string> {
   const appKey = Deno.env.get('DROPBOX_APP_KEY')!;
