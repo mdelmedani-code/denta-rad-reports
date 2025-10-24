@@ -32,11 +32,12 @@ serve(async (req) => {
 
     // ✅ ENHANCEMENT 4: Log cleanup action for GDPR audit trail
     try {
-      await supabase.rpc('log_audit_event_secure', {
-        p_action: 'delete_case',
-        p_resource_type: 'case',
-        p_resource_id: caseId,
-        p_details: {
+      await supabase.from('security_audit_log').insert({
+        user_id: user.id,
+        action: 'delete_case',
+        table_name: 'case',
+        details: {
+          case_id: caseId,
           reason: 'upload_failed',
           dropbox_paths: dropboxPaths,
           storage_path: storagePath,

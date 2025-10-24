@@ -617,33 +617,6 @@ export type Database = {
         }
         Relationships: []
       }
-      upload_rate_limits: {
-        Row: {
-          created_at: string
-          file_size: number | null
-          file_type: string | null
-          id: string
-          upload_timestamp: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          file_size?: number | null
-          file_type?: string | null
-          id?: string
-          upload_timestamp?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          file_size?: number | null
-          file_type?: string | null
-          id?: string
-          upload_timestamp?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -723,7 +696,10 @@ export type Database = {
           severity: string
         }[]
       }
-      check_upload_rate_limit: { Args: { _user_id: string }; Returns: boolean }
+      check_upload_rate_limit: {
+        Args: { p_clinic_id: string }
+        Returns: boolean
+      }
       create_report_share: { Args: { p_report_id: string }; Returns: string }
       detect_indication_from_clinical_question: {
         Args: { clinical_question: string }

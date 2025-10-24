@@ -39,11 +39,76 @@ serve(async (req) => {
 
     console.log('[monitor-system-health] Admin verified:', user.id);
 
-    // Run health check function
-    const { data: healthIssues, error: healthError } = await supabase.rpc('check_system_health');
+    // Run health checks directly
+    const healthIssues: any[] = [];
 
-    if (healthError) {
-      throw new Error(`Health check failed: ${healthError.message}`);
+    // Check 1: Orphaned uploads (created but never completed, >24h)
+    const { data: orphanedUploads, error: orphanError } = await supabase
+      .from('cases')
+      .select('id, folder_name, created_at')
+      .eq('upload_completed', false)
+      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    if (!orphanError && orphanedUploads && orphanedUploads.length > 0) {
+      healthIssues.push({
+        type: 'orphaned_uploads',
+        severity: 'medium',
+        count: orphanedUploads.length,
+        message: `${orphanedUploads.length} cases with incomplete uploads (>24 hours)`,
+        cases: orphanedUploads.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name }))
+      });
+    }
+
+    // Check 2: Failed syncs (cases with sync warnings)
+    const { data: failedSyncs, error: syncError } = await supabase
+      .from('cases')
+      .select('id, folder_name, sync_warnings')
+      .not('sync_warnings', 'is', null)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+    if (!syncError && failedSyncs && failedSyncs.length > 0) {
+      healthIssues.push({
+        type: 'failed_syncs',
+        severity: 'medium',
+        count: failedSyncs.length,
+        message: `${failedSyncs.length} cases with sync warnings in last 7 days`,
+        cases: failedSyncs.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name, warning: c.sync_warnings }))
+      });
+    }
+
+    // Check 3: Stale cases (uploaded but not synced >1h)
+    const { data: staleCases, error: staleError } = await supabase
+      .from('cases')
+      .select('id, folder_name, created_at')
+      .eq('synced_to_dropbox', false)
+      .eq('status', 'uploaded')
+      .lt('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
+
+    if (!staleError && staleCases && staleCases.length > 0) {
+      healthIssues.push({
+        type: 'stale_cases',
+        severity: 'low',
+        count: staleCases.length,
+        message: `${staleCases.length} cases uploaded but not synced (>1 hour)`,
+        cases: staleCases.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name }))
+      });
+    }
+
+    // Check 4: Unprocessed uploads (>48h still uploaded status)
+    const { data: unprocessedCases, error: unprocessedError } = await supabase
+      .from('cases')
+      .select('id, folder_name, created_at')
+      .eq('status', 'uploaded')
+      .lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
+
+    if (!unprocessedError && unprocessedCases && unprocessedCases.length > 0) {
+      healthIssues.push({
+        type: 'unprocessed_uploads',
+        severity: 'high',
+        count: unprocessedCases.length,
+        message: `${unprocessedCases.length} cases uploaded >48 hours ago still not processed`,
+        cases: unprocessedCases.slice(0, 5).map(c => ({ id: c.id, folder: c.folder_name }))
+      });
     }
 
     console.log('[monitor-system-health] Health issues found:', healthIssues?.length || 0);
@@ -68,9 +133,14 @@ serve(async (req) => {
     const totalIssues = criticalIssues + highIssues + mediumIssues + lowIssues;
     const systemHealthy = totalIssues === 0;
 
-    // Send notification if critical or high severity issues found
+    // Only send notification for critical or high severity issues (not medium/low)
     if (criticalIssues > 0 || highIssues > 0) {
       console.log('[monitor-system-health] ⚠️ Critical/High issues detected, sending alert...');
+      
+      // Filter to only critical/high issues for alert
+      const criticalHighIssues = healthIssues.filter(
+        i => i.severity === 'critical' || i.severity === 'high'
+      );
       
       try {
         await supabase.functions.invoke('send-notification', {
@@ -83,7 +153,7 @@ serve(async (req) => {
               high_issues: highIssues,
               medium_issues: mediumIssues,
               low_issues: lowIssues,
-              issues: healthIssues
+              issues: criticalHighIssues
             }
           }
         });
@@ -91,6 +161,8 @@ serve(async (req) => {
       } catch (notifyError) {
         console.error('[monitor-system-health] Failed to send alert:', notifyError);
       }
+    } else if (totalIssues > 0) {
+      console.log('[monitor-system-health] ⚠️ Warning-level issues found (no alert sent)');
     }
 
     const response = {

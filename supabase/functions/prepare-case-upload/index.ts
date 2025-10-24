@@ -28,10 +28,14 @@ serve(async (req) => {
 
     console.log('[prepare-case-upload] User authenticated:', user.id);
 
-    // ✅ ENHANCEMENT 1: Check rate limiting (20 uploads per hour)
+    const body = await req.json();
+
+    // ✅ ENHANCEMENT 1: Check rate limiting (20 uploads per hour per CLINIC)
+    console.log('[prepare-case-upload] Checking rate limit for clinic:', body.clinicId);
+    
     const { data: rateLimitOk, error: rateLimitError } = await supabase.rpc(
       'check_upload_rate_limit',
-      { _user_id: user.id }
+      { p_clinic_id: body.clinicId }
     );
 
     if (rateLimitError) {
@@ -40,12 +44,12 @@ serve(async (req) => {
     }
 
     if (!rateLimitOk) {
-      console.warn('[prepare-case-upload] Rate limit exceeded for user:', user.id);
+      console.warn('[prepare-case-upload] Rate limit exceeded for clinic:', body.clinicId);
       return new Response(
         JSON.stringify({
           error: {
             code: 'RATE_LIMIT_EXCEEDED',
-            message: 'Upload limit exceeded. Maximum 20 uploads per hour.'
+            message: 'Upload limit exceeded. Your clinic can upload maximum 20 cases per hour. Please try again later.'
           }
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -53,8 +57,6 @@ serve(async (req) => {
     }
 
     console.log('[prepare-case-upload] ✅ Rate limit check passed');
-
-    const body = await req.json();
 
     // ✅ FIX 6: Validate file size on backend
     if (!body.fileSize || typeof body.fileSize !== 'number') {
@@ -244,7 +246,12 @@ function sanitizePatientName(name: string): string {
     .replace(/\s+/g, ' ') // Collapse multiple spaces
     .substring(0, 50); // Limit length
   
-  // Ensure at least 1 letter
+  // ✅ Check for empty string first
+  if (!cleaned || cleaned.length === 0) {
+    throw new Error('Patient name cannot be empty');
+  }
+  
+  // ✅ Ensure at least 1 letter
   if (!/[A-Z]/.test(cleaned)) {
     throw new Error('Patient name must contain at least one letter');
   }

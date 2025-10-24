@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import JSZip from "jszip";
-import { validateDICOMZip, getReadableFileSize, checkUploadRateLimit, recordUpload } from "@/services/fileValidationService";
+import { validateDICOMZip, getReadableFileSize } from "@/services/fileValidationService";
 import { getCSRFToken } from "@/utils/csrf";
 import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
@@ -267,17 +267,6 @@ const UploadCase = () => {
       return;
     }
     
-    // Check upload rate limit (20 uploads per 24 hours)
-    const rateLimit = await checkUploadRateLimit();
-    if (!rateLimit.allowed) {
-      toast({
-        title: 'Upload Limit Reached',
-        description: rateLimit.error || 'You can upload 20 cases per 24 hours',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     // ✅ FIX 2: Add rollback logic for partial failures
     let uploadSucceeded = false;
     let syncSucceeded = false;
@@ -496,12 +485,6 @@ const UploadCase = () => {
       .eq('id', newCase.id);
     
     console.log('[Dropbox Sync] Case updated with Dropbox paths');
-    
-    // Record upload
-    await recordUpload(
-      finalZipFile instanceof File ? finalZipFile.size : finalZipFile.size,
-      'application/zip'
-    );
     
     // Log case creation
     await logCaseCreation(newCase.id);
