@@ -260,6 +260,8 @@ async function getDropboxAccessToken(): Promise<string> {
   const appSecret = Deno.env.get('DROPBOX_APP_SECRET')!;
   const refreshToken = Deno.env.get('DROPBOX_REFRESH_TOKEN')!;
 
+  console.log('[getDropboxAccessToken] Refreshing token with app key:', appKey?.substring(0, 8) + '...');
+
   const response = await fetch('https://api.dropbox.com/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -271,8 +273,14 @@ async function getDropboxAccessToken(): Promise<string> {
     }),
   });
 
-  if (!response.ok) throw new Error('Failed to refresh Dropbox token');
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[getDropboxAccessToken] Failed to refresh token:', response.status, errorText);
+    throw new Error(`Failed to refresh Dropbox token: ${errorText}`);
+  }
+  
   const data = await response.json();
+  console.log('[getDropboxAccessToken] ✅ Token refreshed successfully');
   return data.access_token;
 }
 
@@ -287,10 +295,17 @@ async function createDropboxFolder(accessToken: string, path: string): Promise<v
       body: JSON.stringify({ path })
     });
 
-    const checkData = await checkResponse.json();
-    if (checkResponse.ok && checkData['.tag'] === 'folder') return;
+    if (checkResponse.ok) {
+      const checkData = await checkResponse.json();
+      if (checkData['.tag'] === 'folder') return;
+    } else {
+      // Log the actual error for debugging
+      const errorText = await checkResponse.text();
+      console.log('[createDropboxFolder] Check metadata failed:', checkResponse.status, errorText);
+    }
   } catch (error) {
-    // Folder doesn't exist, continue to create
+    console.error('[createDropboxFolder] Exception during check:', error);
+    // Continue to try creating the folder
   }
 
   const createResponse = await fetch('https://api.dropboxapi.com/2/files/create_folder_v2', {
@@ -303,11 +318,20 @@ async function createDropboxFolder(accessToken: string, path: string): Promise<v
   });
 
   if (!createResponse.ok) {
-    const error = await createResponse.json();
-    if (error.error?.['.tag'] === 'path' && error.error?.path?.['.tag'] === 'conflict') {
-      return; // Already exists
+    const errorText = await createResponse.text();
+    console.error('[createDropboxFolder] Create folder failed:', createResponse.status, errorText);
+    
+    // Try to parse as JSON
+    try {
+      const error = JSON.parse(errorText);
+      if (error.error?.['.tag'] === 'path' && error.error?.path?.['.tag'] === 'conflict') {
+        return; // Already exists
+      }
+      throw new Error(`Failed to create folder at ${path}: ${JSON.stringify(error)}`);
+    } catch (e) {
+      // Not JSON, throw the raw error
+      throw new Error(`Failed to create folder at ${path}: ${errorText}`);
     }
-    throw new Error(`Failed to create folder: ${JSON.stringify(error)}`);
   }
 }
 
