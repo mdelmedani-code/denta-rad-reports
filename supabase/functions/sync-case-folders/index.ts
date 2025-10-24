@@ -101,7 +101,7 @@ serve(async (req) => {
       
       const folderName = generateFolderName(caseData.patient_name, caseData.patient_id);
       // ✅ App Folder mode paths (omit /dentarad/ prefix)
-      const uploadPath = `/upload/${folderName}`;
+      const uploadPath = `/uploads/${folderName}`;
       const reportPath = `/reports/${folderName}`;
       
       // Update database with generated paths

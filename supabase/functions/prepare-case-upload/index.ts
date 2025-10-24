@@ -150,7 +150,7 @@ serve(async (req) => {
       console.log('[prepare-case-upload] Generated folder name:', folderName);
 
       // ✅ App Folder mode paths (omit /dentarad/ prefix)
-      scanPath = `/upload/${folderName}/`;
+      scanPath = `/uploads/${folderName}/`;
       reportPath = `/reports/${folderName}/`;
 
       // Insert case record
