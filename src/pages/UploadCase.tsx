@@ -424,8 +424,7 @@ const UploadCase = () => {
       'prepare-case-upload',
       { 
         body: { 
-          patientFirstName: newCase.patient_first_name || '',
-          patientLastName: newCase.patient_last_name || '',
+          patientName: newCase.patient_name,
           patientId: newCase.patient_id || '',
           patientDob: newCase.patient_dob || '',
           clinicalQuestion: newCase.clinical_question,

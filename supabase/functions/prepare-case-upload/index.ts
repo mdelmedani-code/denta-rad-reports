@@ -85,7 +85,7 @@ serve(async (req) => {
       (body.fileSize / 1024 / 1024).toFixed(2), 'MB');
 
     // Validate required fields
-    const requiredFields = ['patientFirstName', 'patientLastName', 'patientId', 
+    const requiredFields = ['patientName', 'patientId', 
                            'clinicalQuestion', 'fieldOfView', 'urgency', 'clinicId'];
 
     for (const field of requiredFields) {
@@ -95,8 +95,7 @@ serve(async (req) => {
     }
 
     // ✅ FIX 5: Sanitize inputs (XSS prevention)
-    const firstName = sanitizePatientName(body.patientFirstName);
-    const lastName = sanitizePatientName(body.patientLastName);
+    const patientName = sanitizePatientName(body.patientName);
     const sanitizedQuestion = sanitizeTextContent(body.clinicalQuestion);
 
     console.log('[prepare-case-upload] Processing case for patient');
@@ -107,8 +106,8 @@ serve(async (req) => {
     const { data: lockAcquired, error: lockError } = await supabase.rpc(
       'acquire_case_lock',
       {
-        p_patient_last_name: lastName,
-        p_patient_first_name: firstName
+        p_patient_last_name: patientName,
+        p_patient_first_name: patientName
       }
     );
 
@@ -128,8 +127,7 @@ serve(async (req) => {
       const { data: existingCases, error: queryError } = await supabase
         .from('cases')
         .select('folder_name')
-        .eq('patient_last_name', lastName)
-        .eq('patient_first_name', firstName)
+        .eq('patient_name', patientName)
         .order('created_at', { ascending: false });
 
       if (queryError) throw new Error('Failed to query existing cases');
@@ -147,7 +145,7 @@ serve(async (req) => {
 
       const newCounter = maxCounter + 1;
       const paddedCounter = String(newCounter).padStart(5, '0');
-      folderName = `${lastName}_${firstName}_${paddedCounter}`;
+      folderName = `${patientName.replace(/\s+/g, '_')}_${paddedCounter}`;
 
       console.log('[prepare-case-upload] Generated folder name:', folderName);
 
@@ -159,8 +157,7 @@ serve(async (req) => {
         .from('cases')
         .insert({
           clinic_id: body.clinicId,
-          patient_first_name: firstName,
-          patient_last_name: lastName,
+          patient_name: patientName,
           patient_id: body.patientId.trim(),
           patient_dob: body.patientDob,
           clinical_question: sanitizedQuestion, // ✅ Sanitized
@@ -185,8 +182,8 @@ serve(async (req) => {
       // Always release lock
       console.log('[prepare-case-upload] Releasing lock...');
       await supabase.rpc('release_case_lock', {
-        p_patient_last_name: lastName,
-        p_patient_first_name: firstName
+        p_patient_last_name: patientName,
+        p_patient_first_name: patientName
       });
       console.log('[prepare-case-upload] ✅ Lock released');
     }

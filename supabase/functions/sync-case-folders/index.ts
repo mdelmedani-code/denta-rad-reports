@@ -18,8 +18,8 @@ serve(async (req) => {
     if (!authHeader) throw new Error('No authorization header');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
@@ -48,9 +48,9 @@ serve(async (req) => {
       .from('cases')
       .select(`
         id, folder_name, dropbox_scan_path, dropbox_report_path, clinic_id,
-        patient_first_name, patient_last_name, patient_id, patient_dob,
+        patient_name, patient_id, patient_dob,
         clinical_question, field_of_view, urgency, created_at,
-        clinics(name, email, address)
+        clinics(name)
       `)
       .eq('id', caseId)
       .single();
@@ -258,7 +258,7 @@ function generateReferralText(caseData: any): string {
 DentaRad Case Referral Information
 ===================================
 
-PATIENT: ${caseData.patient_first_name} ${caseData.patient_last_name}
+PATIENT: ${caseData.patient_name}
 PATIENT ID: ${caseData.patient_id}
 DOB: ${caseData.patient_dob}
 CASE ID: ${caseData.id}
@@ -285,8 +285,7 @@ function generateMetadata(caseData: any): string {
     case_id: caseData.id,
     folder_name: caseData.folder_name,
     patient: {
-      first_name: caseData.patient_first_name,
-      last_name: caseData.patient_last_name,
+      name: caseData.patient_name,
       patient_id: caseData.patient_id,
       date_of_birth: caseData.patient_dob
     },
@@ -313,7 +312,7 @@ DentaRad Reports Folder
 =======================
 
 Folder: ${caseData.folder_name}
-Patient: ${caseData.patient_first_name} ${caseData.patient_last_name}
+Patient: ${caseData.patient_name}
 Case ID: ${caseData.id}
 
 INSTRUCTIONS:
