@@ -46,9 +46,12 @@ serve(async (req) => {
       try {
         console.log(`[retry-failed-syncs] Retrying case ${case_.id} (${case_.patient_name})`);
         
-        // Call sync-case-folders function
+        // Call sync-case-folders with service role authorization
         const { data, error } = await supabase.functions.invoke('sync-case-folders', {
-          body: { caseId: case_.id }
+          body: { caseId: case_.id },
+          headers: {
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          }
         });
 
         if (error) {

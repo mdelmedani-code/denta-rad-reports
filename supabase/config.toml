@@ -1,5 +1,8 @@
 project_id = "swusayoygknritombbwg"
 
+[functions.retry-failed-syncs]
+verify_jwt = false
+
 [functions.send-notification]
 verify_jwt = true
 

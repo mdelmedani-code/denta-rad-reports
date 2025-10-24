@@ -18,30 +18,53 @@ serve(async (req) => {
     if (!authHeader) throw new Error('No authorization header');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
 
-    // ✅ FIX 4: Add authorization check
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error('Unauthorized');
+    // Check if request uses service role key (for cron jobs)
+    const isServiceRole = authHeader.includes(supabaseServiceKey);
 
-    console.log('[sync-case-folders] User authenticated:', user.id);
+    let supabase;
+    let userId: string | null = null;
+    let userRole: string | null = null;
+    let userClinicId: string | null = null;
+
+    if (isServiceRole) {
+      // Service role: bypass user auth (used by cron jobs)
+      console.log('[sync-case-folders] Service role authentication');
+      supabase = createClient(supabaseUrl, supabaseServiceKey);
+      userRole = 'service';
+      
+    } else {
+      // User authentication: normal flow
+      console.log('[sync-case-folders] User authentication');
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw new Error('Unauthorized');
+
+      userId = user.id;
+      console.log('[sync-case-folders] User authenticated:', userId);
+
+      // Get user's role and clinic
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('clinic_id, role')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profile) throw new Error('Profile not found');
+      
+      userRole = profile.role;
+      userClinicId = profile.clinic_id;
+    }
 
     const { caseId } = await req.json();
     if (!caseId) throw new Error('Case ID is required');
 
     console.log('[sync-case-folders] Case ID:', caseId);
-
-    // Get user's role and clinic
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('clinic_id, role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile) throw new Error('Profile not found');
 
     // Get case data
     const { data: caseData, error: caseError } = await supabase
@@ -57,14 +80,16 @@ serve(async (req) => {
 
     if (caseError || !caseData) throw new Error(`Case not found: ${caseError?.message}`);
 
-    // ✅ FIX 4: Verify authorization
-    const isAuthorized = 
-      profile.role === 'admin' || 
-      profile.role === 'reporter' || 
-      profile.clinic_id === caseData.clinic_id;
+    // Authorization check (only for user requests, not service role)
+    if (userRole !== 'service') {
+      const isAuthorized = 
+        userRole === 'admin' || 
+        userRole === 'reporter' || 
+        userClinicId === caseData.clinic_id;
 
-    if (!isAuthorized) {
-      throw new Error('Unauthorized - cannot sync cases from other clinics');
+      if (!isAuthorized) {
+        throw new Error('Unauthorized - cannot sync cases from other clinics');
+      }
     }
 
     console.log('[sync-case-folders] ✅ Authorization verified');
