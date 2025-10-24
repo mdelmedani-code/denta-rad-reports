@@ -149,8 +149,9 @@ serve(async (req) => {
 
       console.log('[prepare-case-upload] Generated folder name:', folderName);
 
-      scanPath = `/DentaRad/Uploads/${folderName}/`;
-      reportPath = `/DentaRad/Reports/${folderName}/`;
+      // ✅ App Folder mode paths (omit /dentarad/ prefix)
+      scanPath = `/upload/${folderName}/`;
+      reportPath = `/reports/${folderName}/`;
 
       // Insert case record
       const { data: insertedCase, error: insertError } = await supabase

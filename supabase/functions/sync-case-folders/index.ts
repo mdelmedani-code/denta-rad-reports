@@ -100,8 +100,9 @@ serve(async (req) => {
       console.log('[sync-case-folders] ⚠️ Missing folder structure, generating...');
       
       const folderName = generateFolderName(caseData.patient_name, caseData.patient_id);
-      const uploadPath = `/dentarad/upload/${folderName}`;
-      const reportPath = `/dentarad/reports/${folderName}`;
+      // ✅ App Folder mode paths (omit /dentarad/ prefix)
+      const uploadPath = `/upload/${folderName}`;
+      const reportPath = `/reports/${folderName}`;
       
       // Update database with generated paths
       const { error: pathUpdateError } = await supabase
@@ -428,7 +429,7 @@ INSTRUCTIONS FOR REPORTER:
 1. Review DICOM files in scan.zip
 2. Create report in Falcon.me
 3. Export as PDF
-4. Upload to: /DentaRad/Reports/${caseData.folder_name}/
+4. Upload to: /reports/${caseData.folder_name}/
 5. Filename: YYYY-MM-DD_report.pdf
 6. Mark complete in DentaRad
 `;
