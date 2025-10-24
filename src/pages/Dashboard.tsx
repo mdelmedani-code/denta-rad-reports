@@ -191,7 +191,11 @@ const Dashboard = () => {
                   <Upload className="w-4 h-4 mr-2" />
                   Upload New Case
                 </Button>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  className="w-full sm:w-auto"
+                  onClick={() => document.getElementById('cases-section')?.scrollIntoView({ behavior: 'smooth' })}
+                >
                   <FileText className="w-4 h-4 mr-2" />
                   View Reports
                 </Button>
@@ -206,7 +210,7 @@ const Dashboard = () => {
         </div>
 
         {/* Cases Section - Mobile Optimized */}
-        <Card>
+        <Card id="cases-section">
           <CardHeader>
             <CardTitle>Your Cases</CardTitle>
             <CardDescription>
