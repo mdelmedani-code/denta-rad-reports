@@ -85,7 +85,8 @@ export default function AdminCaseReview() {
       `Case: ${simpleId} - ${caseData.patient_name}\n` +
       `Folder: ${caseData.folder_name || 'N/A'}\n\n` +
       `Confirm you have:\n` +
-      `✓ Saved report.pdf to /Reports/${caseData.folder_name}/\n` +
+      `✓ Saved report PDF to /Reports/${caseData.folder_name}/\n` +
+      `✓ Filename format: YYYY-MM-DD_report.pdf\n` +
       `✓ Previewed report (correct patient & complete)\n` +
       `✓ Verified accuracy\n\n` +
       `Clinic will be notified immediately.`
@@ -94,13 +95,13 @@ export default function AdminCaseReview() {
     if (!confirmed) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('mark-case-completed', {
+      const { data, error } = await supabase.functions.invoke('complete-case-report', {
         body: { caseId },
       });
 
       if (error) throw error;
 
-      toast.success('Report released to clinic!');
+      toast.success('Case completed and clinic notified!');
       navigate('/reporter');
     } catch (error: any) {
       toast.error(error.message || 'Failed to mark as completed');

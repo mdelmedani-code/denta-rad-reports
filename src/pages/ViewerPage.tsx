@@ -119,59 +119,50 @@ const ViewerPage = () => {
     }
   };
 
-  const previewReport = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
-        body: { caseId, fileType: 'report' },
-      });
-
-      if (error) throw error;
-
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'width=800,height=1000');
-      
-      toast({
-        title: 'Report Opened',
-        description: 'Report opened in new window',
-      });
-    } catch (error) {
-      toast({
-        title: 'Failed to Load Report',
-        description: 'Unable to load report PDF',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const downloadReport = async () => {
+    setDownloading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-dropbox-file', {
-        body: { caseId, fileType: 'report' },
+      const { data, error } = await supabase.functions.invoke('get-report-download-link', {
+        body: { caseId },
       });
 
       if (error) throw error;
 
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `report_${caseData?.patient_name}_${caseId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      if (!data?.downloadUrl) {
+        throw new Error('No download URL received');
+      }
+
+      // Open download link in new tab
+      window.open(data.downloadUrl, '_blank');
 
       toast({
-        title: 'Report Downloaded',
-        description: 'Report PDF downloaded successfully',
+        title: 'Report Ready',
+        description: `Downloading ${data.filename}`,
       });
-    } catch (error) {
-      toast({
-        title: 'Download Failed',
-        description: 'Failed to download report PDF',
-        variant: 'destructive',
-      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      
+      if (error.message?.includes('not yet available')) {
+        toast({
+          title: 'Report Not Ready',
+          description: 'Report is still being prepared. Please check back later.',
+          variant: 'default',
+        });
+      } else if (error.message?.includes('not found')) {
+        toast({
+          title: 'Report Not Found',
+          description: 'Report file not found in Dropbox. Please contact support.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Download Failed',
+          description: error.message || 'Failed to download report PDF',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -421,13 +412,18 @@ const ViewerPage = () => {
                     Report completed on {caseData.completed_at ? new Date(caseData.completed_at).toLocaleString() : 'N/A'}
                   </p>
                   <div className="flex gap-2">
-                    <Button onClick={previewReport}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Preview Report
-                    </Button>
-                    <Button onClick={downloadReport} variant="outline">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Report PDF
+                    <Button onClick={downloadReport} disabled={downloading}>
+                      {downloading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Report PDF
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

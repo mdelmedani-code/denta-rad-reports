@@ -356,13 +356,19 @@ const UploadCase = () => {
     
     console.log('[Dropbox Sync] Session valid, user ID:', session.user.id);
     
-    // Get Dropbox upload credentials
-    const { data: uploadConfigData, error: configError } = await supabase.functions.invoke(
-      'get-dropbox-upload-url',
+    // Get Dropbox upload token and paths using new function
+    const { data: prepData, error: prepError } = await supabase.functions.invoke(
+      'prepare-case-upload',
       { 
         body: { 
-          caseId: newCase.id, 
-          fileName: zipFilename
+          patientFirstName: newCase.patient_first_name || '',
+          patientLastName: newCase.patient_last_name || '',
+          patientId: newCase.patient_id || '',
+          patientDob: newCase.patient_dob || '',
+          clinicalQuestion: newCase.clinical_question,
+          fieldOfView: newCase.field_of_view,
+          urgency: newCase.urgency,
+          clinicId: newCase.clinic_id
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`
@@ -370,42 +376,42 @@ const UploadCase = () => {
       }
     );
 
-    if (configError) {
-      console.error('[Dropbox Sync] Error getting upload config:', configError);
-      throw new Error('Failed to get Dropbox upload credentials: ' + configError.message);
+    if (prepError) {
+      console.error('[Dropbox Sync] Error preparing upload:', prepError);
+      throw new Error('Failed to prepare Dropbox upload: ' + prepError.message);
     }
 
-    if (!uploadConfigData?.success) {
-      console.error('[Dropbox Sync] Upload config failed:', uploadConfigData);
-      throw new Error('Failed to get Dropbox upload credentials');
-    }
-
-    console.log('[Dropbox Sync] Upload config received:', {
-      folderName: uploadConfigData.uploadConfig.folderName,
-      dropboxPath: uploadConfigData.uploadConfig.dropboxPath
+    console.log('[Dropbox Sync] Upload prepared:', {
+      folderName: prepData.folderName,
+      uploadPath: prepData.uploadPath
     });
 
-    // Upload to Dropbox
+    // Upload to Dropbox using the token and path from prepare-case-upload
     console.log('[Dropbox Sync] Uploading file to Dropbox...');
     await DropboxUploadService.uploadFile(
       finalZipFile instanceof File ? finalZipFile : new File([finalZipFile], zipFilename),
-      uploadConfigData.uploadConfig,
+      {
+        accessToken: prepData.dropboxToken,
+        dropboxPath: prepData.uploadPath,
+        expiresIn: 14400 // 4 hours
+      },
       (progress) => console.log(`[Dropbox Sync] Upload progress: ${progress.percentage}%`)
     );
     
-    const dropboxPath = uploadConfigData.uploadConfig.dropboxPath;
-    console.log('[Dropbox Sync] File uploaded to:', dropboxPath);
+    console.log('[Dropbox Sync] File uploaded to:', prepData.uploadPath);
     
     // Update case with paths
     await supabase
       .from('cases')
       .update({
-        dropbox_path: dropboxPath,
+        dropbox_scan_path: prepData.scanFolderPath,
+        dropbox_report_path: prepData.reportFolderPath,
+        folder_name: prepData.folderName,
         file_path: storagePath
       })
       .eq('id', newCase.id);
     
-    console.log('[Dropbox Sync] Case updated with Dropbox path');
+    console.log('[Dropbox Sync] Case updated with Dropbox paths');
     
     // Record upload
     await recordUpload(
@@ -416,21 +422,21 @@ const UploadCase = () => {
     // Log case creation
     await logCaseCreation(newCase.id);
     
-    // Sync to Dropbox (create folders & metadata)
-    console.log('[Dropbox Sync] Calling sync-case-to-dropbox edge function with auth...');
-    const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-case-to-dropbox', {
-      body: { caseId: newCase.id, dropboxPath },
+    // Sync folders and metadata to Dropbox
+    console.log('[Dropbox Sync] Calling sync-case-folders edge function...');
+    const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-case-folders', {
+      body: { caseId: newCase.id },
       headers: {
         Authorization: `Bearer ${session.access_token}`
       }
     });
     
     if (syncError) {
-      console.error('[Dropbox Sync] sync-case-to-dropbox error:', syncError);
-      throw new Error('Failed to sync case to Dropbox: ' + syncError.message);
+      console.error('[Dropbox Sync] sync-case-folders error:', syncError);
+      throw new Error('Failed to sync case folders: ' + syncError.message);
     }
     
-    console.log('[Dropbox Sync] sync-case-to-dropbox response:', syncData);
+    console.log('[Dropbox Sync] sync-case-folders response:', syncData);
     
     // Extract metadata
     console.log('[Dropbox Sync] Calling extract-dicom-zip edge function...');

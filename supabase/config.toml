@@ -44,3 +44,15 @@ verify_jwt = true
 
 [functions.batch-pregenerate-zips]
 verify_jwt = true
+
+[functions.prepare-case-upload]
+verify_jwt = true
+
+[functions.sync-case-folders]
+verify_jwt = true
+
+[functions.complete-case-report]
+verify_jwt = true
+
+[functions.get-report-download-link]
+verify_jwt = true
