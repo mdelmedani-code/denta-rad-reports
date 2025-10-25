@@ -269,6 +269,53 @@ export default function ReportBuilder() {
     try {
       await saveReport();
 
+      // Generate PDF
+      toast({
+        title: 'Generating PDF',
+        description: 'Please wait while we generate the report PDF...',
+      });
+
+      const { generateReportPDF } = await import('@/lib/reportPdfGenerator.tsx');
+      
+      const pdfBlob = await generateReportPDF({
+        caseData,
+        reportData: {
+          clinical_history: clinicalHistory,
+          technique,
+          findings,
+          impression,
+          recommendations,
+          signatory_name: report.signatory_name || undefined,
+          signatory_credentials: report.signatory_credentials || undefined,
+          signed_at: report.signed_at || undefined,
+          version: report.version || 1,
+        },
+      });
+
+      // Upload PDF to storage
+      const pdfPath = `${caseData.folder_name}/report.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(pdfPath, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Update report with PDF info
+      const { error: reportError } = await supabase
+        .from('reports')
+        .update({ 
+          finalized_at: new Date().toISOString(),
+          pdf_generated: true,
+          pdf_storage_path: pdfPath,
+        })
+        .eq('id', report.id);
+
+      if (reportError) throw reportError;
+
+      // Update case status
       const { error: caseError } = await supabase
         .from('cases')
         .update({ status: 'report_ready' })
@@ -276,16 +323,9 @@ export default function ReportBuilder() {
 
       if (caseError) throw caseError;
 
-      const { error: reportError } = await supabase
-        .from('reports')
-        .update({ finalized_at: new Date().toISOString() })
-        .eq('id', report.id);
-
-      if (reportError) throw reportError;
-
       toast({
         title: 'Report Finalized',
-        description: 'Report has been finalized and case updated',
+        description: 'Report PDF generated and case updated',
       });
 
       navigate('/reporter');

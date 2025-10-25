@@ -733,6 +733,8 @@ export type Database = {
           is_signed: boolean | null
           is_superseded: boolean | null
           last_saved_at: string | null
+          pdf_generated: boolean | null
+          pdf_storage_path: string | null
           pdf_url: string | null
           previous_version_id: string | null
           recommendations: string | null
@@ -772,6 +774,8 @@ export type Database = {
           is_signed?: boolean | null
           is_superseded?: boolean | null
           last_saved_at?: string | null
+          pdf_generated?: boolean | null
+          pdf_storage_path?: string | null
           pdf_url?: string | null
           previous_version_id?: string | null
           recommendations?: string | null
@@ -811,6 +815,8 @@ export type Database = {
           is_signed?: boolean | null
           is_superseded?: boolean | null
           last_saved_at?: string | null
+          pdf_generated?: boolean | null
+          pdf_storage_path?: string | null
           pdf_url?: string | null
           previous_version_id?: string | null
           recommendations?: string | null

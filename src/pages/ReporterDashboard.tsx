@@ -113,10 +113,22 @@ export default function ReporterDashboard() {
     try {
       toast.info('Downloading report...');
 
+      // Get report to check for PDF path
+      const { data: reportData, error: reportError } = await supabase
+        .from('reports')
+        .select('pdf_storage_path')
+        .eq('case_id', caseId)
+        .eq('is_superseded', false)
+        .single();
+
+      if (reportError) throw reportError;
+
+      const pdfPath = reportData?.pdf_storage_path || `${folderName}/report.pdf`;
+
       // Get report from storage
       const { data, error } = await supabase.storage
         .from('reports')
-        .download(`${folderName}/report.pdf`);
+        .download(pdfPath);
 
       if (error) {
         console.error('Download error:', error);
@@ -142,10 +154,22 @@ export default function ReporterDashboard() {
 
   async function previewReport(caseId: string, folderName: string) {
     try {
+      // Get report to check for PDF path
+      const { data: reportData, error: reportError } = await supabase
+        .from('reports')
+        .select('pdf_storage_path')
+        .eq('case_id', caseId)
+        .eq('is_superseded', false)
+        .single();
+
+      if (reportError) throw reportError;
+
+      const pdfPath = reportData?.pdf_storage_path || `${folderName}/report.pdf`;
+
       // Get public URL for report
       const { data } = supabase.storage
         .from('reports')
-        .getPublicUrl(`${folderName}/report.pdf`);
+        .getPublicUrl(pdfPath);
 
       if (data?.publicUrl) {
         window.open(data.publicUrl, '_blank');

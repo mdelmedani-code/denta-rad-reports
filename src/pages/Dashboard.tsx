@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Download, Loader2 } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Download, Loader2, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -94,10 +94,22 @@ const Dashboard = () => {
     try {
       sonnerToast.info('Downloading report...');
 
+      // Get report to check for PDF path
+      const { data: reportData, error: reportError } = await supabase
+        .from('reports')
+        .select('pdf_storage_path')
+        .eq('case_id', caseData.id)
+        .eq('is_superseded', false)
+        .single();
+
+      if (reportError) throw reportError;
+
+      const pdfPath = reportData?.pdf_storage_path || `${caseData.folder_name}/report.pdf`;
+
       // Download from Supabase Storage
       const { data, error } = await supabase.storage
         .from('reports')
-        .download(`${caseData.folder_name}/report.pdf`);
+        .download(pdfPath);
 
       if (error) {
         console.error('Download error:', error);
@@ -120,6 +132,36 @@ const Dashboard = () => {
       sonnerToast.error(error.message || 'Failed to download report');
     } finally {
       setDownloadingReport(null);
+    }
+  };
+
+  const previewReport = async (caseData: Case) => {
+    try {
+      // Get report to check for PDF path
+      const { data: reportData, error: reportError } = await supabase
+        .from('reports')
+        .select('pdf_storage_path')
+        .eq('case_id', caseData.id)
+        .eq('is_superseded', false)
+        .single();
+
+      if (reportError) throw reportError;
+
+      const pdfPath = reportData?.pdf_storage_path || `${caseData.folder_name}/report.pdf`;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('reports')
+        .getPublicUrl(pdfPath);
+
+      if (data?.publicUrl) {
+        window.open(data.publicUrl, '_blank');
+      } else {
+        throw new Error('Failed to get report URL');
+      }
+    } catch (error: any) {
+      console.error('Error previewing report:', error);
+      sonnerToast.error(error.message || 'Failed to preview report');
     }
   };
 
@@ -245,19 +287,29 @@ const Dashboard = () => {
                           <td className="py-2">
                             <div className="flex gap-2 flex-wrap">
                               {case_.status === 'report_ready' ? (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => downloadReport(case_)}
-                                  disabled={downloadingReport === case_.id}
-                                >
-                                  {downloadingReport === case_.id ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Download className="h-4 w-4 mr-2" />
-                                  )}
-                                  Download Report
-                                </Button>
+                                <>
+                                  <Button 
+                                    variant="default" 
+                                    size="sm"
+                                    onClick={() => previewReport(case_)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Preview
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => downloadReport(case_)}
+                                    disabled={downloadingReport === case_.id}
+                                  >
+                                    {downloadingReport === case_.id ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Download className="h-4 w-4 mr-2" />
+                                    )}
+                                    Download
+                                  </Button>
+                                </>
                               ) : (
                                 <span className="text-sm text-muted-foreground py-2">
                                   Report in progress...
@@ -319,20 +371,31 @@ const Dashboard = () => {
                           {/* Mobile Actions */}
                           <div className="flex flex-col gap-2 pt-2">
                             {case_.status === 'report_ready' ? (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="w-full"
-                                onClick={() => downloadReport(case_)}
-                                disabled={downloadingReport === case_.id}
-                              >
-                                {downloadingReport === case_.id ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Download className="h-4 w-4 mr-2" />
-                                )}
-                                Download Report
-                              </Button>
+                              <>
+                                <Button 
+                                  variant="default" 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => previewReport(case_)}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Preview Report
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => downloadReport(case_)}
+                                  disabled={downloadingReport === case_.id}
+                                >
+                                  {downloadingReport === case_.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4 mr-2" />
+                                  )}
+                                  Download Report
+                                </Button>
+                              </>
                             ) : (
                               <p className="text-sm text-muted-foreground text-center py-2">
                                 Report in progress...
