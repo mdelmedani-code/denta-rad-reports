@@ -81,6 +81,8 @@ export type Database = {
       }
       cases: {
         Row: {
+          billed: boolean | null
+          billed_at: string | null
           clinic_id: string
           clinical_question: string
           completed_at: string | null
@@ -103,6 +105,8 @@ export type Database = {
           patient_internal_id: string | null
           patient_last_name: string | null
           patient_name: string
+          payment_received: boolean | null
+          payment_received_at: string | null
           pregenerated_zip_path: string | null
           processed_at: string | null
           report_path: string | null
@@ -113,6 +117,7 @@ export type Database = {
           sr_validated: boolean | null
           sr_validation_errors: Json | null
           status: Database["public"]["Enums"]["case_status"]
+          stripe_invoice_id: string | null
           sync_warnings: string | null
           synced_at: string | null
           synced_to_dropbox: boolean | null
@@ -123,6 +128,8 @@ export type Database = {
           zip_generation_status: string | null
         }
         Insert: {
+          billed?: boolean | null
+          billed_at?: string | null
           clinic_id: string
           clinical_question: string
           completed_at?: string | null
@@ -145,6 +152,8 @@ export type Database = {
           patient_internal_id?: string | null
           patient_last_name?: string | null
           patient_name: string
+          payment_received?: boolean | null
+          payment_received_at?: string | null
           pregenerated_zip_path?: string | null
           processed_at?: string | null
           report_path?: string | null
@@ -155,6 +164,7 @@ export type Database = {
           sr_validated?: boolean | null
           sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
+          stripe_invoice_id?: string | null
           sync_warnings?: string | null
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
@@ -165,6 +175,8 @@ export type Database = {
           zip_generation_status?: string | null
         }
         Update: {
+          billed?: boolean | null
+          billed_at?: string | null
           clinic_id?: string
           clinical_question?: string
           completed_at?: string | null
@@ -187,6 +199,8 @@ export type Database = {
           patient_internal_id?: string | null
           patient_last_name?: string | null
           patient_name?: string
+          payment_received?: boolean | null
+          payment_received_at?: string | null
           pregenerated_zip_path?: string | null
           processed_at?: string | null
           report_path?: string | null
@@ -197,6 +211,7 @@ export type Database = {
           sr_validated?: boolean | null
           sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
+          stripe_invoice_id?: string | null
           sync_warnings?: string | null
           synced_at?: string | null
           synced_to_dropbox?: boolean | null
@@ -223,6 +238,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          stripe_customer_id: string | null
         }
         Insert: {
           address?: string | null
@@ -230,6 +246,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          stripe_customer_id?: string | null
         }
         Update: {
           address?: string | null
@@ -237,6 +254,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          stripe_customer_id?: string | null
         }
         Relationships: []
       }
