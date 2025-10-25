@@ -1,5 +1,27 @@
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
+// Helper function to strip HTML tags and convert to plain text
+const stripHtmlTags = (html: string | null | undefined): string => {
+  if (!html) return '';
+  
+  // Remove HTML tags
+  let text = html.replace(/<[^>]*>/g, '');
+  
+  // Decode common HTML entities
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  
+  // Clean up extra whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  
+  return text;
+};
+
 // PDF Styles
 const styles = StyleSheet.create({
   page: {
@@ -163,31 +185,31 @@ export const generateReportPDF = async (data: ReportData) => {
         {/* Clinical History */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>CLINICAL HISTORY</Text>
-          <Text style={styles.content}>{reportData.clinical_history || 'Not provided'}</Text>
+          <Text style={styles.content}>{stripHtmlTags(reportData.clinical_history) || 'Not provided'}</Text>
         </View>
 
         {/* Technique */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>TECHNIQUE</Text>
-          <Text style={styles.content}>{reportData.technique || 'Not provided'}</Text>
+          <Text style={styles.content}>{stripHtmlTags(reportData.technique) || 'Not provided'}</Text>
         </View>
 
         {/* Findings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>FINDINGS</Text>
-          <Text style={styles.content}>{reportData.findings || 'Not provided'}</Text>
+          <Text style={styles.content}>{stripHtmlTags(reportData.findings) || 'Not provided'}</Text>
         </View>
 
         {/* Impression */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>IMPRESSION</Text>
-          <Text style={styles.content}>{reportData.impression || 'Not provided'}</Text>
+          <Text style={styles.content}>{stripHtmlTags(reportData.impression) || 'Not provided'}</Text>
         </View>
 
         {/* Recommendations */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
-          <Text style={styles.content}>{reportData.recommendations || 'Not provided'}</Text>
+          <Text style={styles.content}>{stripHtmlTags(reportData.recommendations) || 'Not provided'}</Text>
         </View>
 
         {/* Electronic Signature */}
