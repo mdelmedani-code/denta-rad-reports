@@ -126,13 +126,13 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* New Case Report Page */}
+            {/* Case Report Page - accessible by both clinic and admin */}
             <Route path="/admin/reports/:reportId" element={
-              <ProtectedRoute requiredRole="admin">
+              <RequireAuth>
                 <AppLayout>
                   <CaseReportPage />
                 </AppLayout>
-              </ProtectedRoute>
+              </RequireAuth>
             } />
             
             {/* Legacy admin routes redirect to unified dashboard */}

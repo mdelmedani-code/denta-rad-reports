@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Download, Loader2, Eye, FileEdit } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Upload, FileText, Clock, LogOut, Download, Loader2, FileEdit } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'reported'>('all');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -158,6 +160,20 @@ const Dashboard = () => {
     }
   };
 
+  const getFilteredCases = () => {
+    switch (activeTab) {
+      case 'pending':
+        return cases.filter(c => c.status === 'uploaded' || c.status === 'in_progress');
+      case 'reported':
+        return cases.filter(c => c.status === 'report_ready' || c.status === 'awaiting_payment');
+      case 'all':
+      default:
+        return cases;
+    }
+  };
+
+  const filteredCases = getFilteredCases();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -239,23 +255,37 @@ const Dashboard = () => {
                 </Button>
               </div>
             ) : (
-              <>
-                {/* Desktop Table View */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Patient Name</th>
-                        <th className="text-left py-2">Upload Date</th>
-                        <th className="text-left py-2">Clinical Question</th>
-                        <th className="text-left py-2">Urgency</th>
-                        <th className="text-left py-2">FOV</th>
-                        <th className="text-left py-2">Status</th>
-                        <th className="text-left py-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cases.map((case_) => (
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="all">All Cases ({cases.length})</TabsTrigger>
+                  <TabsTrigger value="pending">Pending ({cases.filter(c => c.status === 'uploaded' || c.status === 'in_progress').length})</TabsTrigger>
+                  <TabsTrigger value="reported">Reported ({cases.filter(c => c.status === 'report_ready' || c.status === 'awaiting_payment').length})</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value={activeTab}>
+                  {filteredCases.length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">No cases in this category</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop Table View */}
+                      <div className="hidden lg:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2">Patient Name</th>
+                              <th className="text-left py-2">Upload Date</th>
+                              <th className="text-left py-2">Clinical Question</th>
+                              <th className="text-left py-2">Urgency</th>
+                              <th className="text-left py-2">FOV</th>
+                              <th className="text-left py-2">Status</th>
+                              <th className="text-left py-2">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredCases.map((case_) => (
                         <tr key={case_.id} className="border-b">
                           <td className="py-2">{case_.patient_name}</td>
                           <td className="py-2">
@@ -317,14 +347,14 @@ const Dashboard = () => {
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
 
-                {/* Mobile Card View */}
-                <div className="lg:hidden space-y-4">
-                  {cases.map((case_) => (
+                      {/* Mobile Card View */}
+                      <div className="lg:hidden space-y-4">
+                        {filteredCases.map((case_) => (
                     <Card key={case_.id} className="border border-border">
                       <CardContent className="p-4">
                         <div className="space-y-3">
@@ -403,10 +433,13 @@ const Dashboard = () => {
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
+                        </Card>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </CardContent>
         </Card>
