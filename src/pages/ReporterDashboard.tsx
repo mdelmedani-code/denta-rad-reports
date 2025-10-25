@@ -69,10 +69,21 @@ export default function ReporterDashboard() {
     try {
       toast.info('Downloading scan...');
 
-      // Download from Supabase Storage
-      const { data, error } = await supabase.storage
+      // Try multiple possible paths
+      let data = null;
+      let error = null;
+
+      // Try scan.zip first
+      ({ data, error } = await supabase.storage
         .from('cbct-scans')
-        .download(`${folderName}/scan.zip`);
+        .download(`${folderName}/scan.zip`));
+
+      // If that fails, try direct folder path
+      if (error) {
+        ({ data, error } = await supabase.storage
+          .from('cbct-scans')
+          .download(`${folderName}.zip`));
+      }
 
       if (error) {
         console.error('Download error:', error);
@@ -83,7 +94,7 @@ export default function ReporterDashboard() {
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${folderName}.zip`;
+      a.download = `${folderName}_dicom.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -95,6 +106,55 @@ export default function ReporterDashboard() {
       console.error('Download error:', error);
     } finally {
       setDownloadingCase(null);
+    }
+  }
+
+  async function downloadReport(caseId: string, folderName: string) {
+    try {
+      toast.info('Downloading report...');
+
+      // Get report from storage
+      const { data, error } = await supabase.storage
+        .from('reports')
+        .download(`${folderName}/report.pdf`);
+
+      if (error) {
+        console.error('Download error:', error);
+        throw new Error(`Failed to download report: ${error.message}`);
+      }
+
+      // Trigger browser download
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${folderName}_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Report downloaded successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to download report');
+      console.error('Download error:', error);
+    }
+  }
+
+  async function previewReport(caseId: string, folderName: string) {
+    try {
+      // Get public URL for report
+      const { data } = supabase.storage
+        .from('reports')
+        .getPublicUrl(`${folderName}/report.pdf`);
+
+      if (data?.publicUrl) {
+        window.open(data.publicUrl, '_blank');
+      } else {
+        throw new Error('Failed to get report URL');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to preview report');
+      console.error('Preview error:', error);
     }
   }
 
@@ -361,6 +421,9 @@ export default function ReporterDashboard() {
                   <div>
                     <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
                     <CardDescription>
+                      {caseData.folder_name && (
+                        <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
+                      )}
                       Completed: {caseData.completed_at ? new Date(caseData.completed_at).toLocaleDateString() : 'Unknown'}
                     </CardDescription>
                   </div>
@@ -368,8 +431,56 @@ export default function ReporterDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{caseData.clinical_question}</p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold">Clinical Question:</p>
+                    <p className="text-sm text-muted-foreground">{caseData.clinical_question}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-semibold">Field of View:</p>
+                      <p className="text-muted-foreground">{caseData.field_of_view.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Patient ID:</p>
+                      <p className="text-muted-foreground">{caseData.patient_id}</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
+              <CardFooter className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={() => previewReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  variant="default"
+                  size="sm"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Preview Report
+                </Button>
+                
+                <Button 
+                  onClick={() => downloadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Report
+                </Button>
+
+                <Button 
+                  onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  disabled={downloadingCase === caseData.id}
+                  variant="outline"
+                  size="sm"
+                >
+                  {downloadingCase === caseData.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Download DICOM
+                </Button>
+              </CardFooter>
             </Card>
           ))}
 
