@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Search, Shield } from 'lucide-react';
 
 interface SignatureData {
@@ -15,11 +16,23 @@ interface SignatureData {
   signed_at: string;
   signature_hash: string;
   verification_token: string;
+  report_version: number;
+  is_superseded: boolean;
+}
+
+interface VersionInfo {
+  id: string;
+  version: number;
+  signed_at: string;
+  signed_by: string;
+  is_superseded: boolean;
+  is_current: boolean;
 }
 
 export default function SignatureVerification() {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [versionChain, setVersionChain] = useState<VersionInfo[]>([]);
   const [result, setResult] = useState<{
     valid: boolean;
     data?: SignatureData;
@@ -47,6 +60,16 @@ export default function SignatureVerification() {
           error: 'Invalid verification code. Please check and try again.',
         });
         return;
+      }
+
+      // Load version chain
+      const { data: versionData, error: versionError } = await supabase
+        .rpc('get_report_version_chain', {
+          p_report_id: data.report_id,
+        });
+
+      if (!versionError && versionData) {
+        setVersionChain(versionData);
       }
 
       setResult({
@@ -107,11 +130,18 @@ export default function SignatureVerification() {
                     <AlertDescription>
                       <div className="space-y-3">
                         <div className="font-semibold text-green-900 dark:text-green-100 text-lg">
-                          ✅ Signature Valid
+                          ✅ Signature Valid {result.data.is_superseded && '(Superseded Version)'}
                         </div>
                         <p className="text-green-800 dark:text-green-200">
                           This report has been electronically signed and has not been modified since signing.
                         </p>
+                        {result.data.is_superseded && (
+                          <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                            <AlertDescription className="text-amber-900 dark:text-amber-100 text-sm">
+                              ⚠️ This version has been superseded by a newer version. See version history below.
+                            </AlertDescription>
+                          </Alert>
+                        )}
                         <div className="bg-white dark:bg-green-950/40 rounded-lg p-4 space-y-2 text-sm">
                           <div className="grid grid-cols-2 gap-2">
                             <div className="text-muted-foreground">Signed by:</div>
@@ -132,12 +162,53 @@ export default function SignatureVerification() {
                               })}
                             </div>
                             
+                            <div className="text-muted-foreground">Version:</div>
+                            <div className="font-medium">
+                              {result.data.report_version}
+                            </div>
+                            
                             <div className="text-muted-foreground">Content Hash:</div>
                             <div className="font-mono text-xs break-all">
                               {result.data.signature_hash.substring(0, 32)}...
                             </div>
                           </div>
                         </div>
+                        
+                        {versionChain.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <h4 className="font-semibold text-green-900 dark:text-green-100">
+                              Version History:
+                            </h4>
+                            <div className="bg-white dark:bg-green-950/40 rounded-lg p-3 space-y-2">
+                              {versionChain.map((version) => (
+                                <div 
+                                  key={version.id}
+                                  className={`flex items-center justify-between text-sm p-2 rounded ${
+                                    version.is_current 
+                                      ? 'bg-green-100 dark:bg-green-900/30 font-medium' 
+                                      : 'bg-muted/50'
+                                  }`}
+                                >
+                                  <div>
+                                    <span>Version {version.version}</span>
+                                    {version.is_current && (
+                                      <Badge className="ml-2" variant="outline">Current</Badge>
+                                    )}
+                                    {version.is_superseded && (
+                                      <Badge className="ml-2" variant="outline">Superseded</Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {version.signed_at 
+                                      ? new Date(version.signed_at).toLocaleDateString('en-GB')
+                                      : 'Not signed'}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="text-xs text-green-700 dark:text-green-300">
                           This electronic signature is legally binding and verifies the authenticity of this report.
                         </div>

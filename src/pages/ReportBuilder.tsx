@@ -45,6 +45,11 @@ interface ReportData {
   signatory_credentials: string | null;
   signature_hash: string | null;
   last_saved_at: string | null;
+  version: number;
+  is_superseded: boolean;
+  superseded_by: string | null;
+  supersedes: string | null;
+  can_reopen: boolean;
 }
 
 export default function ReportBuilder() {
@@ -59,6 +64,7 @@ export default function ReportBuilder() {
   const [report, setReport] = useState<ReportData | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [reportImages, setReportImages] = useState<any[]>([]);
+  const [versionBanner, setVersionBanner] = useState<string | null>(null);
 
   // Report content state
   const [clinicalHistory, setClinicalHistory] = useState('');
@@ -117,6 +123,7 @@ export default function ReportBuilder() {
         .from('reports')
         .select('*')
         .eq('case_id', caseId)
+        .eq('is_superseded', false)
         .maybeSingle();
 
       if (reportError && reportError.code !== 'PGRST116') throw reportError;
@@ -132,6 +139,9 @@ export default function ReportBuilder() {
             findings: '',
             impression: '',
             recommendations: '',
+            version: 1,
+            is_superseded: false,
+            can_reopen: true,
           })
           .select()
           .single();
@@ -147,6 +157,11 @@ export default function ReportBuilder() {
       setImpression(reportData.impression || '');
       setRecommendations(reportData.recommendations || '');
       setLastSaved(reportData.last_saved_at ? new Date(reportData.last_saved_at) : undefined);
+      
+      // Check if this report is editing after a signature
+      if (reportData.supersedes) {
+        setVersionBanner(`Editing after signature — Version ${reportData.version}. Previous version(s) preserved and remain auditable.`);
+      }
     } catch (error) {
       console.error('Error loading case/report:', error);
       toast({
@@ -284,6 +299,39 @@ export default function ReportBuilder() {
     }
   };
 
+  const handleReopenReport = async () => {
+    if (!report) return;
+
+    try {
+      // Call database function to create new version
+      const { data: newReportId, error } = await supabase
+        .rpc('create_report_version', {
+          p_original_report_id: report.id,
+          p_new_version_number: report.version + 1,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Report Re-opened',
+        description: `Creating new version ${report.version + 1}. Redirecting...`,
+      });
+
+      // Redirect to the new version
+      setTimeout(() => {
+        navigate(`/reporter/report/${caseId}`);
+        window.location.reload(); // Force reload to get new version
+      }, 1500);
+    } catch (error) {
+      console.error('Error reopening report:', error);
+      toast({
+        title: 'Reopen Failed',
+        description: 'Failed to re-open report. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -310,6 +358,8 @@ export default function ReportBuilder() {
         signatory_credentials: report.signatory_credentials || '',
         signature_hash: report.signature_hash,
         verification_token: '',
+        version: report.version,
+        is_superseded: report.is_superseded,
       }
     : null;
 
@@ -420,7 +470,15 @@ export default function ReportBuilder() {
       {report.is_signed && (
         <Alert className="mb-6 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
           <AlertDescription className="text-amber-900 dark:text-amber-100">
-            ⚠️ This report is signed and cannot be edited
+            ⚠️ This report is signed. Use "Re-open for Edit" button below to create a new version.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {versionBanner && (
+        <Alert className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+          <AlertDescription className="text-blue-900 dark:text-blue-100">
+            ℹ️ {versionBanner}
           </AlertDescription>
         </Alert>
       )}
@@ -536,7 +594,9 @@ export default function ReportBuilder() {
               reportId={report.id}
               caseId={caseId!}
               reportContent={reportContent}
+              reportVersion={report.version}
               signatureData={signatureData}
+              canReopen={report.can_reopen && !report.is_superseded}
               onSign={(data) => {
                 setReport({
                   ...report,
@@ -548,6 +608,7 @@ export default function ReportBuilder() {
                   signature_hash: data.signature_hash,
                 });
               }}
+              onReopen={handleReopenReport}
             />
           </CardContent>
         </Card>

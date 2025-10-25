@@ -719,6 +719,7 @@ export type Database = {
           author_id: string | null
           billed: boolean | null
           billed_date: string | null
+          can_reopen: boolean | null
           case_id: string
           clinical_history: string | null
           completed_at: string | null
@@ -730,6 +731,7 @@ export type Database = {
           impression: string | null
           is_latest: boolean | null
           is_signed: boolean | null
+          is_superseded: boolean | null
           last_saved_at: string | null
           pdf_url: string | null
           previous_version_id: string | null
@@ -745,6 +747,8 @@ export type Database = {
           signed_by: string | null
           signed_off_at: string | null
           signed_off_by: string | null
+          superseded_by: string | null
+          supersedes: string | null
           technique: string | null
           template_used: string | null
           version: number | null
@@ -754,6 +758,7 @@ export type Database = {
           author_id?: string | null
           billed?: boolean | null
           billed_date?: string | null
+          can_reopen?: boolean | null
           case_id: string
           clinical_history?: string | null
           completed_at?: string | null
@@ -765,6 +770,7 @@ export type Database = {
           impression?: string | null
           is_latest?: boolean | null
           is_signed?: boolean | null
+          is_superseded?: boolean | null
           last_saved_at?: string | null
           pdf_url?: string | null
           previous_version_id?: string | null
@@ -780,6 +786,8 @@ export type Database = {
           signed_by?: string | null
           signed_off_at?: string | null
           signed_off_by?: string | null
+          superseded_by?: string | null
+          supersedes?: string | null
           technique?: string | null
           template_used?: string | null
           version?: number | null
@@ -789,6 +797,7 @@ export type Database = {
           author_id?: string | null
           billed?: boolean | null
           billed_date?: string | null
+          can_reopen?: boolean | null
           case_id?: string
           clinical_history?: string | null
           completed_at?: string | null
@@ -800,6 +809,7 @@ export type Database = {
           impression?: string | null
           is_latest?: boolean | null
           is_signed?: boolean | null
+          is_superseded?: boolean | null
           last_saved_at?: string | null
           pdf_url?: string | null
           previous_version_id?: string | null
@@ -815,6 +825,8 @@ export type Database = {
           signed_by?: string | null
           signed_off_at?: string | null
           signed_off_by?: string | null
+          superseded_by?: string | null
+          supersedes?: string | null
           technique?: string | null
           template_used?: string | null
           version?: number | null
@@ -837,6 +849,34 @@ export type Database = {
           {
             foreignKeyName: "reports_previous_version_id_fkey"
             columns: ["previous_version_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "reports_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_supersedes_fkey"
+            columns: ["supersedes"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "reports_supersedes_fkey"
+            columns: ["supersedes"]
             isOneToOne: false
             referencedRelation: "reports"
             referencedColumns: ["id"]
@@ -893,12 +933,15 @@ export type Database = {
           case_id: string | null
           id: string
           ip_address: string | null
+          is_superseded: boolean | null
           report_id: string | null
+          report_version: number | null
           signature_hash: string
           signed_at: string | null
           signer_credentials: string | null
           signer_id: string | null
           signer_name: string
+          superseded_by: string | null
           user_agent: string | null
           verification_token: string | null
         }
@@ -906,12 +949,15 @@ export type Database = {
           case_id?: string | null
           id?: string
           ip_address?: string | null
+          is_superseded?: boolean | null
           report_id?: string | null
+          report_version?: number | null
           signature_hash: string
           signed_at?: string | null
           signer_credentials?: string | null
           signer_id?: string | null
           signer_name: string
+          superseded_by?: string | null
           user_agent?: string | null
           verification_token?: string | null
         }
@@ -919,12 +965,15 @@ export type Database = {
           case_id?: string | null
           id?: string
           ip_address?: string | null
+          is_superseded?: boolean | null
           report_id?: string | null
+          report_version?: number | null
           signature_hash?: string
           signed_at?: string | null
           signer_credentials?: string | null
           signer_id?: string | null
           signer_name?: string
+          superseded_by?: string | null
           user_agent?: string | null
           verification_token?: string | null
         }
@@ -948,6 +997,13 @@ export type Database = {
             columns: ["report_id"]
             isOneToOne: false
             referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_audit_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "signature_audit"
             referencedColumns: ["id"]
           },
         ]
@@ -1036,6 +1092,10 @@ export type Database = {
         Returns: boolean
       }
       create_report_share: { Args: { p_report_id: string }; Returns: string }
+      create_report_version: {
+        Args: { p_new_version_number: number; p_original_report_id: string }
+        Returns: string
+      }
       detect_indication_from_clinical_question: {
         Args: { clinical_question: string }
         Returns: string
@@ -1052,6 +1112,17 @@ export type Database = {
           projected_income: number
           reported_cases: number
           total_cases: number
+        }[]
+      }
+      get_report_version_chain: {
+        Args: { p_report_id: string }
+        Returns: {
+          id: string
+          is_current: boolean
+          is_superseded: boolean
+          signed_at: string
+          signed_by: string
+          version: number
         }[]
       }
       get_template_for_indication: {

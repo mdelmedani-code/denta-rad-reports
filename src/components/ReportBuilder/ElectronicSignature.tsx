@@ -24,27 +24,37 @@ interface SignatureData {
   signatory_credentials: string;
   signature_hash: string;
   verification_token: string;
+  version?: number;
+  is_superseded?: boolean;
 }
 
 interface ElectronicSignatureProps {
   reportId: string;
   caseId: string;
   reportContent: string;
+  reportVersion: number;
   signatureData: SignatureData | null;
   onSign: (data: SignatureData) => void;
+  onReopen: () => void;
+  canReopen?: boolean;
 }
 
 export const ElectronicSignature = ({
   reportId,
   caseId,
   reportContent,
+  reportVersion,
   signatureData,
   onSign,
+  onReopen,
+  canReopen = true,
 }: ElectronicSignatureProps) => {
   const [showDialog, setShowDialog] = useState(false);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [signerName, setSignerName] = useState('');
   const [credentials, setCredentials] = useState('');
   const [password, setPassword] = useState('');
+  const [reopenPassword, setReopenPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -89,6 +99,8 @@ export const ElectronicSignature = ({
         signatory_credentials: credentials,
         signature_hash: contentHash,
         verification_token: verificationToken,
+        version: reportVersion,
+        is_superseded: false,
       };
 
       // Save to signature audit
@@ -104,6 +116,8 @@ export const ElectronicSignature = ({
           ip_address: '', // Would need server-side IP detection
           user_agent: navigator.userAgent,
           verification_token: verificationToken,
+          report_version: reportVersion,
+          is_superseded: false,
         });
 
       if (auditError) throw auditError;
@@ -116,6 +130,7 @@ export const ElectronicSignature = ({
           signed_by: signerName,
           signed_at: new Date().toISOString(),
           signature_hash: contentHash,
+          version: reportVersion,
         })
         .eq('id', reportId);
 
@@ -142,32 +157,104 @@ export const ElectronicSignature = ({
     }
   };
 
+  const handleReopen = async () => {
+    if (!reopenPassword) {
+      toast({
+        title: 'Password Required',
+        description: 'Please enter your password to re-open this report',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Re-authenticate user
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: reopenPassword,
+      });
+
+      if (authError) {
+        toast({
+          title: 'Authentication Failed',
+          description: 'Incorrect password. Please try again.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Call the onReopen callback which will handle version creation
+      onReopen();
+
+      toast({
+        title: 'Report Re-opened',
+        description: 'Previous version preserved. You can now edit and must re-sign when complete.',
+      });
+
+      setShowReopenDialog(false);
+      setReopenPassword('');
+    } catch (error) {
+      console.error('Error reopening report:', error);
+      toast({
+        title: 'Reopen Failed',
+        description: 'Failed to re-open the report. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (signatureData) {
     return (
       <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
         <CheckCircle2 className="h-5 w-5 text-green-600" />
         <AlertDescription>
-          <div className="space-y-2">
-            <div className="font-semibold text-green-900 dark:text-green-100">
-              ✅ Electronically Signed
-            </div>
-            <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
-              <div><strong>Signed by:</strong> {signatureData.signatory_name}</div>
-              {signatureData.signatory_credentials && (
-                <div><strong>Credentials:</strong> {signatureData.signatory_credentials}</div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold text-green-900 dark:text-green-100">
+                  ✅ Electronically Signed {signatureData.version && signatureData.version > 1 && `(Version ${signatureData.version})`}
+                </div>
+                {canReopen && !signatureData.is_superseded && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowReopenDialog(true)}
+                  >
+                    Re-open for Edit
+                  </Button>
+                )}
+              </div>
+              <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
+                <div><strong>Signed by:</strong> {signatureData.signatory_name}</div>
+                {signatureData.signatory_credentials && (
+                  <div><strong>Credentials:</strong> {signatureData.signatory_credentials}</div>
+                )}
+                <div>
+                  <strong>Date & Time:</strong>{' '}
+                  {new Date(signatureData.signed_at).toLocaleString('en-GB', {
+                    dateStyle: 'long',
+                    timeStyle: 'long',
+                  })}
+                </div>
+                {signatureData.version && (
+                  <div><strong>Version:</strong> {signatureData.version}</div>
+                )}
+                <div className="font-mono text-xs">
+                  <strong>Verification:</strong> #{signatureData.verification_token.substring(0, 16)}...
+                </div>
+              </div>
+              {signatureData.is_superseded && (
+                <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                  <AlertDescription className="text-amber-900 dark:text-amber-100 text-xs">
+                    ⚠️ This version has been superseded by a newer version
+                  </AlertDescription>
+                </Alert>
               )}
-              <div>
-                <strong>Date & Time:</strong>{' '}
-                {new Date(signatureData.signed_at).toLocaleString('en-GB', {
-                  dateStyle: 'long',
-                  timeStyle: 'long',
-                })}
-              </div>
-              <div className="font-mono text-xs">
-                <strong>Verification:</strong> #{signatureData.verification_token.substring(0, 16)}...
-              </div>
             </div>
-          </div>
         </AlertDescription>
       </Alert>
     );
@@ -245,6 +332,56 @@ export const ElectronicSignature = ({
             </Button>
             <Button onClick={handleSign} disabled={loading}>
               {loading ? 'Signing...' : 'Sign Report'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Re-open Report for Editing</DialogTitle>
+            <DialogDescription>
+              <div className="space-y-2 mt-2">
+                <p>This will create a new version (v{reportVersion + 1}) while preserving the current signed version.</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Previous version remains in audit trail</li>
+                  <li>You must re-sign the report after editing</li>
+                  <li>Version history will be preserved</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <Alert>
+              <AlertDescription>
+                <strong>Note:</strong> Editing after signature is tracked in the audit trail.
+                Previous version preserved and remains auditable.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-2">
+              <Label htmlFor="reopenPassword">Confirm Password *</Label>
+              <Input
+                id="reopenPassword"
+                type="password"
+                value={reopenPassword}
+                onChange={(e) => setReopenPassword(e.target.value)}
+                placeholder="Enter your password to confirm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Re-authentication required for security
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReopenDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleReopen} disabled={loading}>
+              {loading ? 'Re-opening...' : 'Re-open for Edit'}
             </Button>
           </DialogFooter>
         </DialogContent>
