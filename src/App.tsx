@@ -10,7 +10,6 @@ import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import UploadCase from "./pages/UploadCase";
 import AdminDashboard from "./pages/AdminDashboard";
-import Invoices from "./pages/Invoices";
 import ReporterDashboard from "./pages/ReporterDashboard";
 import AdminCaseReview from "./pages/AdminCaseReview";
 import UnifiedDashboard from "./pages/UnifiedDashboard";
@@ -119,14 +118,6 @@ const App = () => (
             {/* Legacy admin routes redirect to unified dashboard */}
             <Route path="/admin" element={<Navigate to="/reporter" replace />} />
             <Route path="/admin/reporter" element={<Navigate to="/reporter" replace />} />
-            
-            <Route path="/admin/invoices" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <Invoices />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
