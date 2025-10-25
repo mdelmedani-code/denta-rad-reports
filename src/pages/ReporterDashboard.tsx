@@ -152,33 +152,26 @@ export default function ReporterDashboard() {
     }
   }
 
-  async function previewReport(caseId: string, folderName: string) {
+  async function accessReport(caseId: string) {
     try {
-      // Get report to check for PDF path
+      // Get report ID for this case
       const { data: reportData, error: reportError } = await supabase
         .from('reports')
-        .select('pdf_storage_path')
+        .select('id')
         .eq('case_id', caseId)
         .eq('is_superseded', false)
         .single();
 
       if (reportError) throw reportError;
 
-      const pdfPath = reportData?.pdf_storage_path || `${folderName}/report.pdf`;
-
-      // Get public URL for report
-      const { data } = supabase.storage
-        .from('reports')
-        .getPublicUrl(pdfPath);
-
-      if (data?.publicUrl) {
-        window.open(data.publicUrl, '_blank');
+      if (reportData?.id) {
+        navigate(`/admin/reports/${reportData.id}`);
       } else {
-        throw new Error('Failed to get report URL');
+        throw new Error('Report not found');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to preview report');
-      console.error('Preview error:', error);
+      toast.error(error.message || 'Failed to access report');
+      console.error('Access report error:', error);
     }
   }
 
@@ -474,12 +467,12 @@ export default function ReporterDashboard() {
               </CardContent>
               <CardFooter className="flex flex-wrap gap-2">
                 <Button 
-                  onClick={() => previewReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  onClick={() => accessReport(caseData.id)}
                   variant="default"
                   size="sm"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Preview Report
+                  <FileEdit className="h-4 w-4 mr-2" />
+                  Access Report
                 </Button>
                 
                 <Button 

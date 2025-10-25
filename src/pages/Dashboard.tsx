@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Clock, LogOut, Download, Loader2, Eye } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Download, Loader2, Eye, FileEdit } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -135,33 +135,26 @@ const Dashboard = () => {
     }
   };
 
-  const previewReport = async (caseData: Case) => {
+  const accessReport = async (caseData: Case) => {
     try {
-      // Get report to check for PDF path
+      // Get report ID for this case
       const { data: reportData, error: reportError } = await supabase
         .from('reports')
-        .select('pdf_storage_path')
+        .select('id')
         .eq('case_id', caseData.id)
         .eq('is_superseded', false)
         .single();
 
       if (reportError) throw reportError;
 
-      const pdfPath = reportData?.pdf_storage_path || `${caseData.folder_name}/report.pdf`;
-
-      // Get public URL
-      const { data } = supabase.storage
-        .from('reports')
-        .getPublicUrl(pdfPath);
-
-      if (data?.publicUrl) {
-        window.open(data.publicUrl, '_blank');
+      if (reportData?.id) {
+        navigate(`/admin/reports/${reportData.id}`);
       } else {
-        throw new Error('Failed to get report URL');
+        throw new Error('Report not found');
       }
     } catch (error: any) {
-      console.error('Error previewing report:', error);
-      sonnerToast.error(error.message || 'Failed to preview report');
+      console.error('Error accessing report:', error);
+      sonnerToast.error(error.message || 'Failed to access report');
     }
   };
 
@@ -291,10 +284,10 @@ const Dashboard = () => {
                                   <Button 
                                     variant="default" 
                                     size="sm"
-                                    onClick={() => previewReport(case_)}
+                                    onClick={() => accessReport(case_)}
                                   >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Preview
+                                    <FileEdit className="h-4 w-4 mr-2" />
+                                    Access Report
                                   </Button>
                                   <Button 
                                     variant="outline" 
@@ -376,10 +369,10 @@ const Dashboard = () => {
                                   variant="default" 
                                   size="sm" 
                                   className="w-full"
-                                  onClick={() => previewReport(case_)}
+                                  onClick={() => accessReport(case_)}
                                 >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Preview Report
+                                  <FileEdit className="h-4 w-4 mr-2" />
+                                  Access Report
                                 </Button>
                                 <Button 
                                   variant="outline" 
