@@ -288,7 +288,7 @@ export default function ReportBuilder() {
         description: 'Report has been finalized and case updated',
       });
 
-      navigate('/admin/dashboard');
+      navigate('/reporter');
     } catch (error) {
       console.error('Error finalizing report:', error);
       toast({
