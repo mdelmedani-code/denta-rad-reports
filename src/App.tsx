@@ -16,6 +16,7 @@ import UnifiedDashboard from "./pages/UnifiedDashboard";
 import BillingExport from "./pages/BillingExport";
 import ViewerPage from "./pages/ViewerPage";
 import ReportBuilder from "./pages/ReportBuilder";
+import CaseReportPage from "./pages/CaseReportPage";
 import SignatureVerification from "./pages/SignatureVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAuth from "./components/RequireAuth";
@@ -122,6 +123,15 @@ const App = () => (
             <Route path="/reporter/report/:caseId" element={
               <ProtectedRoute requiredRole="admin">
                 <ReportBuilder />
+              </ProtectedRoute>
+            } />
+            
+            {/* New Case Report Page */}
+            <Route path="/admin/reports/:reportId" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <CaseReportPage />
+                </AppLayout>
               </ProtectedRoute>
             } />
             
