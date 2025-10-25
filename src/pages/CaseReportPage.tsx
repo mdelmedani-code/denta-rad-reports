@@ -196,7 +196,12 @@ export default function CaseReportPage() {
   };
 
   const handleGeneratePDF = async () => {
-    if (!data) return;
+    if (!data) {
+      console.error('No data available for PDF generation');
+      return;
+    }
+
+    console.log('Starting PDF generation...', { reportId, data });
 
     try {
       toast({
@@ -204,6 +209,7 @@ export default function CaseReportPage() {
         description: 'Please wait...',
       });
 
+      console.log('Calling generateReportPDF...');
       // Map the data to match PDF generator expectations
       const pdfBlob = await generateReportPDF({
         caseData: {
@@ -231,7 +237,11 @@ export default function CaseReportPage() {
         },
       });
 
+      console.log('PDF blob generated successfully', { size: pdfBlob.size });
+
       const pdfPath = `${data.case.folder_name}/report.pdf`;
+      console.log('Uploading to storage...', { pdfPath });
+      
       const { error: uploadError } = await supabase.storage
         .from('reports')
         .upload(pdfPath, pdfBlob, {
@@ -239,8 +249,14 @@ export default function CaseReportPage() {
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
+      console.log('PDF uploaded successfully');
+
+      console.log('Updating report record...');
       const { error: updateError } = await supabase
         .from('reports')
         .update({
@@ -249,8 +265,12 @@ export default function CaseReportPage() {
         })
         .eq('id', reportId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw updateError;
+      }
 
+      console.log('Report updated successfully');
       setReportStatus('shared');
       toast({
         title: 'PDF Generated',
