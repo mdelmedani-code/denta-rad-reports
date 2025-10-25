@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ReportEditor } from '@/components/ReportBuilder/ReportEditor';
 import { Separator } from '@/components/ui/separator';
+import { stripHtmlTags } from '@/lib/utils';
 
 interface ReportEditorCardProps {
   report: any;
@@ -43,8 +44,8 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
           <div className="space-y-6 opacity-60 pointer-events-none">
             <div>
               <h3 className="font-semibold mb-2">Findings</h3>
-              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                {report.findings || 'Not provided'}
+              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg whitespace-pre-wrap">
+                {stripHtmlTags(report.findings) || 'Not provided'}
               </div>
             </div>
 
@@ -52,8 +53,8 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
 
             <div>
               <h3 className="font-semibold mb-2">Impression</h3>
-              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                {report.impression || 'Not provided'}
+              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg whitespace-pre-wrap">
+                {stripHtmlTags(report.impression) || 'Not provided'}
               </div>
             </div>
 
@@ -61,8 +62,8 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
 
             <div>
               <h3 className="font-semibold mb-2">Recommendations</h3>
-              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                {report.recommendations || 'Not provided'}
+              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg whitespace-pre-wrap">
+                {stripHtmlTags(report.recommendations) || 'Not provided'}
               </div>
             </div>
           </div>
