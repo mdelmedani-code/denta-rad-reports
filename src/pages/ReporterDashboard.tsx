@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Download, Upload, Eye, Loader2, CheckCircle, Clock } from 'lucide-react';
+import { Download, Upload, Eye, Loader2, CheckCircle, Clock, FileEdit } from 'lucide-react';
 import { toast } from 'sonner';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
 
@@ -307,6 +307,15 @@ export default function ReporterDashboard() {
               </CardContent>
               <CardFooter className="flex flex-wrap gap-2">
                 <Button 
+                  onClick={() => navigate(`/reporter/report/${caseData.id}`)}
+                  variant="default"
+                  size="sm"
+                >
+                  <FileEdit className="h-4 w-4 mr-2" />
+                  Create Report
+                </Button>
+                
+                <Button 
                   onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
                   disabled={downloadingCase === caseData.id}
                   variant="outline"
@@ -324,13 +333,14 @@ export default function ReporterDashboard() {
                   onClick={() => uploadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
                   disabled={uploadingReport === caseData.id}
                   size="sm"
+                  variant="outline"
                 >
                   {uploadingReport === caseData.id ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <Upload className="h-4 w-4 mr-2" />
                   )}
-                  Upload Report
+                  Upload PDF (Legacy)
                 </Button>
               </CardFooter>
             </Card>

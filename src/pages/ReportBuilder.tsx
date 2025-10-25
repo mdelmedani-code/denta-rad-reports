@@ -7,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
+import { Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, Keyboard } from 'lucide-react';
 import { ReportEditor } from '@/components/ReportBuilder/ReportEditor';
 import { TemplateSelector } from '@/components/ReportBuilder/TemplateSelector';
 import { SnippetInserter } from '@/components/ReportBuilder/SnippetInserter';
 import { AutoSaveIndicator } from '@/components/ReportBuilder/AutoSaveIndicator';
 import { ElectronicSignature } from '@/components/ReportBuilder/ElectronicSignature';
+import { ImageAttachment } from '@/components/ReportBuilder/ImageAttachment';
+import { VersionHistory } from '@/components/ReportBuilder/VersionHistory';
+import { KeyboardShortcuts } from '@/components/ReportBuilder/KeyboardShortcuts';
 
 interface CaseData {
   id: string;
@@ -54,6 +57,8 @@ export default function ReportBuilder() {
   const [lastSaved, setLastSaved] = useState<Date | undefined>();
   const [caseData, setCaseData] = useState<CaseData | null>(null);
   const [report, setReport] = useState<ReportData | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [reportImages, setReportImages] = useState<any[]>([]);
 
   // Report content state
   const [clinicalHistory, setClinicalHistory] = useState('');
@@ -68,8 +73,26 @@ export default function ReportBuilder() {
   useEffect(() => {
     if (caseId) {
       loadCaseAndReport();
+      loadReportImages();
     }
   }, [caseId]);
+
+  const loadReportImages = async () => {
+    if (!report?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('report_images')
+        .select('*')
+        .eq('report_id', report.id)
+        .order('position');
+      
+      if (error) throw error;
+      setReportImages(data || []);
+    } catch (error) {
+      console.error('Error loading images:', error);
+    }
+  };
 
   const loadCaseAndReport = async () => {
     try {
@@ -307,6 +330,33 @@ export default function ReportBuilder() {
         </div>
         <div className="flex items-center gap-4">
           <AutoSaveIndicator status={saveStatus} lastSaved={lastSaved} />
+          <VersionHistory
+            reportId={report.id}
+            currentVersion={{
+              clinical_history: clinicalHistory,
+              technique,
+              findings,
+              impression,
+              recommendations,
+            }}
+            onRestore={(version) => {
+              setClinicalHistory(version.clinical_history);
+              setTechnique(version.technique);
+              setFindings(version.findings);
+              setImpression(version.impression);
+              setRecommendations(version.recommendations);
+              triggerAutoSave();
+            }}
+            disabled={report.is_signed}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowShortcuts(true)}
+            title="Keyboard Shortcuts"
+          >
+            <Keyboard className="h-5 w-5" />
+          </Button>
           <Button onClick={saveReport} variant="outline" disabled={saveStatus === 'saving'}>
             <Save className="h-4 w-4 mr-2" />
             Save
@@ -417,7 +467,7 @@ export default function ReportBuilder() {
           <CardHeader>
             <CardTitle>Findings</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <ReportEditor
               content={findings}
               onChange={(content) => {
@@ -427,6 +477,15 @@ export default function ReportBuilder() {
                 }
               }}
               placeholder="Document detailed findings..."
+            />
+            
+            <ImageAttachment
+              reportId={report.id}
+              caseId={caseId!}
+              section="findings"
+              images={reportImages}
+              onImagesChange={setReportImages}
+              disabled={report.is_signed}
             />
           </CardContent>
         </Card>
@@ -512,6 +571,13 @@ export default function ReportBuilder() {
           </Button>
         </div>
       </div>
+
+      <KeyboardShortcuts
+        open={showShortcuts}
+        onOpenChange={setShowShortcuts}
+        onSave={saveReport}
+        onFinalize={handleFinalizeReport}
+      />
     </div>
   );
 }

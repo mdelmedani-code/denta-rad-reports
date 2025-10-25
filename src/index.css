@@ -142,3 +142,84 @@ All colors MUST be HSL.
 .eta-text {
   transition: opacity 0.3s ease-in-out;
 }
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 150px;
+}
+
+.ProseMirror p {
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror h1 {
+  font-size: 1.5rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.25rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.1rem;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror li {
+  margin: 0.25rem 0;
+}
+
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  border: 2px solid hsl(var(--border));
+  padding: 0.5rem;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ProseMirror th {
+  font-weight: 600;
+  text-align: left;
+  background-color: hsl(var(--muted));
+}
+
+.ProseMirror .selectedCell {
+  background-color: hsl(var(--accent) / 0.2);
+}
+
+.ProseMirror a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

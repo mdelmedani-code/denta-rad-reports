@@ -15,6 +15,8 @@ import AdminCaseReview from "./pages/AdminCaseReview";
 import UnifiedDashboard from "./pages/UnifiedDashboard";
 import BillingExport from "./pages/BillingExport";
 import ViewerPage from "./pages/ViewerPage";
+import ReportBuilder from "./pages/ReportBuilder";
+import SignatureVerification from "./pages/SignatureVerification";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
@@ -38,6 +40,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
+            <Route path="/verify/:token?" element={<SignatureVerification />} />
             
             {/* Terms of Service - requires auth but not terms acceptance */}
             <Route path="/terms-of-service" element={
@@ -112,6 +115,13 @@ const App = () => (
                 <AppLayout>
                   <AdminCaseReview />
                 </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Report builder */}
+            <Route path="/reporter/report/:caseId" element={
+              <ProtectedRoute requiredRole="admin">
+                <ReportBuilder />
               </ProtectedRoute>
             } />
             
