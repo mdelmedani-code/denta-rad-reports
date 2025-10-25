@@ -481,6 +481,61 @@ export type Database = {
           },
         ]
       }
+      report_images: {
+        Row: {
+          caption: string | null
+          case_id: string | null
+          id: string
+          image_url: string
+          position: number | null
+          report_id: string | null
+          section: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          caption?: string | null
+          case_id?: string | null
+          id?: string
+          image_url: string
+          position?: number | null
+          report_id?: string | null
+          section?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          caption?: string | null
+          case_id?: string | null
+          id?: string
+          image_url?: string
+          position?: number | null
+          report_id?: string | null
+          section?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_images_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_images_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "report_images_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           access_count: number | null
@@ -514,71 +569,254 @@ export type Database = {
         }
         Relationships: []
       }
+      report_snippets: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          shortcut: string | null
+          use_count: number | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          shortcut?: string | null
+          use_count?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          shortcut?: string | null
+          use_count?: number | null
+        }
+        Relationships: []
+      }
+      report_templates: {
+        Row: {
+          category: string
+          clinical_history: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          findings: string | null
+          id: string
+          impression: string | null
+          is_default: boolean | null
+          name: string
+          recommendations: string | null
+          technique: string | null
+          template_type: string
+          updated_at: string | null
+          use_count: number | null
+        }
+        Insert: {
+          category: string
+          clinical_history?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          findings?: string | null
+          id?: string
+          impression?: string | null
+          is_default?: boolean | null
+          name: string
+          recommendations?: string | null
+          technique?: string | null
+          template_type: string
+          updated_at?: string | null
+          use_count?: number | null
+        }
+        Update: {
+          category?: string
+          clinical_history?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          findings?: string | null
+          id?: string
+          impression?: string | null
+          is_default?: boolean | null
+          name?: string
+          recommendations?: string | null
+          technique?: string | null
+          template_type?: string
+          updated_at?: string | null
+          use_count?: number | null
+        }
+        Relationships: []
+      }
+      report_versions: {
+        Row: {
+          attached_images: string[] | null
+          clinical_history: string | null
+          findings: string | null
+          id: string
+          impression: string | null
+          recommendations: string | null
+          report_id: string | null
+          saved_at: string | null
+          saved_by: string | null
+          technique: string | null
+          version_number: number
+        }
+        Insert: {
+          attached_images?: string[] | null
+          clinical_history?: string | null
+          findings?: string | null
+          id?: string
+          impression?: string | null
+          recommendations?: string | null
+          report_id?: string | null
+          saved_at?: string | null
+          saved_by?: string | null
+          technique?: string | null
+          version_number: number
+        }
+        Update: {
+          attached_images?: string[] | null
+          clinical_history?: string | null
+          findings?: string | null
+          id?: string
+          impression?: string | null
+          recommendations?: string | null
+          report_id?: string | null
+          saved_at?: string | null
+          saved_by?: string | null
+          technique?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_versions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "report_versions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
+          attached_images: string[] | null
           author_id: string | null
           billed: boolean | null
           billed_date: string | null
           case_id: string
+          clinical_history: string | null
           completed_at: string | null
           created_at: string | null
           dropbox_path: string | null
           finalized_at: string | null
+          findings: string | null
           id: string
+          impression: string | null
           is_latest: boolean | null
+          is_signed: boolean | null
+          last_saved_at: string | null
           pdf_url: string | null
           previous_version_id: string | null
+          recommendations: string | null
+          report_content: Json | null
           report_text: string | null
           signatory_credentials: string | null
           signatory_name: string | null
           signatory_title: string | null
+          signature_hash: string | null
           signature_statement: string | null
+          signed_at: string | null
+          signed_by: string | null
           signed_off_at: string | null
           signed_off_by: string | null
+          technique: string | null
+          template_used: string | null
           version: number | null
         }
         Insert: {
+          attached_images?: string[] | null
           author_id?: string | null
           billed?: boolean | null
           billed_date?: string | null
           case_id: string
+          clinical_history?: string | null
           completed_at?: string | null
           created_at?: string | null
           dropbox_path?: string | null
           finalized_at?: string | null
+          findings?: string | null
           id?: string
+          impression?: string | null
           is_latest?: boolean | null
+          is_signed?: boolean | null
+          last_saved_at?: string | null
           pdf_url?: string | null
           previous_version_id?: string | null
+          recommendations?: string | null
+          report_content?: Json | null
           report_text?: string | null
           signatory_credentials?: string | null
           signatory_name?: string | null
           signatory_title?: string | null
+          signature_hash?: string | null
           signature_statement?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
           signed_off_at?: string | null
           signed_off_by?: string | null
+          technique?: string | null
+          template_used?: string | null
           version?: number | null
         }
         Update: {
+          attached_images?: string[] | null
           author_id?: string | null
           billed?: boolean | null
           billed_date?: string | null
           case_id?: string
+          clinical_history?: string | null
           completed_at?: string | null
           created_at?: string | null
           dropbox_path?: string | null
           finalized_at?: string | null
+          findings?: string | null
           id?: string
+          impression?: string | null
           is_latest?: boolean | null
+          is_signed?: boolean | null
+          last_saved_at?: string | null
           pdf_url?: string | null
           previous_version_id?: string | null
+          recommendations?: string | null
+          report_content?: Json | null
           report_text?: string | null
           signatory_credentials?: string | null
           signatory_name?: string | null
           signatory_title?: string | null
+          signature_hash?: string | null
           signature_statement?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
           signed_off_at?: string | null
           signed_off_by?: string | null
+          technique?: string | null
+          template_used?: string | null
           version?: number | null
         }
         Relationships: [
@@ -649,6 +887,70 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      signature_audit: {
+        Row: {
+          case_id: string | null
+          id: string
+          ip_address: string | null
+          report_id: string | null
+          signature_hash: string
+          signed_at: string | null
+          signer_credentials: string | null
+          signer_id: string | null
+          signer_name: string
+          user_agent: string | null
+          verification_token: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          id?: string
+          ip_address?: string | null
+          report_id?: string | null
+          signature_hash: string
+          signed_at?: string | null
+          signer_credentials?: string | null
+          signer_id?: string | null
+          signer_name: string
+          user_agent?: string | null
+          verification_token?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          id?: string
+          ip_address?: string | null
+          report_id?: string | null
+          signature_hash?: string
+          signed_at?: string | null
+          signer_credentials?: string | null
+          signer_id?: string | null
+          signer_name?: string
+          user_agent?: string | null
+          verification_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_audit_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_audit_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "billable_reports"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "signature_audit_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
