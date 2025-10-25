@@ -391,11 +391,6 @@ const UploadCase = () => {
       setUploadSuccess(true);
       sonnerToast.success('Case uploaded successfully!');
       
-      // Navigate after brief delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
-      
     } catch (error) {
       console.error('Upload failed:', error);
       
@@ -438,20 +433,66 @@ const UploadCase = () => {
         {/* Success Message */}
         {uploadSuccess && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="mb-6"
           >
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              <AlertDescription className="text-green-800">
-                <div className="font-semibold mb-1">Upload Successful!</div>
-                <div className="text-sm">
-                  Case #{createdSimpleId} for {createdPatientName} has been uploaded.
-                  You'll be redirected to your dashboard shortly.
+            <Card className="border-2 border-green-500 bg-green-50 dark:bg-green-950/20">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="flex justify-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
+                      <CheckCircle2 className="w-10 h-10 text-white" />
+                    </div>
+                  </motion.div>
+                  
+                  <div>
+                    <h3 className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">
+                      Upload Successful!
+                    </h3>
+                    <p className="text-green-600 dark:text-green-300">
+                      Case #{createdSimpleId} for {createdPatientName} has been uploaded successfully.
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3 justify-center pt-4">
+                    <Button
+                      size="lg"
+                      onClick={() => navigate('/dashboard')}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Go to Dashboard
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => {
+                        setUploadSuccess(false);
+                        setUploadProgress(0);
+                        setZipFile(null);
+                        setDicomFiles([]);
+                        setFormData({
+                          patientName: "",
+                          patientInternalId: "",
+                          patientDob: "",
+                          clinicalQuestion: "",
+                          fieldOfView: "up_to_5x5",
+                          urgency: "standard"
+                        });
+                      }}
+                      className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40"
+                    >
+                      Upload Another Scan
+                    </Button>
+                  </div>
                 </div>
-              </AlertDescription>
-            </Alert>
+              </CardContent>
+            </Card>
           </motion.div>
         )}
 
