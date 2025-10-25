@@ -42,7 +42,7 @@ export function BillingDashboard() {
   async function loadBillingData() {
     setLoading(true);
     try {
-      // Get unbilled completed cases
+      // Get unbilled completed cases (filtered by completion date)
       const { data: cases, error: casesError } = await supabase
         .from('cases')
         .select(`
@@ -50,6 +50,7 @@ export function BillingDashboard() {
           folder_name,
           patient_name,
           field_of_view,
+          completed_at,
           created_at,
           clinic_id,
           clinics (
@@ -61,10 +62,11 @@ export function BillingDashboard() {
         `)
         .eq('status', 'report_ready')
         .eq('billed', false)
-        .gte('created_at', `${startDate}T00:00:00`)
-        .lte('created_at', `${endDate}T23:59:59`)
+        .not('completed_at', 'is', null)
+        .gte('completed_at', `${startDate}T00:00:00`)
+        .lte('completed_at', `${endDate}T23:59:59`)
         .order('clinic_id', { ascending: true })
-        .order('created_at', { ascending: true });
+        .order('completed_at', { ascending: true });
 
       if (casesError) throw casesError;
 
@@ -106,7 +108,7 @@ export function BillingDashboard() {
           patient_name: c.patient_name,
           field_of_view: c.field_of_view,
           price: price,
-          created_at: c.created_at
+          created_at: c.completed_at || c.created_at
         });
 
         return acc;
