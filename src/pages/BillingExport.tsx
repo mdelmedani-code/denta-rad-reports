@@ -74,10 +74,10 @@ export default function BillingExport() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast({
-      title: 'CSV Exported',
-      description: 'Use this file to create invoices in Stripe or your accounting software'
-    });
+      toast({
+        title: 'CSV Exported',
+        description: 'Use this file to create invoices in Invoice Ninja or your accounting software'
+      });
   }
 
   const totalRevenue = reports.reduce((sum, r) => sum + Number(r.total_amount), 0);
@@ -89,7 +89,7 @@ export default function BillingExport() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Billing Export</h1>
           <p className="text-muted-foreground">
-            Export unbilled reports to create invoices in Stripe, QuickBooks, or Wave
+            Export unbilled reports to create invoices in Invoice Ninja, QuickBooks, or Wave
           </p>
         </div>
 
@@ -217,10 +217,10 @@ export default function BillingExport() {
           <CardContent>
             <ol className="space-y-2 ml-5 list-decimal">
               <li>Click "Export to CSV" to download the report</li>
-              <li>Go to Stripe Dashboard → Create Invoice</li>
-              <li>Copy amounts and client details from CSV</li>
-              <li>Send invoice through Stripe (they handle payment)</li>
-              <li>Mark as paid in your records when payment received</li>
+              <li>Go to Invoice Ninja → Invoices → Import</li>
+              <li>Upload CSV file to bulk create invoices</li>
+              <li>Review and email all invoices at once</li>
+              <li>Mark as paid in Invoice Ninja when payment received</li>
             </ol>
             <p className="text-xs text-muted-foreground mt-4">
               <strong>Tip:</strong> You can also use QuickBooks, Wave, or PayPal for invoicing

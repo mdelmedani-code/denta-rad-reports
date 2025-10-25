@@ -13,7 +13,6 @@ interface BillingData {
   clinic_id: string;
   clinic_name: string;
   clinic_email: string;
-  stripe_customer_id: string | null;
   case_count: number;
   total_amount: number;
   case_ids: string[];
@@ -57,8 +56,7 @@ export function BillingDashboard() {
           clinics (
             id,
             name,
-            email,
-            stripe_customer_id
+            contact_email
           )
         `)
         .eq('status', 'report_ready')
@@ -91,8 +89,7 @@ export function BillingDashboard() {
           acc[clinicId] = {
             clinic_id: clinicId,
             clinic_name: c.clinics.name,
-            clinic_email: c.clinics.email,
-            stripe_customer_id: c.clinics.stripe_customer_id,
+            clinic_email: c.clinics.contact_email,
             case_count: 0,
             total_amount: 0,
             case_ids: [],
@@ -129,55 +126,39 @@ export function BillingDashboard() {
     loadBillingData();
   }, [startDate, endDate]);
 
-  // Export to CSV with Stripe instructions
+  // Export to CSV in Invoice Ninja format
   function exportToCSV() {
-    const rows = [
-      ['Clinic Name', 'Email', 'Stripe Customer ID', 'Case Count', 'Total Amount (£)', 'Case List']
-    ];
-
-    billingData.forEach(clinic => {
-      const caseList = clinic.cases
-        .map(c => `${c.folder_name} (${c.field_of_view})`)
-        .join('; ');
-
-      rows.push([
-        clinic.clinic_name,
-        clinic.clinic_email,
-        clinic.stripe_customer_id || 'NOT SET',
-        clinic.case_count.toString(),
-        clinic.total_amount.toFixed(2),
-        caseList
-      ]);
-    });
-
-    // Add summary row
-    rows.push([]);
-    rows.push(['TOTAL', '', '', totalCases.toString(), totalAmount.toFixed(2), '']);
-
-    // Add instructions
+    const today = new Date();
+    const invoiceDate = today.toISOString().split('T')[0];
+    const dueDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
     const monthYear = new Date(startDate).toLocaleDateString('en-GB', { 
       month: 'long', 
       year: 'numeric' 
     });
 
-    rows.push([]);
-    rows.push(['INSTRUCTIONS FOR STRIPE INVOICING:']);
-    rows.push(['1. Go to: https://dashboard.stripe.com/invoices']);
-    rows.push(['2. Click "Create invoice"']);
-    rows.push(['3. For each clinic above:']);
-    rows.push([`   - Customer: Enter clinic name and email (or use Stripe Customer ID if set)`]);
-    rows.push([`   - Description: "CBCT Reporting - ${monthYear}"`]);
-    rows.push(['   - Amount: Copy from "Total Amount (£)" column']);
-    rows.push(['   - Due date: 30 days from today']);
-    rows.push(['   - Payment methods: Enable "Bank Transfer"']);
-    rows.push(['   - Click "Send invoice"']);
-    rows.push(['4. Stripe will automatically email the invoice to the clinic']);
-    rows.push(['5. Clinic receives professional invoice with your bank details']);
-    rows.push(['6. Clinic pays via bank transfer (no fees for you)']);
-    rows.push(['7. When payments arrive, return to DentaRad and click "Mark All as Billed"']);
-    rows.push([]);
-    rows.push(['💰 COST: £0 per month (no transaction fees with bank transfer)']);
+    // Invoice Ninja CSV format
+    const rows = [
+      ['Client', 'Email', 'Invoice Date', 'Due Date', 'Item', 'Description', 'Quantity', 'Rate', 'Tax']
+    ];
 
+    billingData.forEach(clinic => {
+      const description = `${monthYear} - ${clinic.case_count} cases: ${clinic.cases.slice(0, 5).map(c => c.folder_name).join(', ')}${clinic.cases.length > 5 ? '...' : ''}`;
+      
+      rows.push([
+        clinic.clinic_name,
+        clinic.clinic_email,
+        invoiceDate,
+        dueDate,
+        'CBCT Reporting Services',
+        description,
+        '1',
+        clinic.total_amount.toFixed(2),
+        '0' // Change to '20' if VAT registered
+      ]);
+    });
+
+    // Create CSV
     const csv = rows.map(row => 
       row.map(cell => `"${cell}"`).join(',')
     ).join('\n');
@@ -186,11 +167,11 @@ export function BillingDashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `dentarad_stripe_billing_${startDate}_to_${endDate}.csv`;
+    link.download = `dentarad_invoice_ninja_${startDate}_to_${endDate}.csv`;
     link.click();
     URL.revokeObjectURL(url);
 
-    toast.success(`Exported billing for ${billingData.length} clinics`);
+    toast.success(`Exported ${billingData.length} invoices for Invoice Ninja`);
   }
 
   // Mark as billed
@@ -255,33 +236,6 @@ export function BillingDashboard() {
     }
   }
 
-  // Generate Stripe invoice link
-  function getStripeLink(clinic: BillingData) {
-    if (!clinic.stripe_customer_id) {
-      toast.error('This clinic has no Stripe customer ID. Set it up in Stripe first.');
-      return;
-    }
-
-    const monthYear = new Date(startDate).toLocaleDateString('en-GB', { 
-      month: 'long', 
-      year: 'numeric' 
-    });
-
-    const params = new URLSearchParams({
-      'customer': clinic.stripe_customer_id,
-      'currency': 'gbp',
-      'description': `CBCT Reporting Services - ${monthYear} (${clinic.case_count} cases)`
-    });
-
-    // Copy amount to clipboard
-    navigator.clipboard.writeText(clinic.total_amount.toFixed(2));
-    toast.success(`Amount £${clinic.total_amount.toFixed(2)} copied to clipboard`);
-
-    window.open(
-      `https://dashboard.stripe.com/invoices/create?${params.toString()}`,
-      '_blank'
-    );
-  }
 
   const totalCases = billingData.reduce((sum, c) => sum + c.case_count, 0);
   const totalAmount = billingData.reduce((sum, c) => sum + c.total_amount, 0);
@@ -335,7 +289,7 @@ export function BillingDashboard() {
         <CardHeader>
           <CardTitle>Monthly Billing Export</CardTitle>
           <CardDescription>
-            Export unbilled cases for manual Stripe invoicing (bank transfer - no fees)
+            Export unbilled cases as CSV for Invoice Ninja bulk import (creates 10 invoices in 2 minutes)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -366,7 +320,7 @@ export function BillingDashboard() {
               className="flex-1"
             >
               <Download className="h-4 w-4 mr-2" />
-              Export to CSV
+              Export for Invoice Ninja
             </Button>
 
             <Button
@@ -395,9 +349,9 @@ export function BillingDashboard() {
       {/* Billing Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Invoices to Create</CardTitle>
+          <CardTitle>Unbilled Cases by Clinic</CardTitle>
           <CardDescription>
-            Click "Create Invoice" to open Stripe with pre-filled data
+            Export to CSV to create bulk invoices in Invoice Ninja
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -415,8 +369,6 @@ export function BillingDashboard() {
                   <TableHead>Email</TableHead>
                   <TableHead className="text-right">Cases</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -434,23 +386,6 @@ export function BillingDashboard() {
                     <TableCell className="text-right font-medium">
                       £{clinic.total_amount.toFixed(2)}
                     </TableCell>
-                    <TableCell>
-                      {clinic.stripe_customer_id ? (
-                        <Badge variant="default">Ready</Badge>
-                      ) : (
-                        <Badge variant="destructive">No Stripe ID</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => getStripeLink(clinic)}
-                        disabled={!clinic.stripe_customer_id}
-                      >
-                        Create Invoice
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -464,30 +399,26 @@ export function BillingDashboard() {
         <Info className="h-4 w-4" />
         <AlertDescription>
           <div className="space-y-2">
-            <p className="font-semibold">Monthly Invoicing Process (25 minutes):</p>
+            <p className="font-semibold">Monthly Invoicing with Invoice Ninja (5 minutes):</p>
             <ol className="list-decimal list-inside space-y-1 text-sm">
               <li>Select date range (usually previous month)</li>
-              <li>Click "Export to CSV" - downloads file with all clinic details and amounts</li>
-              <li>Open Stripe Dashboard: <a href="https://dashboard.stripe.com/invoices" target="_blank" rel="noopener noreferrer" className="text-primary underline">https://dashboard.stripe.com/invoices</a></li>
-              <li>Create invoice for each clinic (2 minutes each):
-                <ul className="list-disc list-inside ml-6 mt-1">
-                  <li>Copy clinic name and email from CSV</li>
-                  <li>Copy total amount from CSV</li>
-                  <li>Set description: "CBCT Reporting - [Month] [Year]"</li>
-                  <li>Enable payment method: Bank Transfer</li>
-                  <li>Set due date: 30 days</li>
-                  <li>Click "Send invoice"</li>
-                </ul>
-              </li>
-              <li>Stripe automatically emails professional invoice to clinic</li>
-              <li>Clinic receives invoice with your bank details included</li>
-              <li>Clinic pays via bank transfer (their normal payment method)</li>
-              <li>When payments arrive in your bank account, click "Mark All as Billed"</li>
+              <li>Click "Export for Invoice Ninja" - downloads CSV</li>
+              <li>Login to Invoice Ninja: <a href="https://app.invoiceninja.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">app.invoiceninja.com</a></li>
+              <li>Go to: Invoices → Import</li>
+              <li>Upload the CSV file</li>
+              <li>Review mapping (should be automatic after first time)</li>
+              <li>Click "Import" - all invoices created instantly</li>
+              <li>Review invoices → Click "Email All"</li>
+              <li>Clinics receive professional invoices automatically</li>
+              <li>When payments arrive, mark invoices as paid in Invoice Ninja</li>
+              <li>Return to DentaRad → Click "Mark All as Billed"</li>
               <li>Optionally click "Archive Billed Cases" to clean up dashboard</li>
             </ol>
-            <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 rounded-md border border-green-200 dark:border-green-800">
-              <p className="font-semibold text-green-900 dark:text-green-100">💰 Cost: £0 per month</p>
-              <p className="text-sm text-green-800 dark:text-green-200">No transaction fees with bank transfer payment method</p>
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800">
+              <p className="font-semibold text-blue-900 dark:text-blue-100">⚡ Time: 5 minutes per month</p>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Invoice Ninja: £8/month (£96/year) | Bank transfer = no transaction fees
+              </p>
             </div>
           </div>
         </AlertDescription>
