@@ -10,6 +10,8 @@ interface ReportEditorCardProps {
 }
 
 export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardProps) {
+  const [clinicalHistory, setClinicalHistory] = useState(report.clinical_history || '');
+  const [technique, setTechnique] = useState(report.technique || '');
   const [findings, setFindings] = useState(report.findings || '');
   const [impression, setImpression] = useState(report.impression || '');
   const [recommendations, setRecommendations] = useState(report.recommendations || '');
@@ -18,6 +20,8 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
     const timer = setTimeout(() => {
       if (!disabled) {
         onSave({
+          clinical_history: clinicalHistory,
+          technique,
           findings,
           impression,
           recommendations,
@@ -27,7 +31,7 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [findings, impression, recommendations, disabled]);
+  }, [clinicalHistory, technique, findings, impression, recommendations, disabled]);
 
   if (disabled) {
     return (
