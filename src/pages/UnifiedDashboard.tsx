@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, DollarSign, BarChart3 } from 'lucide-react';
 import ReporterDashboard from './ReporterDashboard';
 import AdminDashboard from './AdminDashboard';
-import BillingExport from './BillingExport';
+import { BillingDashboard } from '@/components/BillingDashboard';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function UnifiedDashboard() {
@@ -45,7 +45,7 @@ export default function UnifiedDashboard() {
           </TabsContent>
 
           <TabsContent value="billing">
-            <BillingExport />
+            <BillingDashboard />
           </TabsContent>
         </Tabs>
       </div>
