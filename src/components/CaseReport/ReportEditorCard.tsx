@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Lock } from 'lucide-react';
 import { ReportEditor } from '@/components/ReportBuilder/ReportEditor';
 import { Separator } from '@/components/ui/separator';
 
@@ -42,13 +40,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
           <CardTitle className="text-xl">Report Content</CardTitle>
         </CardHeader>
         <CardContent>
-          <Alert className="mb-4">
-            <Lock className="h-4 w-4" />
-            <AlertDescription>
-              Report is locked. Re-open for editing to make changes.
-            </AlertDescription>
-          </Alert>
-
           <div className="space-y-6 opacity-60 pointer-events-none">
             <div>
               <h3 className="font-semibold mb-2">Clinical History</h3>
