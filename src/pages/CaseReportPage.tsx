@@ -361,8 +361,8 @@ export default function CaseReportPage() {
 
               {reportStatus === 'shared' && (
                 <Button onClick={handleGeneratePDF}>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Regenerate PDF
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download Report
                 </Button>
               )}
             </div>
