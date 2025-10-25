@@ -6,37 +6,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileArchive, Files, Info, CheckCircle2, Upload, Activity, Clock, X } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, FileArchive, CheckCircle2, Upload, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
-import JSZip from "jszip";
 import { validateDICOMZip, getReadableFileSize } from "@/services/fileValidationService";
-import { getCSRFToken } from "@/utils/csrf";
 import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
 import { Progress } from "@/components/ui/progress";
-
-type UploadMode = 'zip' | 'individual';
+import { useChunkedUpload } from "@/hooks/useChunkedUpload";
 
 const UploadCase = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [uploadMode, setUploadMode] = useState<UploadMode>('zip');
   const [zipFile, setZipFile] = useState<File | null>(null);
-  const [dicomFiles, setDicomFiles] = useState<File[]>([]);
-  const [processingFiles, setProcessingFiles] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
   const [createdSimpleId, setCreatedSimpleId] = useState<string | null>(null);
   const [createdPatientName, setCreatedPatientName] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentCaseFolderName, setCurrentCaseFolderName] = useState<string>('');
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -48,6 +40,33 @@ const UploadCase = () => {
   });
 
   const [validating, setValidating] = useState(false);
+
+  // Chunked upload with progress tracking
+  const { upload, uploading, progress, cancel } = useChunkedUpload({
+    bucketName: 'cbct-scans',
+    onSuccess: async (filePath) => {
+      console.log('[Upload] File uploaded successfully:', filePath);
+      
+      // Log case creation
+      if (createdCaseId) {
+        await logCaseCreation(createdCaseId);
+      }
+      
+      setUploadSuccess(true);
+      sonnerToast.success('Case uploaded successfully!');
+    },
+    onError: async (error) => {
+      console.error('[Upload] Upload failed:', error);
+      
+      // Rollback: delete case if upload failed
+      if (createdCaseId) {
+        console.log('Rolling back: deleting case record');
+        await supabase.from('cases').delete().eq('id', createdCaseId);
+      }
+      
+      sonnerToast.error(error.message || 'Upload failed');
+    }
+  });
 
   const handleZipSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,95 +124,6 @@ const UploadCase = () => {
     }
   };
 
-  const handleDicomFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    
-    const validFiles = files.filter(file => {
-      const name = file.name.toLowerCase();
-      return name.endsWith('.dcm') || name.endsWith('.dicom') || !name.includes('.');
-    });
-    
-    if (validFiles.length === 0) {
-      toast({ 
-        title: 'No Valid Files', 
-        description: 'Please select DICOM files (.dcm or .dicom)', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    
-    const totalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > 500 * 1024 * 1024) {
-      toast({ 
-        title: 'Files Too Large', 
-        description: 'Total file size must be less than 500MB', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    
-    setDicomFiles(validFiles);
-  };
-
-  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    
-    const validFiles = files.filter(file => {
-      const name = file.name.toLowerCase();
-      return name.endsWith('.dcm') || name.endsWith('.dicom') || !name.includes('.');
-    });
-    
-    if (validFiles.length === 0) {
-      toast({ 
-        title: 'No Valid DICOM Files', 
-        description: 'No DICOM files found in selected folder', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    
-    const totalSize = validFiles.reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > 500 * 1024 * 1024) {
-      toast({ 
-        title: 'Files Too Large', 
-        description: 'Total folder size must be less than 500MB', 
-        variant: 'destructive' 
-      });
-      return;
-    }
-    
-    toast({
-      title: 'Folder Selected',
-      description: `Found ${validFiles.length} DICOM files in folder`
-    });
-    
-    setDicomFiles(validFiles);
-  };
-
-  const createZipFromFiles = async (files: File[]): Promise<Blob> => {
-    setProcessingFiles(true);
-    try {
-      const zip = new JSZip();
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const filename = file.name.split('/').pop() || `slice_${i}.dcm`;
-        zip.file(filename, file);
-      }
-      
-      const zipBlob = await zip.generateAsync({
-        type: 'blob',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 }
-      });
-      
-      return zipBlob;
-    } finally {
-      setProcessingFiles(false);
-    }
-  };
 
   const generateFolderName = async (patientName: string, patientId: string): Promise<string> => {
     // Sanitize name: uppercase, remove special chars, replace spaces with underscores
@@ -230,7 +160,7 @@ const UploadCase = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (uploadMode === 'zip' && !zipFile) {
+    if (!zipFile) {
       toast({ 
         title: 'No File', 
         description: 'Please select a ZIP file', 
@@ -238,41 +168,7 @@ const UploadCase = () => {
       });
       return;
     }
-    
-    if (uploadMode === 'individual' && dicomFiles.length === 0) {
-      toast({ 
-        title: 'No Files', 
-        description: 'Please select DICOM files', 
-        variant: 'destructive' 
-      });
-      return;
-    }
 
-    // Validate file size
-    const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
-    const MIN_FILE_SIZE = 1024; // 1KB
-    
-    const fileToValidate = uploadMode === 'zip' ? zipFile : null;
-    if (fileToValidate) {
-      if (fileToValidate.size > MAX_FILE_SIZE) {
-        toast({
-          title: 'File Too Large',
-          description: 'Maximum file size: 2GB',
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      if (fileToValidate.size < MIN_FILE_SIZE) {
-        toast({
-          title: 'File Too Small',
-          description: 'Please upload a valid CBCT scan',
-          variant: 'destructive'
-        });
-        return;
-      }
-    }
-    
     // Sanitize inputs
     const sanitizedPatientName = sanitizeText(formData.patientName);
     const sanitizedPatientInternalId = formData.patientInternalId ? sanitizePatientRef(formData.patientInternalId) : '';
@@ -287,11 +183,7 @@ const UploadCase = () => {
       return;
     }
     
-    let createdCase: any = null;
-    
     try {
-      setUploading(true);
-      setUploadProgress(0);
       setUploadSuccess(false);
       setCreatedPatientName(sanitizedPatientName);
       
@@ -312,6 +204,7 @@ const UploadCase = () => {
       
       // Generate unique folder name
       const folderName = await generateFolderName(sanitizedPatientName, sanitizedPatientInternalId || 'UNKNOWN');
+      setCurrentCaseFolderName(folderName);
       
       // Create case record
       const { data: newCase, error: caseError } = await supabase
@@ -332,77 +225,18 @@ const UploadCase = () => {
       
       if (caseError) throw caseError;
       
-      createdCase = newCase;
       setCreatedCaseId(newCase.id);
       setCreatedSimpleId(String(newCase.simple_id).padStart(5, '0'));
       
-      setUploadProgress(20);
+      console.log('[Upload] Case created, starting chunked upload:', newCase.id);
       
-      // Prepare ZIP file
-      let finalZipFile: File | Blob;
-      let zipFilename: string;
-      
-      if (uploadMode === 'zip') {
-        finalZipFile = zipFile!;
-        zipFilename = 'scan.zip';
-      } else {
-        sonnerToast.info(`Compressing ${dicomFiles.length} DICOM files...`);
-        const zipBlob = await createZipFromFiles(dicomFiles);
-        finalZipFile = zipBlob;
-        zipFilename = 'scan.zip';
-      }
-      
-      setUploadProgress(40);
-      
-      // Upload to Supabase Storage
-      const storagePath = `${folderName}/${zipFilename}`;
-      
-      console.log('[Upload] Uploading to Supabase Storage:', storagePath);
-      
-      const { error: uploadError } = await supabase.storage
-        .from('cbct-scans')
-        .upload(storagePath, finalZipFile, {
-          contentType: 'application/zip',
-          upsert: false
-        });
-      
-      if (uploadError) {
-        console.error('[Upload] Storage upload failed:', uploadError);
-        throw new Error(`Failed to upload scan: ${uploadError.message}`);
-      }
-      
-      setUploadProgress(80);
-      
-      console.log('[Upload] File uploaded successfully');
-      
-      // Update case with success flag
-      await supabase
-        .from('cases')
-        .update({
-          upload_completed: true
-        })
-        .eq('id', newCase.id);
-      
-      setUploadProgress(100);
-      
-      // Log case creation
-      await logCaseCreation(newCase.id);
-      
-      setUploadSuccess(true);
-      sonnerToast.success('Case uploaded successfully!');
+      // Start chunked upload with progress tracking
+      const storagePath = `${folderName}/scan.zip`;
+      await upload(zipFile, storagePath);
       
     } catch (error) {
       console.error('Upload failed:', error);
-      
-      // Rollback: delete case if upload failed
-      if (createdCase) {
-        console.log('Rolling back: deleting case record');
-        await supabase.from('cases').delete().eq('id', createdCase.id);
-      }
-      
       sonnerToast.error(error instanceof Error ? error.message : 'Upload failed');
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -473,9 +307,11 @@ const UploadCase = () => {
                       variant="outline"
                       onClick={() => {
                         setUploadSuccess(false);
-                        setUploadProgress(0);
                         setZipFile(null);
-                        setDicomFiles([]);
+                        setCreatedCaseId(null);
+                        setCreatedSimpleId(null);
+                        setCreatedPatientName('');
+                        setCurrentCaseFolderName('');
                         setFormData({
                           patientName: "",
                           patientInternalId: "",
@@ -608,49 +444,11 @@ const UploadCase = () => {
                   </div>
                 </div>
 
-                {/* Upload Mode Selection */}
-                <div className="space-y-4 pt-4 border-t">
-                  <Label>Upload Method</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      type="button"
-                      variant={uploadMode === 'zip' ? 'default' : 'outline'}
-                      onClick={() => setUploadMode('zip')}
-                      className="h-auto py-4"
-                      disabled={uploading}
-                    >
-                      <div className="text-center">
-                        <FileArchive className="w-6 h-6 mx-auto mb-2" />
-                        <div className="font-semibold">ZIP File</div>
-                        <div className="text-xs text-muted-foreground">
-                          Pre-packaged archive
-                        </div>
-                      </div>
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant={uploadMode === 'individual' ? 'default' : 'outline'}
-                      onClick={() => setUploadMode('individual')}
-                      className="h-auto py-4"
-                      disabled={uploading}
-                    >
-                      <div className="text-center">
-                        <Files className="w-6 h-6 mx-auto mb-2" />
-                        <div className="font-semibold">DICOM Files</div>
-                        <div className="text-xs text-muted-foreground">
-                          Individual files/folder
-                        </div>
-                      </div>
-                    </Button>
-                  </div>
-                </div>
-
                 {/* File Upload */}
-                {uploadMode === 'zip' && (
+                <div className="space-y-4 pt-4 border-t">
                   <div>
                     <Label htmlFor="zipFile">
-                      Upload ZIP File <span className="text-destructive">*</span>
+                      Upload DICOM ZIP File <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="zipFile"
@@ -660,6 +458,9 @@ const UploadCase = () => {
                       disabled={uploading || validating}
                       required
                     />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Please upload your CBCT scan as a single ZIP file
+                    </p>
                     {validating && (
                       <p className="text-sm text-muted-foreground mt-2">
                         <Clock className="w-4 h-4 inline animate-spin mr-1" />
@@ -667,60 +468,29 @@ const UploadCase = () => {
                       </p>
                     )}
                     {zipFile && !validating && (
-                      <p className="text-sm text-green-600 mt-2">
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-2">
                         <CheckCircle2 className="w-4 h-4 inline mr-1" />
                         {zipFile.name} ({getReadableFileSize(zipFile.size)})
                       </p>
                     )}
                   </div>
-                )}
-
-                {uploadMode === 'individual' && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="dicomFiles">Upload DICOM Files</Label>
-                      <Input
-                        id="dicomFiles"
-                        type="file"
-                        multiple
-                        accept=".dcm,.dicom"
-                        onChange={handleDicomFilesSelect}
-                        disabled={uploading}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="dicomFolder">Or Select Folder</Label>
-                      <Input
-                        id="dicomFolder"
-                        type="file"
-                        // @ts-ignore
-                        webkitdirectory=""
-                        directory=""
-                        multiple
-                        onChange={handleFolderSelect}
-                        disabled={uploading}
-                      />
-                    </div>
-                    {dicomFiles.length > 0 && (
-                      <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertDescription>
-                          {dicomFiles.length} DICOM file(s) selected
-                          ({getReadableFileSize(dicomFiles.reduce((sum, f) => sum + f.size, 0))})
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                )}
+                </div>
 
                 {/* Upload Progress */}
                 {uploading && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Uploading...</span>
-                      <span className="font-medium">{uploadProgress}%</span>
+                      <span className="text-muted-foreground">
+                        Uploading... {progress.uploadedMB.toFixed(1)}MB / {progress.totalMB.toFixed(1)}MB
+                      </span>
+                      <span className="font-medium">{Math.round(progress.percentage)}%</span>
                     </div>
-                    <Progress value={uploadProgress} />
+                    <Progress value={progress.percentage} />
+                    {progress.speedMBps > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {progress.speedMBps.toFixed(1)} MB/s • ETA: {progress.etaSeconds}s
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -729,17 +499,12 @@ const UploadCase = () => {
                   type="submit" 
                   className="w-full" 
                   size="lg"
-                  disabled={uploading || validating || processingFiles}
+                  disabled={uploading || validating || !zipFile}
                 >
                   {uploading ? (
                     <>
-                      <Activity className="w-4 h-4 mr-2 animate-spin" />
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
                       Uploading...
-                    </>
-                  ) : processingFiles ? (
-                    <>
-                      <Activity className="w-4 h-4 mr-2 animate-spin" />
-                      Processing Files...
                     </>
                   ) : (
                     <>
