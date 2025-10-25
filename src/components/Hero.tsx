@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Clock, Award, ArrowRight } from "lucide-react";
+import { FileText, Clock, Award } from "lucide-react";
 
 const Hero = () => {
   return (
@@ -56,17 +56,6 @@ const Hero = () => {
               <p className="text-white font-semibold">Specialist Expertise</p>
               <p className="text-white/70 text-sm">Head & neck subspecialty</p>
             </div>
-          </div>
-          
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button variant="premium" size="lg" className="text-lg px-8 py-6 h-auto">
-              Refer a Case
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-6 h-auto bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white hover:text-navy">
-              Register for Access
-            </Button>
           </div>
           
           {/* Clinic Login */}
