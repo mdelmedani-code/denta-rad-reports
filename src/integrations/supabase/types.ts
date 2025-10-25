@@ -81,6 +81,9 @@ export type Database = {
       }
       cases: {
         Row: {
+          archived: boolean | null
+          archived_at: string | null
+          archived_reason: string | null
           billed: boolean | null
           billed_at: string | null
           clinic_id: string
@@ -128,6 +131,9 @@ export type Database = {
           zip_generation_status: string | null
         }
         Insert: {
+          archived?: boolean | null
+          archived_at?: string | null
+          archived_reason?: string | null
           billed?: boolean | null
           billed_at?: string | null
           clinic_id: string
@@ -175,6 +181,9 @@ export type Database = {
           zip_generation_status?: string | null
         }
         Update: {
+          archived?: boolean | null
+          archived_at?: string | null
+          archived_reason?: string | null
           billed?: boolean | null
           billed_at?: string | null
           clinic_id?: string

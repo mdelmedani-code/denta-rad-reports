@@ -51,6 +51,7 @@ const Dashboard = () => {
             contact_email
           )
         `)
+        .eq('archived', false)
         .order('upload_date', { ascending: false });
 
       if (error) throw error;

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Download, CheckCircle, DollarSign, Calendar } from 'lucide-react';
+import { Download, CheckCircle, DollarSign, Calendar, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BillingData {
@@ -42,7 +42,7 @@ export function BillingDashboard() {
   async function loadBillingData() {
     setLoading(true);
     try {
-      // Get unbilled completed cases (filtered by completion date)
+      // Get unbilled completed cases (filtered by completion date, exclude archived)
       const { data: cases, error: casesError } = await supabase
         .from('cases')
         .select(`
@@ -62,6 +62,7 @@ export function BillingDashboard() {
         `)
         .eq('status', 'report_ready')
         .eq('billed', false)
+        .eq('archived', false)
         .not('completed_at', 'is', null)
         .gte('completed_at', `${startDate}T00:00:00`)
         .lte('completed_at', `${endDate}T23:59:59`)
@@ -189,6 +190,38 @@ export function BillingDashboard() {
     }
   }
 
+  // Archive billed cases
+  async function archiveBilledCases() {
+    if (!confirm('Archive all billed cases shown? They will be hidden from main views but remain in the database.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const allCaseIds = billingData.flatMap(c => c.case_ids);
+
+      const { error } = await supabase
+        .from('cases')
+        .update({
+          archived: true,
+          archived_at: new Date().toISOString(),
+          archived_reason: 'Invoiced and archived from billing dashboard'
+        })
+        .in('id', allCaseIds)
+        .eq('billed', true); // Only archive if already marked as billed
+
+      if (error) throw error;
+
+      toast.success(`Archived ${allCaseIds.length} billed cases`);
+      loadBillingData(); // Refresh
+    } catch (error) {
+      console.error('Archive error:', error);
+      toast.error('Failed to archive cases');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Generate Stripe invoice link
   function getStripeLink(clinic: BillingData) {
     if (!clinic.stripe_customer_id) {
@@ -306,10 +339,21 @@ export function BillingDashboard() {
             <Button
               onClick={markAsBilled}
               disabled={loading || billingData.length === 0}
+              variant="default"
               className="flex-1"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               Mark All as Billed
+            </Button>
+
+            <Button
+              onClick={archiveBilledCases}
+              disabled={loading || billingData.length === 0}
+              variant="secondary"
+              className="flex-1"
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Archive Billed Cases
             </Button>
           </div>
         </CardContent>
