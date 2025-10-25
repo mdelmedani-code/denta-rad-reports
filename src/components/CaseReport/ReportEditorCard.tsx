@@ -10,8 +10,6 @@ interface ReportEditorCardProps {
 }
 
 export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardProps) {
-  const [clinicalHistory, setClinicalHistory] = useState(report.clinical_history || '');
-  const [technique, setTechnique] = useState(report.technique || '');
   const [findings, setFindings] = useState(report.findings || '');
   const [impression, setImpression] = useState(report.impression || '');
   const [recommendations, setRecommendations] = useState(report.recommendations || '');
@@ -20,8 +18,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
     const timer = setTimeout(() => {
       if (!disabled) {
         onSave({
-          clinical_history: clinicalHistory,
-          technique,
           findings,
           impression,
           recommendations,
@@ -31,7 +27,7 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [clinicalHistory, technique, findings, impression, recommendations, disabled]);
+  }, [findings, impression, recommendations, disabled]);
 
   if (disabled) {
     return (
@@ -41,24 +37,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
         </CardHeader>
         <CardContent>
           <div className="space-y-6 opacity-60 pointer-events-none">
-            <div>
-              <h3 className="font-semibold mb-2">Clinical History</h3>
-              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                {report.clinical_history || 'Not provided'}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="font-semibold mb-2">Technique</h3>
-              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
-                {report.technique || 'Not provided'}
-              </div>
-            </div>
-
-            <Separator />
-
             <div>
               <h3 className="font-semibold mb-2">Findings</h3>
               <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg">
@@ -95,28 +73,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
         <CardTitle className="text-xl">Report Content</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div>
-          <h3 className="font-semibold mb-2">Clinical History</h3>
-          <ReportEditor
-            content={clinicalHistory}
-            onChange={setClinicalHistory}
-            placeholder="Enter clinical history..."
-          />
-        </div>
-
-        <Separator />
-
-        <div>
-          <h3 className="font-semibold mb-2">Technique</h3>
-          <ReportEditor
-            content={technique}
-            onChange={setTechnique}
-            placeholder="Describe imaging technique..."
-          />
-        </div>
-
-        <Separator />
-
         <div>
           <h3 className="font-semibold mb-2">Findings</h3>
           <ReportEditor
