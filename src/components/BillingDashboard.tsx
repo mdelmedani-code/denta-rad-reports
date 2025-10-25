@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Download, CheckCircle, DollarSign, Calendar, Archive } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Download, CheckCircle, PoundSterling, Calendar, Archive, Info, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BillingData {
@@ -128,22 +129,54 @@ export function BillingDashboard() {
     loadBillingData();
   }, [startDate, endDate]);
 
-  // Export to CSV
+  // Export to CSV with Stripe instructions
   function exportToCSV() {
     const rows = [
-      ['Clinic Name', 'Email', 'Stripe Customer ID', 'Case Count', 'Total Amount (£)', 'Case IDs']
+      ['Clinic Name', 'Email', 'Stripe Customer ID', 'Case Count', 'Total Amount (£)', 'Case List']
     ];
 
     billingData.forEach(clinic => {
+      const caseList = clinic.cases
+        .map(c => `${c.folder_name} (${c.field_of_view})`)
+        .join('; ');
+
       rows.push([
         clinic.clinic_name,
         clinic.clinic_email,
         clinic.stripe_customer_id || 'NOT SET',
         clinic.case_count.toString(),
         clinic.total_amount.toFixed(2),
-        clinic.case_ids.join(', ')
+        caseList
       ]);
     });
+
+    // Add summary row
+    rows.push([]);
+    rows.push(['TOTAL', '', '', totalCases.toString(), totalAmount.toFixed(2), '']);
+
+    // Add instructions
+    const monthYear = new Date(startDate).toLocaleDateString('en-GB', { 
+      month: 'long', 
+      year: 'numeric' 
+    });
+
+    rows.push([]);
+    rows.push(['INSTRUCTIONS FOR STRIPE INVOICING:']);
+    rows.push(['1. Go to: https://dashboard.stripe.com/invoices']);
+    rows.push(['2. Click "Create invoice"']);
+    rows.push(['3. For each clinic above:']);
+    rows.push([`   - Customer: Enter clinic name and email (or use Stripe Customer ID if set)`]);
+    rows.push([`   - Description: "CBCT Reporting - ${monthYear}"`]);
+    rows.push(['   - Amount: Copy from "Total Amount (£)" column']);
+    rows.push(['   - Due date: 30 days from today']);
+    rows.push(['   - Payment methods: Enable "Bank Transfer"']);
+    rows.push(['   - Click "Send invoice"']);
+    rows.push(['4. Stripe will automatically email the invoice to the clinic']);
+    rows.push(['5. Clinic receives professional invoice with your bank details']);
+    rows.push(['6. Clinic pays via bank transfer (no fees for you)']);
+    rows.push(['7. When payments arrive, return to DentaRad and click "Mark All as Billed"']);
+    rows.push([]);
+    rows.push(['💰 COST: £0 per month (no transaction fees with bank transfer)']);
 
     const csv = rows.map(row => 
       row.map(cell => `"${cell}"`).join(',')
@@ -153,11 +186,11 @@ export function BillingDashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `dentarad_billing_${startDate}_to_${endDate}.csv`;
+    link.download = `dentarad_stripe_billing_${startDate}_to_${endDate}.csv`;
     link.click();
     URL.revokeObjectURL(url);
 
-    toast.success('Billing data exported to CSV');
+    toast.success(`Exported billing for ${billingData.length} clinics`);
   }
 
   // Mark as billed
@@ -260,7 +293,7 @@ export function BillingDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCases}</div>
@@ -272,21 +305,8 @@ export function BillingDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">£{totalAmount.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              To be invoiced
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clinics</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{billingData.length}</div>
@@ -295,14 +315,27 @@ export function BillingDashboard() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <PoundSterling className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">£{totalAmount.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              To be invoiced
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Date Range & Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Billing Period</CardTitle>
+          <CardTitle>Monthly Billing Export</CardTitle>
           <CardDescription>
-            Select date range and export billing data
+            Export unbilled cases for manual Stripe invoicing (bank transfer - no fees)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -425,6 +458,40 @@ export function BillingDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Instructions Panel */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <div className="space-y-2">
+            <p className="font-semibold">Monthly Invoicing Process (25 minutes):</p>
+            <ol className="list-decimal list-inside space-y-1 text-sm">
+              <li>Select date range (usually previous month)</li>
+              <li>Click "Export to CSV" - downloads file with all clinic details and amounts</li>
+              <li>Open Stripe Dashboard: <a href="https://dashboard.stripe.com/invoices" target="_blank" rel="noopener noreferrer" className="text-primary underline">https://dashboard.stripe.com/invoices</a></li>
+              <li>Create invoice for each clinic (2 minutes each):
+                <ul className="list-disc list-inside ml-6 mt-1">
+                  <li>Copy clinic name and email from CSV</li>
+                  <li>Copy total amount from CSV</li>
+                  <li>Set description: "CBCT Reporting - [Month] [Year]"</li>
+                  <li>Enable payment method: Bank Transfer</li>
+                  <li>Set due date: 30 days</li>
+                  <li>Click "Send invoice"</li>
+                </ul>
+              </li>
+              <li>Stripe automatically emails professional invoice to clinic</li>
+              <li>Clinic receives invoice with your bank details included</li>
+              <li>Clinic pays via bank transfer (their normal payment method)</li>
+              <li>When payments arrive in your bank account, click "Mark All as Billed"</li>
+              <li>Optionally click "Archive Billed Cases" to clean up dashboard</li>
+            </ol>
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 rounded-md border border-green-200 dark:border-green-800">
+              <p className="font-semibold text-green-900 dark:text-green-100">💰 Cost: £0 per month</p>
+              <p className="text-sm text-green-800 dark:text-green-200">No transaction fees with bank transfer payment method</p>
+            </div>
+          </div>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
