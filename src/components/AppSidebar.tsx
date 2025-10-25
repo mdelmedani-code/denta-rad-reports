@@ -3,7 +3,7 @@ import {
   Home, 
   Upload, 
   FileText, 
-  DollarSign, 
+  PoundSterling, 
   BarChart3, 
   Shield, 
   Settings, 
@@ -82,7 +82,7 @@ export function AppSidebar() {
   const adminItems = [
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
-    { title: "Billing Export", url: "/billing-export", icon: DollarSign },
+    { title: "Billing Export", url: "/billing-export", icon: PoundSterling },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
   ];
