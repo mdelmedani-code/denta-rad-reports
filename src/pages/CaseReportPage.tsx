@@ -204,9 +204,31 @@ export default function CaseReportPage() {
         description: 'Please wait...',
       });
 
+      // Map the data to match PDF generator expectations
       const pdfBlob = await generateReportPDF({
-        caseData: data.case,
-        reportData: data.report,
+        caseData: {
+          patient_name: data.case.patient_name,
+          patient_dob: data.case.patient_dob || '',
+          patient_id: data.case.patient_internal_id || data.case.patient_id || 'N/A',
+          folder_name: data.case.folder_name,
+          clinical_question: data.case.clinical_question || '',
+          field_of_view: data.case.field_of_view || 'up_to_5x5',
+          upload_date: data.case.upload_date,
+          clinic: {
+            name: data.case.clinics?.name || data.case.clinic?.name || 'Unknown Clinic',
+          },
+        },
+        reportData: {
+          clinical_history: data.report.clinical_history || '',
+          technique: data.report.technique || '',
+          findings: data.report.findings || '',
+          impression: data.report.impression || '',
+          recommendations: data.report.recommendations || '',
+          signatory_name: data.report.signatory_name,
+          signatory_credentials: data.report.signatory_credentials,
+          signed_at: data.report.signed_at,
+          version: data.report.version,
+        },
       });
 
       const pdfPath = `${data.case.folder_name}/report.pdf`;
@@ -236,11 +258,11 @@ export default function CaseReportPage() {
       });
 
       await loadCaseReport();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating PDF:', error);
       toast({
         title: 'PDF Generation Failed',
-        description: 'Failed to generate PDF',
+        description: error?.message || 'Failed to generate PDF',
         variant: 'destructive',
       });
     }
