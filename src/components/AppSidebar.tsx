@@ -82,12 +82,9 @@ export function AppSidebar() {
   const adminItems = [
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
-    { title: "Invoices", url: "/admin/invoices", icon: DollarSign },
     { title: "Billing Export", url: "/billing-export", icon: DollarSign },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
-    { title: "PDF Templates", url: "/admin/pdf-templates", icon: Settings },
-    { title: "Template Management", url: "/admin/template-management", icon: Settings },
   ];
 
   const items = userRole === 'admin' ? adminItems : clinicItems;

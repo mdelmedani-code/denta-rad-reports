@@ -354,17 +354,9 @@ const AdminDashboard = () => {
                 <Database className="w-4 h-4 mr-2" />
                 {isBackingUp ? "Backing up..." : "Backup to GCS"}
               </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/reporter")}>
+              <Button variant="outline" onClick={() => navigate("/reporter")}>
                 <Eye className="w-4 h-4 mr-2" />
                 Reporter Dashboard
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/pdf-templates")}>
-                <FileText className="w-4 h-4 mr-2" />
-                PDF Templates
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/template-management")}>
-                <FileText className="w-4 h-4 mr-2" />
-                Template Indications
               </Button>
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
