@@ -95,7 +95,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="bg-white border-r">
       <SidebarContent className="bg-white">
         {/* Logo Section */}
-        <div className="p-4 border-b bg-white">
+        <div className="p-4 border-b">
           {!collapsed ? (
             <img src={dentaradLogo} alt="DentaRad" className="w-full h-auto" />
           ) : (
