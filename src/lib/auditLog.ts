@@ -19,14 +19,20 @@ export type AuditAction =
   | 'user_deleted'
   | 'role_changed'
   | 'password_reset'
-  | 'account_unlocked';
+  | 'account_unlocked'
+  | 'invoice_created'
+  | 'invoice_updated'
+  | 'invoice_sent'
+  | 'invoice_paid'
+  | 'invoice_deleted';
 
 export type ResourceType = 
   | 'case'
   | 'report'
   | 'dicom'
   | 'pdf'
-  | 'user_account';
+  | 'user_account'
+  | 'invoice';
 
 interface AuditLogParams {
   action: AuditAction;

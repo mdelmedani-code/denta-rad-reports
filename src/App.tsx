@@ -26,6 +26,8 @@ import PrivacyNotice from "./pages/PrivacyNotice";
 import AuditLogs from "./pages/AuditLogs";
 import SecurityDashboard from "./pages/SecurityDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
+import InvoicingPage from "./pages/admin/InvoicingPage";
+import CreateInvoicePage from "./pages/admin/CreateInvoicePage";
 import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -88,6 +90,22 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <UserManagementPage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/invoices" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <InvoicingPage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/invoices/create" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <CreateInvoicePage />
                 </AppLayout>
               </ProtectedRoute>
             } />
