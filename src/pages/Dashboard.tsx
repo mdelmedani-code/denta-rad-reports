@@ -302,39 +302,41 @@ const Dashboard = () => {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b">
-                              <th className="text-left py-2">Patient Name</th>
-                              <th className="text-left py-2">Upload Date</th>
-                              <th className="text-left py-2">Clinical Question</th>
-                              <th className="text-left py-2">Urgency</th>
-                              <th className="text-left py-2">FOV</th>
-                              <th className="text-left py-2">Status</th>
-                              <th className="text-left py-2">Actions</th>
+                              <th className="text-left py-4 px-2">Patient Name</th>
+                              <th className="text-left py-4 px-2">Upload Date</th>
+                              <th className="text-left py-4 px-2">Clinical Question</th>
+                              <th className="text-left py-4 px-2">Urgency</th>
+                              <th className="text-left py-4 px-2">FOV</th>
+                              <th className="text-left py-4 px-2">Status</th>
+                              <th className="text-left py-4 px-2">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {filteredCases.map((case_) => (
-                        <tr key={case_.id} className="border-b">
-                          <td className="py-2">{case_.patient_name}</td>
-                          <td className="py-2">
+                        <tr key={case_.id} className="border-b hover:bg-muted/50 transition-colors">
+                          <td className="py-4 px-2 font-medium">{case_.patient_name}</td>
+                          <td className="py-4 px-2">
                             {new Date(case_.upload_date).toLocaleDateString()}
                           </td>
-                          <td className="py-2 max-w-xs truncate">
-                            {case_.clinical_question}
+                          <td className="py-4 px-2 max-w-xs">
+                            <div className="line-clamp-2">
+                              {case_.clinical_question}
+                            </div>
                           </td>
-                          <td className="py-2">
+                          <td className="py-4 px-2">
                             <Badge 
                               variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
                             >
                               {case_.urgency}
                             </Badge>
                           </td>
-                          <td className="py-2">{case_.field_of_view}</td>
-                          <td className="py-2">
+                          <td className="py-4 px-2">{case_.field_of_view}</td>
+                          <td className="py-4 px-2">
                             <Badge className={getStatusColor(case_.status)}>
                               {formatStatus(case_.status)}
                             </Badge>
                           </td>
-                          <td className="py-2">
+                          <td className="py-4 px-2">
                             <div className="flex gap-2 flex-wrap">
                               {case_.status === 'report_ready' ? (
                                 <>
@@ -380,14 +382,14 @@ const Dashboard = () => {
                       </div>
 
                       {/* Mobile Card View */}
-                      <div className="lg:hidden space-y-4">
+                      <div className="lg:hidden space-y-6">
                         {filteredCases.map((case_) => (
-                    <Card key={case_.id} className="border border-border">
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-semibold text-lg">{case_.patient_name}</h3>
+                    <Card key={case_.id} className="border border-border shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-1">{case_.patient_name}</h3>
                               <p className="text-sm text-muted-foreground">
                                 {new Date(case_.upload_date).toLocaleDateString()}
                               </p>
@@ -397,7 +399,7 @@ const Dashboard = () => {
                             </Badge>
                           </div>
                           
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div>
                               <p className="text-sm font-medium">Clinical Question:</p>
                               <p className="text-sm text-muted-foreground">
@@ -419,7 +421,7 @@ const Dashboard = () => {
                           </div>
 
                           {/* Mobile Actions */}
-                          <div className="flex flex-col gap-2 pt-2">
+                          <div className="flex flex-col gap-2 pt-4 border-t border-border">
                             {case_.status === 'report_ready' ? (
                               <>
                                 <Button 
