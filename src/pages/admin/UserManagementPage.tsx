@@ -99,10 +99,21 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch all users from auth.users via admin API
-      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      // Fetch all users via edge function
+      const { data: usersResponse, error: authError } = await supabase.functions.invoke('admin-list-users', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
       
       if (authError) throw authError;
+      if (usersResponse.error) throw new Error(usersResponse.error);
+      
+      const authUsers = usersResponse.users;
 
       // Fetch roles and clinic information
       const { data: profiles, error: profileError } = await supabase
@@ -175,34 +186,24 @@ export default function UserManagementPage() {
     }
 
     try {
-      // Create user via admin API
-      const { data, error } = await supabase.auth.admin.createUser({
-        email: newUserEmail,
-        password: newUserPassword,
-        email_confirm: true,
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      // Create user via edge function
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: newUserEmail,
+          password: newUserPassword,
+          role: newUserRole,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;
-
-      // Assign role
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert([{
-          user_id: data.user.id,
-          role: newUserRole as 'admin' | 'clinic' | 'reporter',
-        }]);
-
-      if (roleError) throw roleError;
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert([{
-          id: data.user.id,
-          email: newUserEmail,
-        }]);
-
-      if (profileError) throw profileError;
+      if (data.error) throw new Error(data.error);
 
       // Audit log
       await logAudit({
@@ -282,12 +283,23 @@ export default function UserManagementPage() {
     }
 
     try {
-      const { error } = await supabase.auth.admin.updateUserById(
-        selectedUser.id,
-        { password: newPassword }
-      );
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      // Update password via edge function
+      const { data, error } = await supabase.functions.invoke('admin-update-user', {
+        body: {
+          userId: selectedUser.id,
+          password: newPassword,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       await logAudit({
         action: "password_reset",
@@ -353,9 +365,22 @@ export default function UserManagementPage() {
     if (!selectedUser) return;
 
     try {
-      const { error } = await supabase.auth.admin.deleteUser(selectedUser.id);
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      // Delete user via edge function
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: {
+          userId: selectedUser.id,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
       if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       await logAudit({
         action: "user_deleted",
