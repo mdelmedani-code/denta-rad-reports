@@ -14,7 +14,12 @@ export type AuditAction =
   | 'mfa_setup'
   | 'password_change'
   | 'failed_login'
-  | 'unauthorized_access_attempt';
+  | 'unauthorized_access_attempt'
+  | 'user_created'
+  | 'user_deleted'
+  | 'role_changed'
+  | 'password_reset'
+  | 'account_unlocked';
 
 export type ResourceType = 
   | 'case'

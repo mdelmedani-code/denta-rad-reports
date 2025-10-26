@@ -10,7 +10,8 @@ import {
   ScrollText,
   LogOut,
   Eye,
-  User
+  User,
+  Users
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,6 +85,7 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
     { title: "Billing Export", url: "/billing-export", icon: PoundSterling },
+    { title: "User Management", url: "/admin/users", icon: Users },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
   ];
