@@ -12,8 +12,7 @@ import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
 import { toast as sonnerToast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
 
 interface Case {
   id: string;
@@ -179,29 +178,25 @@ const Dashboard = () => {
   const filteredCases = getFilteredCases();
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="border-b border-border bg-card sticky top-0 z-10">
-            <div className="px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex justify-between items-center gap-3">
-                <div className="flex items-center gap-3">
-                  <SidebarTrigger />
-                  <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-foreground">DentaRad Portal</h1>
-                    <p className="text-sm sm:text-base text-muted-foreground truncate">Welcome back, {user?.email}</p>
-                  </div>
-                </div>
-                <Button variant="outline" onClick={handleSignOut} className="hidden sm:flex">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
-                </Button>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-4 flex-1">
+              <img src={dentaradLogo} alt="DentaRad" className="h-10 sm:h-12" />
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground">DentaRad Portal</h1>
+                <p className="text-sm sm:text-base text-muted-foreground truncate">Welcome back, {user?.email}</p>
               </div>
             </div>
-          </header>
+            <Button variant="outline" onClick={handleSignOut} className="w-full sm:w-auto">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
@@ -481,10 +476,8 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-        </div>
-        </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 

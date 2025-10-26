@@ -95,11 +95,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="bg-white border-r">
       <SidebarContent className="bg-white">
         {/* Logo Section */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b bg-white">
           {!collapsed ? (
-            <img src={dentaradLogo} alt="DentaRad" className="h-10 w-auto" />
+            <img src={dentaradLogo} alt="DentaRad" className="w-full h-auto" />
           ) : (
-            <img src={dentaradLogo} alt="DentaRad" className="h-8 w-auto" />
+            <img src={dentaradLogo} alt="DentaRad" className="w-full h-auto" />
           )}
         </div>
         
