@@ -81,6 +81,12 @@ export function AppSidebar() {
     { title: "Upload Case", url: "/upload-case", icon: Upload },
   ];
 
+  const reporterItems = [
+    { title: "Dashboard", url: "/reporter", icon: BarChart3 },
+    { title: "Cases", url: "/reporter", icon: FileText },
+    { title: "Billing Export", url: "/billing-export", icon: PoundSterling },
+  ];
+
   const adminItems = [
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
@@ -90,7 +96,7 @@ export function AppSidebar() {
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
   ];
 
-  const items = userRole === 'admin' ? adminItems : clinicItems;
+  const items = userRole === 'admin' ? adminItems : (userRole === 'reporter' ? reporterItems : clinicItems);
   const collapsed = sidebarState === "collapsed";
 
   return (
@@ -139,7 +145,7 @@ export function AppSidebar() {
                   </div>
                   {userRole && (
                     <div className="text-xs font-medium text-primary">
-                      {userRole === 'admin' ? 'Administrator' : 'Clinic User'}
+                      {userRole === 'admin' ? 'Administrator' : (userRole === 'reporter' ? 'Reporter' : 'Clinic User')}
                     </div>
                   )}
                 </div>

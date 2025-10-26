@@ -94,7 +94,7 @@ const App = () => (
             
             {/* Unified dashboard for reporter/admin */}
             <Route path="/reporter" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="reporter">
                 <AppLayout>
                   <UnifiedDashboard />
                 </AppLayout>
@@ -103,7 +103,7 @@ const App = () => (
             
             {/* Billing export */}
             <Route path="/billing-export" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="reporter">
                 <AppLayout>
                   <BillingExport />
                 </AppLayout>
@@ -112,7 +112,7 @@ const App = () => (
             
             {/* Viewer page */}
             <Route path="/viewer/:caseId" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="reporter">
                 <AppLayout>
                   <ViewerPage />
                 </AppLayout>
@@ -121,7 +121,7 @@ const App = () => (
             
             {/* Reporter case review */}
             <Route path="/reporter/case/:id" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="reporter">
                 <AppLayout>
                   <AdminCaseReview />
                 </AppLayout>
@@ -130,7 +130,7 @@ const App = () => (
             
             {/* Report builder */}
             <Route path="/reporter/report/:caseId" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="reporter">
                 <ReportBuilder />
               </ProtectedRoute>
             } />

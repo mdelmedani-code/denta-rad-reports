@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'clinic' | 'admin';
+  requiredRole?: 'clinic' | 'admin' | 'reporter';
 }
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
@@ -50,12 +50,22 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     if (!loading && !roleLoading) {
       if (!user) {
         navigate(requiredRole === 'admin' ? "/admin/login" : "/login");
-      } else if (requiredRole && userRole !== requiredRole) {
-        // Redirect based on role mismatch
-        if (requiredRole === 'admin' && userRole !== 'admin') {
-          navigate("/admin/login");
-        } else if (requiredRole === 'clinic' && userRole !== 'clinic') {
-          navigate("/login");
+      } else if (requiredRole) {
+        // Check if user has required role or higher privileges
+        const hasAccess = 
+          userRole === requiredRole || 
+          (userRole === 'admin' && (requiredRole === 'reporter' || requiredRole === 'admin')) ||
+          (userRole === 'reporter' && requiredRole === 'reporter');
+        
+        if (!hasAccess) {
+          // Redirect based on role mismatch
+          if (requiredRole === 'admin' && userRole !== 'admin') {
+            navigate("/admin/login");
+          } else if (requiredRole === 'clinic' && userRole !== 'clinic') {
+            navigate("/login");
+          } else if (requiredRole === 'reporter' && userRole === 'clinic') {
+            navigate("/dashboard");
+          }
         }
       }
     }
@@ -69,7 +79,13 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     );
   }
 
-  if (!user || (requiredRole && userRole !== requiredRole)) {
+  // Check if user has access (admin has access to all, reporter has access to reporter routes)
+  const hasAccess = !requiredRole || 
+    userRole === requiredRole || 
+    (userRole === 'admin' && (requiredRole === 'reporter' || requiredRole === 'admin')) ||
+    (userRole === 'reporter' && requiredRole === 'reporter');
+
+  if (!user || !hasAccess) {
     return null;
   }
 
