@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, FileText, Clock, LogOut, Download, Loader2, FileEdit } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Download, Loader2, FileEdit, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
 import { toast as sonnerToast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Case {
   id: string;
@@ -35,6 +36,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'reported'>('all');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -226,7 +228,32 @@ const Dashboard = () => {
 
         {/* Notification Preferences */}
         <div className="mb-8">
-          <NotificationPreferences />
+          <Collapsible open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Email Notifications</CardTitle>
+                      <CardDescription className="text-sm">
+                        Configure your notification preferences
+                      </CardDescription>
+                    </div>
+                    <ChevronDown 
+                      className={`h-5 w-5 transition-transform duration-200 ${
+                        notificationsOpen ? 'rotate-180' : ''
+                      }`} 
+                    />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <NotificationPreferences />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         </div>
 
         {/* Cases Section */}

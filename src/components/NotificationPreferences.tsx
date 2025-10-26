@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
@@ -91,83 +90,73 @@ export const NotificationPreferences = () => {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Email Notifications</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="new-cases">New Cases</Label>
-            <p className="text-sm text-muted-foreground">
-              Get notified when new cases are uploaded by your clinic
-            </p>
-          </div>
-          <Switch
-            id="new-cases"
-            checked={preferences.email_new_cases}
-            onCheckedChange={(checked) => updatePreferences('email_new_cases', checked)}
-            disabled={saving}
-          />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="new-cases">New Cases</Label>
+          <p className="text-sm text-muted-foreground">
+            Get notified when new cases are uploaded by your clinic
+          </p>
         </div>
+        <Switch
+          id="new-cases"
+          checked={preferences.email_new_cases}
+          onCheckedChange={(checked) => updatePreferences('email_new_cases', checked)}
+          disabled={saving}
+        />
+      </div>
 
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="urgent-cases">Urgent Cases</Label>
-            <p className="text-sm text-muted-foreground">
-              Get notified immediately for urgent cases
-            </p>
-          </div>
-          <Switch
-            id="urgent-cases"
-            checked={preferences.email_urgent_cases}
-            onCheckedChange={(checked) => updatePreferences('email_urgent_cases', checked)}
-            disabled={saving}
-          />
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="urgent-cases">Urgent Cases</Label>
+          <p className="text-sm text-muted-foreground">
+            Get notified immediately for urgent cases
+          </p>
         </div>
+        <Switch
+          id="urgent-cases"
+          checked={preferences.email_urgent_cases}
+          onCheckedChange={(checked) => updatePreferences('email_urgent_cases', checked)}
+          disabled={saving}
+        />
+      </div>
 
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="status-changes">Status Changes</Label>
-            <p className="text-sm text-muted-foreground">
-              Get notified when case status updates (e.g., completed, in progress)
-            </p>
-          </div>
-          <Switch
-            id="status-changes"
-            checked={preferences.email_status_changes}
-            onCheckedChange={(checked) => updatePreferences('email_status_changes', checked)}
-            disabled={saving}
-          />
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="status-changes">Status Changes</Label>
+          <p className="text-sm text-muted-foreground">
+            Get notified when case status updates (e.g., completed, in progress)
+          </p>
         </div>
+        <Switch
+          id="status-changes"
+          checked={preferences.email_status_changes}
+          onCheckedChange={(checked) => updatePreferences('email_status_changes', checked)}
+          disabled={saving}
+        />
+      </div>
 
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="daily-summary">Daily Summary</Label>
-            <p className="text-sm text-muted-foreground">
-              Receive a daily summary of your cases
-            </p>
-          </div>
-          <Switch
-            id="daily-summary"
-            checked={preferences.email_daily_summary}
-            onCheckedChange={(checked) => updatePreferences('email_daily_summary', checked)}
-            disabled={saving}
-          />
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="daily-summary">Daily Summary</Label>
+          <p className="text-sm text-muted-foreground">
+            Receive a daily summary of your cases
+          </p>
         </div>
-      </CardContent>
-    </Card>
+        <Switch
+          id="daily-summary"
+          checked={preferences.email_daily_summary}
+          onCheckedChange={(checked) => updatePreferences('email_daily_summary', checked)}
+          disabled={saving}
+        />
+      </div>
+    </div>
   );
 };
