@@ -29,6 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
 
 export function AppSidebar() {
   const { user } = useAuth();
@@ -91,12 +92,21 @@ export function AppSidebar() {
   const collapsed = sidebarState === "collapsed";
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
+    <Sidebar collapsible="icon" className="bg-white border-r">
+      <SidebarContent className="bg-white">
+        {/* Logo Section */}
+        <div className="p-4 border-b">
+          {!collapsed ? (
+            <img src={dentaradLogo} alt="DentaRad" className="h-10 w-auto" />
+          ) : (
+            <img src={dentaradLogo} alt="DentaRad" className="h-8 w-auto" />
+          )}
+        </div>
+        
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
-            {!collapsed && "DentaRad"}
+            {!collapsed && "Navigation"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
