@@ -70,7 +70,31 @@ export default function InvoicingPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const checkAdminAccess = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/admin/login");
+      return;
+    }
+
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!roleData || roleData.role !== "admin") {
+      toast({
+        title: "Access Denied",
+        description: "You do not have permission to access this page.",
+        variant: "destructive",
+      });
+      navigate("/reporter");
+    }
+  };
+
   useEffect(() => {
+    checkAdminAccess();
     fetchInvoices();
   }, [statusFilter]);
 
