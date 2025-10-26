@@ -26,81 +26,108 @@ const stripHtmlTags = (html: string | null | undefined): string => {
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Helvetica',
   },
-  header: {
+  // Header with branding
+  brandHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
+    paddingBottom: 15,
     borderBottom: '2pt solid #333',
-    paddingBottom: 10,
   },
-  title: {
-    fontSize: 20,
+  brandName: {
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 5,
+    color: '#0066cc',
   },
-  subtitle: {
-    fontSize: 12,
+  contactInfo: {
+    fontSize: 9,
     color: '#666',
+    textAlign: 'right',
   },
-  section: {
+  // Title section
+  mainTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 15,
+    marginBottom: 20,
+    color: '#333',
+  },
+  // Patient info grid
+  infoGrid: {
     marginBottom: 15,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
-    backgroundColor: '#f0f0f0',
-    padding: 5,
-  },
-  content: {
-    fontSize: 11,
-    lineHeight: 1.5,
-  },
-  patientInfo: {
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 4,
-  },
-  patientRow: {
+  infoRow: {
     flexDirection: 'row',
-    marginBottom: 5,
+    marginBottom: 6,
   },
-  label: {
+  infoLabel: {
+    fontSize: 10,
     fontWeight: 'bold',
-    width: 120,
+    width: 150,
+    color: '#333',
   },
-  value: {
+  infoValue: {
+    fontSize: 10,
     flex: 1,
+    color: '#000',
   },
-  signature: {
-    marginTop: 30,
-    padding: 15,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 4,
-    borderLeft: '4pt solid #4caf50',
+  // Section styles
+  section: {
+    marginTop: 15,
+    marginBottom: 10,
   },
-  signatureTitle: {
+  sectionTitle: {
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#2e7d32',
+    color: '#000',
+    textTransform: 'uppercase',
   },
-  signatureText: {
+  sectionContent: {
     fontSize: 10,
+    lineHeight: 1.6,
+    color: '#000',
+  },
+  // Signature section
+  signatureSection: {
+    marginTop: 25,
+    paddingTop: 15,
+    borderTop: '1pt solid #ccc',
+  },
+  endOfReport: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  doctorInfo: {
+    fontSize: 10,
+    textAlign: 'center',
     marginBottom: 3,
   },
+  doctorName: {
+    fontWeight: 'bold',
+  },
+  reportDate: {
+    fontSize: 9,
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+  },
+  // Footer
   footer: {
     position: 'absolute',
     bottom: 30,
     left: 40,
     right: 40,
-    borderTop: '1pt solid #ccc',
-    paddingTop: 10,
-    fontSize: 9,
-    color: '#666',
+    textAlign: 'center',
+    fontSize: 8,
+    color: '#999',
   },
 });
 
@@ -136,111 +163,116 @@ export const generateReportPDF = async (data: ReportData) => {
   const ReportDocument = () => (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>CBCT Radiology Report</Text>
-          <Text style={styles.subtitle}>
-            Generated: {new Date().toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'long',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
+        {/* DentaRad Header */}
+        <View style={styles.brandHeader}>
+          <View>
+            <Text style={styles.brandName}>DentaRad</Text>
+          </View>
+          <View>
+            <Text style={styles.contactInfo}>Email: Admin@dentarad.com</Text>
+            <Text style={styles.contactInfo}>Your workplace address</Text>
+          </View>
         </View>
 
-        {/* Patient Information */}
-        <View style={styles.patientInfo}>
-          <View style={styles.patientRow}>
-            <Text style={styles.label}>Patient Name:</Text>
-            <Text style={styles.value}>{caseData.patient_name}</Text>
+        {/* Patient Information Grid */}
+        <View style={styles.infoGrid}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Patient:</Text>
+            <Text style={styles.infoValue}>{caseData.patient_name}</Text>
           </View>
-          <View style={styles.patientRow}>
-            <Text style={styles.label}>Patient ID:</Text>
-            <Text style={styles.value}>{caseData.patient_id}</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Referring Physician:</Text>
+            <Text style={styles.infoValue}>{caseData.clinic.name}</Text>
           </View>
-          <View style={styles.patientRow}>
-            <Text style={styles.label}>Date of Birth:</Text>
-            <Text style={styles.value}>
-              {new Date(caseData.patient_dob).toLocaleDateString('en-GB')}
-            </Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Study:</Text>
+            <Text style={styles.infoValue}>CBCT Scan - {caseData.field_of_view.replace(/_/g, ' ')}</Text>
           </View>
-          <View style={styles.patientRow}>
-            <Text style={styles.label}>Scan Date:</Text>
-            <Text style={styles.value}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Study date:</Text>
+            <Text style={styles.infoValue}>
               {new Date(caseData.upload_date).toLocaleDateString('en-GB')}
             </Text>
           </View>
-          <View style={styles.patientRow}>
-            <Text style={styles.label}>Referring Practice:</Text>
-            <Text style={styles.value}>{caseData.clinic.name}</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Accession Number:</Text>
+            <Text style={styles.infoValue}>{caseData.patient_id}</Text>
           </View>
-          <View style={styles.patientRow}>
-            <Text style={styles.label}>Field of View:</Text>
-            <Text style={styles.value}>{caseData.field_of_view.replace(/_/g, ' ')}</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Completion flag:</Text>
+            <Text style={styles.infoValue}>Complete</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Verification flag:</Text>
+            <Text style={styles.infoValue}>
+              {reportData.signed_at ? 'Verified' : 'Pending'}
+            </Text>
           </View>
         </View>
+
+        {/* Main Title */}
+        <Text style={styles.mainTitle}>Diagnostic Report</Text>
 
         {/* Clinical History */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>CLINICAL HISTORY</Text>
-          <Text style={styles.content}>{stripHtmlTags(reportData.clinical_history) || 'Not provided'}</Text>
+          <Text style={styles.sectionContent}>
+            {stripHtmlTags(reportData.clinical_history) || caseData.clinical_question || 'Not provided'}
+          </Text>
         </View>
 
         {/* Technique */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>TECHNIQUE</Text>
-          <Text style={styles.content}>{stripHtmlTags(reportData.technique) || 'Not provided'}</Text>
+          <Text style={styles.sectionTitle}>Technique:</Text>
+          <Text style={styles.sectionContent}>
+            {stripHtmlTags(reportData.technique) || 'CBCT examination performed'}
+          </Text>
         </View>
 
         {/* Findings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>FINDINGS</Text>
-          <Text style={styles.content}>{stripHtmlTags(reportData.findings) || 'Not provided'}</Text>
+          <Text style={styles.sectionTitle}>Findings:</Text>
+          <Text style={styles.sectionContent}>
+            {stripHtmlTags(reportData.findings) || 'Not provided'}
+          </Text>
         </View>
 
         {/* Impression */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>IMPRESSION</Text>
-          <Text style={styles.content}>{stripHtmlTags(reportData.impression) || 'Not provided'}</Text>
+          <Text style={styles.sectionTitle}>Impression:</Text>
+          <Text style={styles.sectionContent}>
+            {stripHtmlTags(reportData.impression) || 'Not provided'}
+          </Text>
         </View>
 
-        {/* Recommendations */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
-          <Text style={styles.content}>{stripHtmlTags(reportData.recommendations) || 'Not provided'}</Text>
-        </View>
-
-        {/* Electronic Signature */}
+        {/* Signature Section */}
         {reportData.signatory_name && reportData.signed_at && (
-          <View style={styles.signature}>
-            <Text style={styles.signatureTitle}>✓ ELECTRONICALLY SIGNED</Text>
-            <Text style={styles.signatureText}>Signed by: {reportData.signatory_name}</Text>
+          <View style={styles.signatureSection}>
+            <Text style={styles.endOfReport}>***End of Report***</Text>
+            <Text style={[styles.doctorInfo, styles.doctorName]}>
+              {reportData.signatory_name}
+            </Text>
             {reportData.signatory_credentials && (
-              <Text style={styles.signatureText}>
-                Credentials: {reportData.signatory_credentials}
+              <Text style={styles.doctorInfo}>
+                ({reportData.signatory_credentials})
               </Text>
             )}
-            <Text style={styles.signatureText}>
-              Date & Time:{' '}
-              {new Date(reportData.signed_at).toLocaleString('en-GB', {
-                dateStyle: 'long',
-                timeStyle: 'long',
+            <Text style={styles.reportDate}>
+              Report Date: {new Date(reportData.signed_at).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })} - {new Date(reportData.signed_at).toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
               })}
             </Text>
-            {reportData.version && reportData.version > 1 && (
-              <Text style={styles.signatureText}>Version: {reportData.version}</Text>
-            )}
           </View>
         )}
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>Report ID: {caseData.folder_name}</Text>
-          <Text>
-            This report was generated electronically and is valid without a handwritten signature.
-          </Text>
+          <Text>1 - 1</Text>
         </View>
       </Page>
     </Document>
