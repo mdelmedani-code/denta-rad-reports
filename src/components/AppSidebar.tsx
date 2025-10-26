@@ -29,7 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
+import dentaradLogo from "@/assets/dentarad-logo-white.jpg";
 
 export function AppSidebar() {
   const { user } = useAuth();
