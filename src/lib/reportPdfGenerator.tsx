@@ -1,4 +1,5 @@
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { pdf, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import dentaradLogo from '@/assets/dentarad-logo.png';
 
 // Helper function to strip HTML tags and convert to plain text
 const stripHtmlTags = (html: string | null | undefined): string => {
@@ -38,10 +39,20 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     borderBottom: '2pt solid #333',
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 40,
+    objectFit: 'contain',
+  },
   brandName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#0066cc',
+    marginLeft: 10,
   },
   contactInfo: {
     fontSize: 9,
@@ -165,8 +176,8 @@ export const generateReportPDF = async (data: ReportData) => {
       <Page size="A4" style={styles.page}>
         {/* DentaRad Header */}
         <View style={styles.brandHeader}>
-          <View>
-            <Text style={styles.brandName}>DentaRad</Text>
+          <View style={styles.logoContainer}>
+            <Image src={dentaradLogo} style={styles.logo} />
           </View>
           <View>
             <Text style={styles.contactInfo}>Email: Admin@dentarad.com</Text>
