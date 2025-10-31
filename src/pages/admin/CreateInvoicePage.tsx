@@ -237,39 +237,45 @@ export default function CreateInvoicePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Create invoice (using type assertion due to outdated types)
-      const { data: invoice, error: invoiceError } = await supabase
-        .from("invoices" as any)
-        .insert({
-          clinic_id: selectedClinic,
-          issue_date: issueDate,
-          due_date: dueDate,
-          tax_rate: taxRate,
-          status: "draft",
-          notes: notes,
-          created_by: user?.id,
-        })
-        .select()
-        .single() as any;
+      // Get the first case ID if available (required field in DB)
+      const firstCaseId = lineItems.find(item => item.case_id)?.case_id;
+      
+      if (!firstCaseId) {
+        toast({
+          title: "Validation Error",
+          description: "Please load at least one case from the clinic.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-      if (invoiceError) throw invoiceError;
-
-      // Create line items
-      const items = lineItems.map((item, index) => ({
-        invoice_id: invoice.id,
-        case_id: item.case_id || null,
+      // Prepare line items for JSONB storage
+      const lineItemsData = lineItems.map((item, index) => ({
         line_number: index + 1,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
         total: item.total,
+        case_id: item.case_id || null,
       }));
 
-      const { error: itemsError } = await supabase
-        .from("invoice_items" as any)
-        .insert(items);
+      // Create invoice with line items as JSONB
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          clinic_id: selectedClinic,
+          case_id: firstCaseId, // Required field - use first case
+          amount: calculateTotal(),
+          currency: 'GBP',
+          status: "pending",
+          due_date: dueDate,
+          line_items: lineItemsData,
+        })
+        .select()
+        .single();
 
-      if (itemsError) throw itemsError;
+      if (invoiceError) throw invoiceError;
 
       // Mark cases as billed if they were loaded
       const casesToBill = lineItems.filter(item => item.case_id).map(item => item.case_id);
@@ -279,11 +285,12 @@ export default function CreateInvoicePage() {
           .update({
             billed: true,
             billed_at: new Date().toISOString(),
-            invoice_id: invoice.id,
           })
           .in("id", casesToBill);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.warn('Failed to mark cases as billed:', updateError);
+        }
       }
 
       await logAudit({
@@ -291,7 +298,7 @@ export default function CreateInvoicePage() {
         resourceType: "invoice",
         resourceId: invoice.id,
         details: {
-          invoice_number: invoice.invoice_number,
+          invoice_number: (invoice as any).invoice_number || invoice.id,
           clinic_id: selectedClinic,
           total: calculateTotal(),
           line_items_count: lineItems.length,
@@ -300,14 +307,15 @@ export default function CreateInvoicePage() {
 
       toast({
         title: "Success",
-        description: `Invoice ${invoice.invoice_number} created successfully.`,
+        description: `Invoice ${(invoice as any).invoice_number || 'created'} successfully.`,
       });
 
       navigate("/admin/invoices");
     } catch (error: any) {
+      console.error('Invoice creation error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create invoice",
         variant: "destructive",
       });
     } finally {
