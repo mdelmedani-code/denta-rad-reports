@@ -274,8 +274,10 @@ export type Database = {
           clinic_id: string
           created_at: string
           currency: string
+          due_date: string | null
           exported_at: string | null
           id: string
+          line_items: Json
           paid_at: string | null
           status: string
           stripe_invoice_id: string | null
@@ -286,8 +288,10 @@ export type Database = {
           clinic_id: string
           created_at?: string
           currency?: string
+          due_date?: string | null
           exported_at?: string | null
           id?: string
+          line_items?: Json
           paid_at?: string | null
           status?: string
           stripe_invoice_id?: string | null
@@ -298,8 +302,10 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           currency?: string
+          due_date?: string | null
           exported_at?: string | null
           id?: string
+          line_items?: Json
           paid_at?: string | null
           status?: string
           stripe_invoice_id?: string | null
