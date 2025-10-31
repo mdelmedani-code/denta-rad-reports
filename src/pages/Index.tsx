@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import logo from "@/assets/dentarad-logo-main.jpg";
+import logo from "@/assets/dentarad-logo-cropped.jpg";
 
 const Index = () => {
   return (
@@ -10,7 +10,7 @@ const Index = () => {
           <img 
             src={logo} 
             alt="DentaRad" 
-            className="h-48 w-auto"
+            className="h-96 w-auto"
           />
         </div>
 
