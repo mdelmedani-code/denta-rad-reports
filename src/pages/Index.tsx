@@ -6,13 +6,18 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center px-4">
       <div className="text-center space-y-8 max-w-2xl">
         {/* Logo */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-4">
           <img 
             src={logo} 
             alt="DentaRad" 
             className="h-32 w-auto"
           />
         </div>
+
+        {/* Company Info */}
+        <p className="text-sm text-muted-foreground/70 mb-8">
+          Dentarad is a trading name of Radelm Ltd.
+        </p>
 
         {/* Main Message */}
         <div className="space-y-4">
