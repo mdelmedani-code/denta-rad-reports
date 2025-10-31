@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import logo from "@/assets/dentarad-dashboard-logo.png";
+import logo from "@/assets/dentarad-logo-main.jpg";
 
 const Index = () => {
   return (
@@ -10,17 +10,14 @@ const Index = () => {
           <img 
             src={logo} 
             alt="DentaRad" 
-            className="h-24 w-auto"
+            className="h-32 w-auto"
           />
         </div>
 
         {/* Main Message */}
         <div className="space-y-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-foreground">
-            DentaRad
-          </h1>
           <p className="text-xl text-muted-foreground">
-            Expert CBCT Teleradiology Services
+            CBCT Teleradiology Services
           </p>
           <div className="pt-4">
             <div className="inline-block px-6 py-3 bg-primary/10 rounded-lg border border-primary/20">
