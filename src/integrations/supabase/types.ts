@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      auth_secrets: {
-        Row: {
-          created_at: string | null
-          mfa_backup_codes: Json | null
-          mfa_secret: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          mfa_backup_codes?: Json | null
-          mfa_secret?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          mfa_backup_codes?: Json | null
-          mfa_secret?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       case_annotations: {
         Row: {
           annotation_data: Json
@@ -415,7 +391,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          backup_codes: Json | null
           clinic_id: string | null
           created_at: string | null
           credentials: string | null
@@ -424,8 +399,6 @@ export type Database = {
           email: string
           id: string
           mfa_backup_codes: string[] | null
-          mfa_enabled: boolean | null
-          mfa_enforced_at: string | null
           mfa_secret: string | null
           notification_preferences: Json | null
           professional_title: string | null
@@ -436,7 +409,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          backup_codes?: Json | null
           clinic_id?: string | null
           created_at?: string | null
           credentials?: string | null
@@ -445,8 +417,6 @@ export type Database = {
           email: string
           id: string
           mfa_backup_codes?: string[] | null
-          mfa_enabled?: boolean | null
-          mfa_enforced_at?: string | null
           mfa_secret?: string | null
           notification_preferences?: Json | null
           professional_title?: string | null
@@ -457,7 +427,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          backup_codes?: Json | null
           clinic_id?: string | null
           created_at?: string | null
           credentials?: string | null
@@ -466,8 +435,6 @@ export type Database = {
           email?: string
           id?: string
           mfa_backup_codes?: string[] | null
-          mfa_enabled?: boolean | null
-          mfa_enforced_at?: string | null
           mfa_secret?: string | null
           notification_preferences?: Json | null
           professional_title?: string | null
@@ -1113,7 +1080,6 @@ export type Database = {
         Returns: string
       }
       generate_invoice_number: { Args: never; Returns: string }
-      get_backup_codes: { Args: { p_user_id: string }; Returns: Json }
       get_current_user_clinic: { Args: never; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
       get_health_metrics: { Args: never; Returns: Json }
@@ -1225,10 +1191,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      store_mfa_secret: {
-        Args: { p_backup_codes: Json; p_mfa_secret: string; p_user_id: string }
-        Returns: boolean
-      }
       test_rls_policies: {
         Args: never
         Returns: {
@@ -1236,10 +1198,6 @@ export type Database = {
           rls_enabled: boolean
           table_name: string
         }[]
-      }
-      verify_mfa_token: {
-        Args: { p_token: string; p_user_id: string }
-        Returns: boolean
       }
     }
     Enums: {
