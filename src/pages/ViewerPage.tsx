@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Download, ArrowLeft, FileText, Calendar, User, Activity, AlertTriangle, Eye, Clock } from "lucide-react";
+import { Loader2, Download, ArrowLeft, FileText, Calendar, User, Activity, AlertTriangle, Clock, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { logCaseView, logUnauthorizedAccess, logDicomDownload } from "@/lib/auditLog";
-import { sanitizeText } from "@/utils/sanitization";
+import { ImageGallery } from "@/components/ImageGallery";
 
 const ViewerPage = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -20,7 +19,7 @@ const ViewerPage = () => {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [caseData, setCaseData] = useState<any>(null);
-  const [metadataOpen, setMetadataOpen] = useState(false);
+  const [reportImages, setReportImages] = useState<any[]>([]);
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
@@ -65,6 +64,19 @@ const ViewerPage = () => {
 
       await logCaseView(caseId);
       setCaseData(data);
+
+      // Load report images if case has a report
+      if (data.status === 'report_ready') {
+        const { data: imagesData } = await supabase
+          .from('report_images')
+          .select('*')
+          .eq('case_id', caseId)
+          .order('position');
+        
+        if (imagesData) {
+          setReportImages(imagesData);
+        }
+      }
     } catch (err) {
       console.error('Error loading case:', err);
       setError(err instanceof Error ? err.message : 'Failed to load case');
@@ -407,7 +419,7 @@ const ViewerPage = () => {
               <h3 className="text-lg font-semibold mb-4">Diagnostic Report</h3>
 
               {isReportReady ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Report completed on {caseData.completed_at ? new Date(caseData.completed_at).toLocaleString() : 'N/A'}
                   </p>
@@ -426,6 +438,20 @@ const ViewerPage = () => {
                       )}
                     </Button>
                   </div>
+
+                  {/* Report Images */}
+                  {reportImages.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
+                          <ImageIcon className="w-5 h-5" />
+                          Report Images ({reportImages.length})
+                        </h4>
+                        <ImageGallery images={reportImages} />
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <Alert>

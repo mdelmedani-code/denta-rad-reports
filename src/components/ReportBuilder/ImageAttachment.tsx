@@ -5,9 +5,8 @@ import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Loader2, ZoomIn } from 'lucide-react';
 
 interface ImageData {
   id: string;
@@ -191,22 +190,28 @@ export const ImageAttachment = ({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {images.map((image, index) => (
             <Card key={image.id} className="overflow-hidden">
-              <div className="relative aspect-video bg-muted">
+              <div className="relative aspect-video bg-muted group">
                 <img
                   src={image.image_url}
                   alt={image.caption || `Figure ${index + 1}`}
-                  className="w-full h-full object-cover cursor-pointer"
+                  className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
                   onClick={() => {
                     setSelectedImage(image);
                     setCaption(image.caption);
                   }}
                 />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                  <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
                 {!disabled && (
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="absolute top-2 right-2 h-6 w-6"
-                    onClick={() => handleRemoveImage(image.id, image.image_url)}
+                    className="absolute top-2 right-2 h-6 w-6 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveImage(image.id, image.image_url);
+                    }}
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -270,18 +275,19 @@ export const ImageAttachment = ({
 
       {selectedImage && (
         <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-4xl">
+          <DialogContent className="max-w-[95vw] max-h-[95vh]">
             <DialogHeader>
               <DialogTitle>Image Preview</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <img
-                src={selectedImage.image_url}
-                alt={selectedImage.caption}
-                className="w-full rounded-lg"
-              />
+              <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-muted rounded-lg">
+                <img
+                  src={selectedImage.image_url}
+                  alt={selectedImage.caption}
+                  className="max-w-full max-h-[70vh] object-contain"
+                />
+              </div>
               <div>
-                <Label>Caption</Label>
                 <Input
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
@@ -295,6 +301,7 @@ export const ImageAttachment = ({
                     handleUpdateCaption(selectedImage.id, caption);
                     setSelectedImage(null);
                   }}
+                  className="w-full"
                 >
                   Save Caption
                 </Button>
