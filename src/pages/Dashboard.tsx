@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, FileText, Clock, LogOut, Download, Loader2, FileEdit, ChevronDown } from "lucide-react";
+import { Upload, FileText, Clock, LogOut, Download, Loader2, FileEdit, ChevronDown, PoundSterling } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +25,7 @@ interface Case {
   urgency: 'standard' | 'urgent';
   field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
   folder_name?: string;
+  estimated_cost?: number;
   clinics?: {
     name: string;
     contact_email: string;
@@ -60,7 +61,25 @@ const Dashboard = () => {
         .order('upload_date', { ascending: false });
 
       if (error) throw error;
-      setCases(data || []);
+      
+      // Calculate estimated cost for each case
+      const casesWithCost = await Promise.all(
+        (data || []).map(async (caseItem) => {
+          try {
+            const { data: costData } = await supabase.rpc('calculate_case_price', {
+              p_field_of_view: caseItem.field_of_view,
+              p_urgency: caseItem.urgency,
+              p_addons: []
+            });
+            return { ...caseItem, estimated_cost: costData };
+          } catch (err) {
+            console.error('Error calculating cost:', err);
+            return { ...caseItem, estimated_cost: 0 };
+          }
+        })
+      );
+      
+      setCases(casesWithCost);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -311,6 +330,7 @@ const Dashboard = () => {
                               <th className="text-left py-8 px-2">Clinical Question</th>
                               <th className="text-left py-8 px-2">Urgency</th>
                               <th className="text-left py-8 px-2">FOV</th>
+                              <th className="text-left py-8 px-2">Cost</th>
                               <th className="text-left py-8 px-2">Status</th>
                               <th className="text-left py-8 px-2">Actions</th>
                             </tr>
@@ -335,6 +355,12 @@ const Dashboard = () => {
                             </Badge>
                           </td>
                           <td className="py-8 px-2">{case_.field_of_view}</td>
+                          <td className="py-8 px-2">
+                            <div className="flex items-center text-sm font-medium text-primary">
+                              <PoundSterling className="h-4 w-4 mr-1" />
+                              {case_.estimated_cost?.toFixed(2) || '0.00'}
+                            </div>
+                          </td>
                           <td className="py-8 px-2">
                             <Badge className={getStatusColor(case_.status)}>
                               {formatStatus(case_.status)}
@@ -420,6 +446,10 @@ const Dashboard = () => {
                               </Badge>
                               <Badge variant="outline" className="text-xs">
                                 FOV: {case_.field_of_view}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                                <PoundSterling className="h-3 w-3" />
+                                {case_.estimated_cost?.toFixed(2) || '0.00'}
                               </Badge>
                             </div>
                           </div>
