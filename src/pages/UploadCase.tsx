@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileArchive, CheckCircle2, Upload, Clock } from "lucide-react";
+import { ArrowLeft, FileArchive, CheckCircle2, Upload, Clock, PoundSterling } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
 import { logCaseCreation } from "@/lib/auditLog";
 import { Progress } from "@/components/ui/progress";
 import { useChunkedUpload } from "@/hooks/useChunkedUpload";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const UploadCase = () => {
   const { user } = useAuth();
@@ -29,6 +30,8 @@ const UploadCase = () => {
   const [createdSimpleId, setCreatedSimpleId] = useState<string | null>(null);
   const [createdPatientName, setCreatedPatientName] = useState<string>('');
   const [currentCaseFolderName, setCurrentCaseFolderName] = useState<string>('');
+  const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
+  const [loadingPrice, setLoadingPrice] = useState(false);
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -40,6 +43,37 @@ const UploadCase = () => {
   });
 
   const [validating, setValidating] = useState(false);
+
+  // Fetch pricing based on field of view
+  useEffect(() => {
+    const fetchPrice = async () => {
+      setLoadingPrice(true);
+      try {
+        const { data, error } = await supabase
+          .from('pricing_rules')
+          .select('price, currency')
+          .eq('field_of_view', formData.fieldOfView)
+          .is('effective_to', null)
+          .order('effective_from', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.error('Error fetching price:', error);
+          setEstimatedCost(null);
+        } else if (data) {
+          setEstimatedCost(Number(data.price));
+        }
+      } catch (err) {
+        console.error('Unexpected error fetching price:', err);
+        setEstimatedCost(null);
+      } finally {
+        setLoadingPrice(false);
+      }
+    };
+
+    fetchPrice();
+  }, [formData.fieldOfView]);
 
   // Chunked upload with progress tracking
   const { upload, uploading, progress, cancel } = useChunkedUpload({
@@ -442,6 +476,35 @@ const UploadCase = () => {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Cost Calculator */}
+                  {estimatedCost !== null && !loadingPrice && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Alert className="bg-primary/5 border-primary/20">
+                        <PoundSterling className="h-4 w-4 text-primary" />
+                        <AlertDescription className="ml-2">
+                          <span className="font-medium">Estimated Cost:</span>{' '}
+                          <span className="text-lg font-bold text-primary">
+                            £{estimatedCost.toFixed(2)}
+                          </span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            (for {formData.fieldOfView.replace(/_/g, ' ')})
+                          </span>
+                        </AlertDescription>
+                      </Alert>
+                    </motion.div>
+                  )}
+                  
+                  {loadingPrice && (
+                    <div className="text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4 inline animate-spin mr-1" />
+                      Loading pricing...
+                    </div>
+                  )}
                 </div>
 
                 {/* File Upload */}
