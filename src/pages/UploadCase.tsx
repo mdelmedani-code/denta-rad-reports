@@ -38,6 +38,7 @@ const UploadCase = () => {
     patientInternalId: "",
     patientDob: "",
     clinicalQuestion: "",
+    specialInstructions: "",
     fieldOfView: "up_to_5x5" as "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8",
     urgency: "standard" as "standard" | "urgent"
   });
@@ -241,6 +242,8 @@ const UploadCase = () => {
       setCurrentCaseFolderName(folderName);
       
       // Create case record
+      const sanitizedSpecialInstructions = formData.specialInstructions ? sanitizeText(formData.specialInstructions) : null;
+      
       const { data: newCase, error: caseError } = await supabase
         .from('cases')
         .insert({
@@ -249,6 +252,7 @@ const UploadCase = () => {
           patient_internal_id: sanitizedPatientInternalId || null,
           patient_dob: formData.patientDob || null,
           clinical_question: sanitizedClinicalQuestion,
+          special_instructions: sanitizedSpecialInstructions,
           field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
           folder_name: folderName,
@@ -351,6 +355,7 @@ const UploadCase = () => {
                           patientInternalId: "",
                           patientDob: "",
                           clinicalQuestion: "",
+                          specialInstructions: "",
                           fieldOfView: "up_to_5x5",
                           urgency: "standard"
                         });
@@ -437,6 +442,23 @@ const UploadCase = () => {
                       disabled={uploading}
                       rows={3}
                     />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="specialInstructions">
+                      Special Instructions or Questions (Optional)
+                    </Label>
+                    <Textarea
+                      id="specialInstructions"
+                      placeholder="Any additional notes, preferences, or questions for the radiologist..."
+                      value={formData.specialInstructions}
+                      onChange={(e) => setFormData({...formData, specialInstructions: e.target.value})}
+                      disabled={uploading}
+                      rows={2}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Use this to communicate directly with your radiologist
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

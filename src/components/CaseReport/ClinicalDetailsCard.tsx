@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, DollarSign, Activity } from 'lucide-react';
+import { FileText, DollarSign, Activity, MessageSquare, Reply } from 'lucide-react';
 
 interface ClinicalDetailsCardProps {
   caseData: any;
@@ -25,6 +25,36 @@ export function ClinicalDetailsCard({ caseData }: ClinicalDetailsCardProps) {
             {caseData.clinical_question || 'Not provided'}
           </div>
         </div>
+
+        {/* Special Instructions from Clinic */}
+        {caseData.special_instructions && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="h-4 w-4 text-blue-500" />
+              <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                Special Instructions / Questions from Clinic
+              </div>
+            </div>
+            <div className="pl-6 text-foreground bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              {caseData.special_instructions}
+            </div>
+          </div>
+        )}
+
+        {/* Reporter Notes / Response */}
+        {caseData.reporter_notes && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Reply className="h-4 w-4 text-green-500" />
+              <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                Radiologist's Response / Notes
+              </div>
+            </div>
+            <div className="pl-6 text-foreground bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              {caseData.reporter_notes}
+            </div>
+          </div>
+        )}
 
         {/* Examination Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

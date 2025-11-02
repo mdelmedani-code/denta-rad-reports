@@ -89,10 +89,12 @@ export type Database = {
           pregenerated_zip_path: string | null
           processed_at: string | null
           report_path: string | null
+          reporter_notes: string | null
           scan_upload_verified_at: string | null
           scan_uploaded_to_dropbox: boolean | null
           series_count: number | null
           simple_id: number | null
+          special_instructions: string | null
           sr_validated: boolean | null
           sr_validation_errors: Json | null
           status: Database["public"]["Enums"]["case_status"]
@@ -139,10 +141,12 @@ export type Database = {
           pregenerated_zip_path?: string | null
           processed_at?: string | null
           report_path?: string | null
+          reporter_notes?: string | null
           scan_upload_verified_at?: string | null
           scan_uploaded_to_dropbox?: boolean | null
           series_count?: number | null
           simple_id?: number | null
+          special_instructions?: string | null
           sr_validated?: boolean | null
           sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]
@@ -189,10 +193,12 @@ export type Database = {
           pregenerated_zip_path?: string | null
           processed_at?: string | null
           report_path?: string | null
+          reporter_notes?: string | null
           scan_upload_verified_at?: string | null
           scan_uploaded_to_dropbox?: boolean | null
           series_count?: number | null
           simple_id?: number | null
+          special_instructions?: string | null
           sr_validated?: boolean | null
           sr_validation_errors?: Json | null
           status?: Database["public"]["Enums"]["case_status"]

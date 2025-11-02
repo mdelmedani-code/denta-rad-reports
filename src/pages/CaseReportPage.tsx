@@ -11,6 +11,7 @@ import { AttachmentsCard } from '@/components/CaseReport/AttachmentsCard';
 import { ReportEditorCard } from '@/components/CaseReport/ReportEditorCard';
 import { ImageGalleryCard } from '@/components/CaseReport/ImageGalleryCard';
 import { SignatureAuditCard } from '@/components/CaseReport/SignatureAuditCard';
+import { ReporterNotesCard } from '@/components/CaseReport/ReporterNotesCard';
 import { generateReportPDF } from '@/lib/reportPdfGenerator';
 
 type ReportStatus = 'draft' | 'verified' | 'shared';
@@ -381,6 +382,12 @@ export default function CaseReportPage() {
 
           {/* Clinical Details */}
           <ClinicalDetailsCard caseData={data.case} />
+
+          {/* Reporter Notes for Communication */}
+          <ReporterNotesCard 
+            caseData={data.case} 
+            onUpdate={loadCaseReport}
+          />
 
           {/* Attachments */}
           <AttachmentsCard
