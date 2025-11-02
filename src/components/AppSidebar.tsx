@@ -12,7 +12,8 @@ import {
   Eye,
   User,
   Users,
-  Receipt
+  Receipt,
+  Database
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +95,7 @@ export function AppSidebar() {
     { title: "Invoicing", url: "/admin/invoices", icon: Receipt },
     { title: "Billing Export", url: "/billing-export", icon: PoundSterling },
     { title: "User Management", url: "/admin/users", icon: Users },
+    { title: "Data Retention", url: "/admin/data-retention", icon: Database },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
   ];

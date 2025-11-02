@@ -28,6 +28,7 @@ import SecurityDashboard from "./pages/SecurityDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import InvoicingPage from "./pages/admin/InvoicingPage";
 import CreateInvoicePage from "./pages/admin/CreateInvoicePage";
+import DataRetentionPage from "./pages/admin/DataRetentionPage";
 import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -106,6 +107,14 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <CreateInvoicePage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/data-retention" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <DataRetentionPage />
                 </AppLayout>
               </ProtectedRoute>
             } />
