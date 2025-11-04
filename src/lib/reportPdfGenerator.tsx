@@ -248,46 +248,79 @@ export const generateReportPDF = async (data: ReportData) => {
         <Text style={styles.mainTitle}>Diagnostic Report</Text>
 
         {/* Clinical History */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>CLINICAL HISTORY</Text>
-          <Text style={styles.sectionContent}>
-            {stripHtmlTags(reportData.clinical_history) || 'Not provided'}
-          </Text>
-        </View>
+        {reportData.clinical_history && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>CLINICAL HISTORY</Text>
+            <Text style={styles.sectionContent}>
+              {stripHtmlTags(reportData.clinical_history)}
+            </Text>
+          </View>
+        )}
 
         {/* Technique */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Technique:</Text>
-          <Text style={styles.sectionContent}>
-            {stripHtmlTags(reportData.technique) || 'CBCT examination performed'}
-          </Text>
-        </View>
+        {reportData.technique && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>TECHNIQUE</Text>
+            <Text style={styles.sectionContent}>
+              {stripHtmlTags(reportData.technique)}
+            </Text>
+          </View>
+        )}
 
         {/* Findings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Findings:</Text>
-          <Text style={styles.sectionContent}>
-            {stripHtmlTags(reportData.findings) || 'Not provided'}
-          </Text>
-          
-          {/* Include images attached to findings */}
-          {images.filter(img => img.section === 'findings').map((img, index) => (
-            <View key={img.id}>
-              <Image src={img.image_url} style={styles.reportImage} />
-              {img.caption && (
-                <Text style={styles.imageCaption}>{img.caption}</Text>
-              )}
-            </View>
-          ))}
-        </View>
+        {reportData.findings && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>FINDINGS</Text>
+            <Text style={styles.sectionContent}>
+              {stripHtmlTags(reportData.findings)}
+            </Text>
+            
+            {/* Include images attached to findings */}
+            {images.filter(img => img.section === 'findings').map((img) => (
+              <View key={img.id} style={{ marginTop: 10 }}>
+                <Image src={img.image_url} style={styles.reportImage} />
+                {img.caption && (
+                  <Text style={styles.imageCaption}>{img.caption}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Impression */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Impression:</Text>
-          <Text style={styles.sectionContent}>
-            {stripHtmlTags(reportData.impression) || 'Not provided'}
-          </Text>
-        </View>
+        {reportData.impression && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>IMPRESSION</Text>
+            <Text style={styles.sectionContent}>
+              {stripHtmlTags(reportData.impression)}
+            </Text>
+          </View>
+        )}
+
+        {/* Recommendations */}
+        {reportData.recommendations && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
+            <Text style={styles.sectionContent}>
+              {stripHtmlTags(reportData.recommendations)}
+            </Text>
+          </View>
+        )}
+
+        {/* All Report Images Gallery */}
+        {images.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>REPORT IMAGES ({images.length})</Text>
+            {images.map((img) => (
+              <View key={img.id} style={{ marginTop: 10 }}>
+                <Image src={img.image_url} style={styles.reportImage} />
+                {img.caption && (
+                  <Text style={styles.imageCaption}>{img.caption}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Signature Section */}
         {reportData.signatory_name && reportData.signed_at && (
