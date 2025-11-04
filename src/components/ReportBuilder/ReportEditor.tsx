@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import { useEffect } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -56,6 +57,21 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
       onChange(editor.getHTML());
     },
   });
+
+  // Sync editor content when content prop changes (e.g., from templates/snippets)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      const { from, to } = editor.state.selection;
+      editor.commands.setContent(content, { emitUpdate: false });
+      // Restore cursor position if possible
+      try {
+        editor.commands.setTextSelection({ from: Math.min(from, editor.state.doc.content.size), to: Math.min(to, editor.state.doc.content.size) });
+      } catch (e) {
+        // Cursor position out of range, just focus at end
+        editor.commands.focus('end');
+      }
+    }
+  }, [content, editor]);
 
   if (!editor) {
     return null;
