@@ -19,6 +19,7 @@ const ViewerPage = () => {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [caseData, setCaseData] = useState<any>(null);
+  const [reportData, setReportData] = useState<any>(null);
   const [reportImages, setReportImages] = useState<any[]>([]);
   const [accessDenied, setAccessDenied] = useState(false);
 
@@ -65,16 +66,28 @@ const ViewerPage = () => {
       await logCaseView(caseId);
       setCaseData(data);
 
-      // Load report images if case has a report
+      // Load report data if case has a report
       if (data.status === 'report_ready') {
-        const { data: imagesData } = await supabase
-          .from('report_images')
+        const { data: report, error: reportError } = await supabase
+          .from('reports')
           .select('*')
           .eq('case_id', caseId)
-          .order('position');
+          .eq('is_latest', true)
+          .single();
         
-        if (imagesData) {
-          setReportImages(imagesData);
+        if (report && !reportError) {
+          setReportData(report);
+          
+          // Load report images
+          const { data: imagesData } = await supabase
+            .from('report_images')
+            .select('*')
+            .eq('report_id', report.id)
+            .order('position');
+          
+          if (imagesData) {
+            setReportImages(imagesData);
+          }
         }
       }
     } catch (err) {
@@ -418,13 +431,13 @@ const ViewerPage = () => {
             <div>
               <h3 className="text-lg font-semibold mb-4">Diagnostic Report</h3>
 
-              {isReportReady ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Report completed on {caseData.completed_at ? new Date(caseData.completed_at).toLocaleString() : 'N/A'}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button onClick={downloadReport} disabled={downloading}>
+              {isReportReady && reportData ? (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground">
+                      Report completed on {caseData.completed_at ? new Date(caseData.completed_at).toLocaleString() : 'N/A'}
+                    </p>
+                    <Button onClick={downloadReport} disabled={downloading} size="sm">
                       {downloading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -433,13 +446,117 @@ const ViewerPage = () => {
                       ) : (
                         <>
                           <Download className="mr-2 h-4 w-4" />
-                          Download Report PDF
+                          Download PDF
                         </>
                       )}
                     </Button>
                   </div>
 
-                  {/* Report Images */}
+                  <Separator />
+
+                  {/* Clinical History */}
+                  {reportData.clinical_history && (
+                    <div>
+                      <h4 className="text-sm font-semibold uppercase text-foreground mb-2">
+                        Clinical History
+                      </h4>
+                      <div 
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: reportData.clinical_history }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Technique */}
+                  {reportData.technique && (
+                    <div>
+                      <h4 className="text-sm font-semibold uppercase text-foreground mb-2">
+                        Technique
+                      </h4>
+                      <div 
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: reportData.technique }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Findings */}
+                  {reportData.findings && (
+                    <div>
+                      <h4 className="text-sm font-semibold uppercase text-foreground mb-2">
+                        Findings
+                      </h4>
+                      <div 
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: reportData.findings }}
+                      />
+                      
+                      {/* Images for findings section */}
+                      {reportImages.filter(img => img.section === 'findings').length > 0 && (
+                        <div className="mt-4">
+                          <ImageGallery images={reportImages.filter(img => img.section === 'findings')} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Impression */}
+                  {reportData.impression && (
+                    <div>
+                      <h4 className="text-sm font-semibold uppercase text-foreground mb-2">
+                        Impression
+                      </h4>
+                      <div 
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: reportData.impression }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {reportData.recommendations && (
+                    <div>
+                      <h4 className="text-sm font-semibold uppercase text-foreground mb-2">
+                        Recommendations
+                      </h4>
+                      <div 
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: reportData.recommendations }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Signature */}
+                  {reportData.is_signed && reportData.signatory_name && (
+                    <>
+                      <Separator className="my-6" />
+                      <div className="bg-muted/50 rounded-lg p-6 text-center space-y-2">
+                        <p className="font-bold text-lg">***End of Report***</p>
+                        <p className="font-semibold text-foreground">
+                          {reportData.signatory_name}
+                        </p>
+                        {reportData.signatory_credentials && (
+                          <p className="text-sm text-muted-foreground">
+                            ({reportData.signatory_credentials})
+                          </p>
+                        )}
+                        {reportData.signed_at && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Report Date: {new Date(reportData.signed_at).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })} - {new Date(reportData.signed_at).toLocaleTimeString('en-GB', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* All Report Images */}
                   {reportImages.length > 0 && (
                     <>
                       <Separator />
@@ -453,6 +570,13 @@ const ViewerPage = () => {
                     </>
                   )}
                 </div>
+              ) : isReportReady && !reportData ? (
+                <Alert>
+                  <Clock className="h-4 w-4" />
+                  <AlertDescription>
+                    Report data is being loaded...
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <Alert>
                   <Clock className="h-4 w-4" />
