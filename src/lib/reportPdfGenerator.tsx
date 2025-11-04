@@ -110,6 +110,20 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     borderTop: '1pt solid #ccc',
   },
+  // Image styles
+  reportImage: {
+    maxWidth: '100%',
+    maxHeight: 300,
+    objectFit: 'contain',
+    marginVertical: 10,
+  },
+  imageCaption: {
+    fontSize: 9,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 10,
+  },
   endOfReport: {
     fontSize: 11,
     fontWeight: 'bold',
@@ -142,6 +156,14 @@ const styles = StyleSheet.create({
   },
 });
 
+interface ReportImage {
+  id: string;
+  image_url: string;
+  caption?: string;
+  section?: string;
+  position?: number;
+}
+
 interface ReportData {
   caseData: {
     patient_name: string;
@@ -166,10 +188,11 @@ interface ReportData {
     signed_at?: string;
     version?: number;
   };
+  images?: ReportImage[];
 }
 
 export const generateReportPDF = async (data: ReportData) => {
-  const { caseData, reportData } = data;
+  const { caseData, reportData, images = [] } = data;
 
   const ReportDocument = () => (
     <Document>
@@ -228,7 +251,7 @@ export const generateReportPDF = async (data: ReportData) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>CLINICAL HISTORY</Text>
           <Text style={styles.sectionContent}>
-            {stripHtmlTags(reportData.clinical_history) || caseData.clinical_question || 'Not provided'}
+            {stripHtmlTags(reportData.clinical_history) || 'Not provided'}
           </Text>
         </View>
 
@@ -246,6 +269,16 @@ export const generateReportPDF = async (data: ReportData) => {
           <Text style={styles.sectionContent}>
             {stripHtmlTags(reportData.findings) || 'Not provided'}
           </Text>
+          
+          {/* Include images attached to findings */}
+          {images.filter(img => img.section === 'findings').map((img, index) => (
+            <View key={img.id}>
+              <Image src={img.image_url} style={styles.reportImage} />
+              {img.caption && (
+                <Text style={styles.imageCaption}>{img.caption}</Text>
+              )}
+            </View>
+          ))}
         </View>
 
         {/* Impression */}

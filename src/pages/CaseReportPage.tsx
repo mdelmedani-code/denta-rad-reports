@@ -196,6 +196,51 @@ export default function CaseReportPage() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!data?.report?.pdf_storage_path) {
+      toast({
+        title: 'No PDF Available',
+        description: 'Please generate the PDF first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: 'Downloading',
+        description: 'Please wait...',
+      });
+
+      const { data: pdfData, error } = await supabase.storage
+        .from('reports')
+        .download(data.report.pdf_storage_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(pdfData);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.case.folder_name}_report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Downloaded',
+        description: 'Report downloaded successfully',
+      });
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: 'Download Failed',
+        description: error?.message || 'Failed to download PDF',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleGeneratePDF = async () => {
     if (!data) {
       console.error('No data available for PDF generation');
@@ -209,6 +254,13 @@ export default function CaseReportPage() {
         title: 'Generating PDF',
         description: 'Please wait...',
       });
+
+      // Fetch report images
+      const { data: images } = await supabase
+        .from('report_images')
+        .select('*')
+        .eq('report_id', reportId)
+        .order('position');
 
       console.log('Calling generateReportPDF...');
       // Map the data to match PDF generator expectations
@@ -236,6 +288,7 @@ export default function CaseReportPage() {
           signed_at: data.report.signed_at,
           version: data.report.version,
         },
+        images: images || [],
       });
 
       console.log('PDF blob generated successfully', { size: pdfBlob.size });
@@ -361,10 +414,16 @@ export default function CaseReportPage() {
               )}
 
               {reportStatus === 'shared' && (
-                <Button onClick={handleGeneratePDF}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Download Report
-                </Button>
+                <>
+                  <Button variant="outline" onClick={handleGeneratePDF}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Regenerate PDF
+                  </Button>
+                  <Button onClick={handleDownloadPDF}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Download Report
+                  </Button>
+                </>
               )}
             </div>
           </div>
