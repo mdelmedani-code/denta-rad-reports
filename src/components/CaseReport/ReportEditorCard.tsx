@@ -15,7 +15,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
   const [technique, setTechnique] = useState(report.technique || '');
   const [findings, setFindings] = useState(report.findings || '');
   const [impression, setImpression] = useState(report.impression || '');
-  const [recommendations, setRecommendations] = useState(report.recommendations || '');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -25,14 +24,13 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
           technique,
           findings,
           impression,
-          recommendations,
           last_saved_at: new Date().toISOString(),
         });
       }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [clinicalHistory, technique, findings, impression, recommendations, disabled]);
+  }, [clinicalHistory, technique, findings, impression, disabled]);
 
   if (disabled) {
     return (
@@ -55,15 +53,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
               <h3 className="font-semibold mb-2">Impression</h3>
               <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg whitespace-pre-wrap">
                 {stripHtmlTags(report.impression) || 'Not provided'}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="font-semibold mb-2">Recommendations</h3>
-              <div className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-lg whitespace-pre-wrap">
-                {stripHtmlTags(report.recommendations) || 'Not provided'}
               </div>
             </div>
           </div>
@@ -95,17 +84,6 @@ export function ReportEditorCard({ report, onSave, disabled }: ReportEditorCardP
             content={impression}
             onChange={setImpression}
             placeholder="Summarize impression..."
-          />
-        </div>
-
-        <Separator />
-
-        <div>
-          <h3 className="font-semibold mb-2">Recommendations</h3>
-          <ReportEditor
-            content={recommendations}
-            onChange={setRecommendations}
-            placeholder="Provide recommendations..."
           />
         </div>
       </CardContent>

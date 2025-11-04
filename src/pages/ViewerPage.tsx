@@ -513,19 +513,6 @@ const ViewerPage = () => {
                     </div>
                   )}
 
-                  {/* Recommendations */}
-                  {reportData.recommendations && (
-                    <div>
-                      <h4 className="text-sm font-semibold uppercase text-foreground mb-2">
-                        Recommendations
-                      </h4>
-                      <div 
-                        className="prose prose-sm max-w-none text-foreground"
-                        dangerouslySetInnerHTML={{ __html: reportData.recommendations }}
-                      />
-                    </div>
-                  )}
-
                   {/* Signature */}
                   {reportData.is_signed && reportData.signatory_name && (
                     <>

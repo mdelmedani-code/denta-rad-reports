@@ -37,7 +37,6 @@ interface ReportData {
   technique: string;
   findings: string;
   impression: string;
-  recommendations: string;
   is_signed: boolean;
   signed_by: string | null;
   signed_at: string | null;
@@ -71,7 +70,6 @@ export default function ReportBuilder() {
   const [technique, setTechnique] = useState('');
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
-  const [recommendations, setRecommendations] = useState('');
 
   // Auto-save timer
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
@@ -138,7 +136,6 @@ export default function ReportBuilder() {
             technique: '',
             findings: '',
             impression: '',
-            recommendations: '',
             version: 1,
             is_superseded: false,
             can_reopen: true,
@@ -155,7 +152,6 @@ export default function ReportBuilder() {
       setTechnique(reportData.technique || '');
       setFindings(reportData.findings || '');
       setImpression(reportData.impression || '');
-      setRecommendations(reportData.recommendations || '');
       setLastSaved(reportData.last_saved_at ? new Date(reportData.last_saved_at) : undefined);
       
       // Check if this report is editing after a signature
@@ -201,7 +197,6 @@ export default function ReportBuilder() {
           technique,
           findings,
           impression,
-          recommendations,
           last_saved_at: new Date().toISOString(),
         })
         .eq('id', report.id);
@@ -231,7 +226,6 @@ export default function ReportBuilder() {
     setTechnique(template.technique || technique);
     setFindings(template.findings || findings);
     setImpression(template.impression || impression);
-    setRecommendations(template.recommendations || recommendations);
     triggerAutoSave();
   };
 
@@ -248,9 +242,6 @@ export default function ReportBuilder() {
         break;
       case 'impression':
         setImpression(prev => prev + '\n\n' + content);
-        break;
-      case 'recommendations':
-        setRecommendations(prev => prev + '\n\n' + content);
         break;
     }
     triggerAutoSave();
@@ -284,7 +275,6 @@ export default function ReportBuilder() {
           technique,
           findings,
           impression,
-          recommendations,
           signatory_name: report.signatory_name || undefined,
           signatory_credentials: report.signatory_credentials || undefined,
           signed_at: report.signed_at || undefined,
@@ -403,7 +393,7 @@ export default function ReportBuilder() {
       }
     : null;
 
-  const reportContent = `${clinicalHistory}\n${technique}\n${findings}\n${impression}\n${recommendations}`;
+  const reportContent = `${clinicalHistory}\n${technique}\n${findings}\n${impression}`;
 
   return (
     <div className="container mx-auto py-8 max-w-5xl">
@@ -427,14 +417,12 @@ export default function ReportBuilder() {
               technique,
               findings,
               impression,
-              recommendations,
             }}
             onRestore={(version) => {
               setClinicalHistory(version.clinical_history);
               setTechnique(version.technique);
               setFindings(version.findings);
               setImpression(version.impression);
-              setRecommendations(version.recommendations);
               triggerAutoSave();
             }}
             disabled={report.is_signed}
@@ -602,24 +590,6 @@ export default function ReportBuilder() {
                 }
               }}
               placeholder="Summarize key findings..."
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recommendations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReportEditor
-              content={recommendations}
-              onChange={(content) => {
-                if (!report.is_signed) {
-                  setRecommendations(content);
-                  triggerAutoSave();
-                }
-              }}
-              placeholder="Provide clinical recommendations..."
             />
           </CardContent>
         </Card>

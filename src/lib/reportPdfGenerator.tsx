@@ -182,7 +182,6 @@ interface ReportData {
     technique: string;
     findings: string;
     impression: string;
-    recommendations: string;
     signatory_name?: string;
     signatory_credentials?: string;
     signed_at?: string;
@@ -293,16 +292,6 @@ export const generateReportPDF = async (data: ReportData) => {
             <Text style={styles.sectionTitle}>IMPRESSION</Text>
             <Text style={styles.sectionContent}>
               {stripHtmlTags(reportData.impression)}
-            </Text>
-          </View>
-        )}
-
-        {/* Recommendations */}
-        {reportData.recommendations && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
-            <Text style={styles.sectionContent}>
-              {stripHtmlTags(reportData.recommendations)}
             </Text>
           </View>
         )}

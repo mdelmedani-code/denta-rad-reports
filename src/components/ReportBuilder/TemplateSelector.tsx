@@ -20,7 +20,6 @@ interface Template {
   technique: string;
   findings: string;
   impression: string;
-  recommendations: string;
   is_default: boolean;
   use_count: number;
 }

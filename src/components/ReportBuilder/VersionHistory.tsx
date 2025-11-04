@@ -23,7 +23,6 @@ interface Version {
   technique: string;
   findings: string;
   impression: string;
-  recommendations: string;
   saved_at: string;
   saved_by: string;
 }
@@ -35,7 +34,6 @@ interface VersionHistoryProps {
     technique: string;
     findings: string;
     impression: string;
-    recommendations: string;
   };
   onRestore: (version: Version) => void;
   disabled?: boolean;
@@ -111,7 +109,6 @@ export const VersionHistory = ({
           technique: currentVersion.technique,
           findings: currentVersion.findings,
           impression: currentVersion.impression,
-          recommendations: currentVersion.recommendations,
           saved_by: (await supabase.auth.getUser()).data.user?.id,
         });
 

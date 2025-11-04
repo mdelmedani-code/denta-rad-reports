@@ -282,7 +282,6 @@ export default function CaseReportPage() {
           technique: data.report.technique || '',
           findings: data.report.findings || '',
           impression: data.report.impression || '',
-          recommendations: data.report.recommendations || '',
           signatory_name: data.report.signatory_name,
           signatory_credentials: data.report.signatory_credentials,
           signed_at: data.report.signed_at,
