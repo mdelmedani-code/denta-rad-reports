@@ -1,5 +1,5 @@
 import { pdf, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-import dentaradLogo from '@/assets/dentarad-logo.png';
+import dentaradLogo from '@/assets/dentarad-logo-pdf.jpg';
 
 // Helper function to strip HTML tags and convert to plain text
 const stripHtmlTags = (html: string | null | undefined): string => {
@@ -29,120 +29,149 @@ const styles = StyleSheet.create({
     padding: 40,
     fontSize: 10,
     fontFamily: 'Helvetica',
+    backgroundColor: '#ffffff',
   },
   // Header with branding
   brandHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottom: '2pt solid #333',
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 25,
+    paddingBottom: 20,
+    borderBottom: '2pt solid #5fa8a6',
   },
   logo: {
-    width: 120,
-    height: 40,
+    width: 160,
+    height: 50,
     objectFit: 'contain',
-  },
-  brandName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0066cc',
-    marginLeft: 10,
   },
   contactInfo: {
     fontSize: 9,
     color: '#666',
     textAlign: 'right',
+    marginBottom: 3,
   },
-  // Title section
-  mainTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 15,
+  // Patient info section
+  infoSection: {
     marginBottom: 20,
-    color: '#333',
   },
-  // Patient info grid
+  infoSectionTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#1a1a1a',
+  },
   infoGrid: {
     marginBottom: 15,
   },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottom: '0.5pt solid #e5e5e5',
   },
   infoLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
-    width: 150,
-    color: '#333',
+    width: 140,
+    color: '#5fa8a6',
+    textTransform: 'uppercase',
   },
   infoValue: {
     fontSize: 10,
     flex: 1,
-    color: '#000',
+    color: '#1a1a1a',
+  },
+  // Main title
+  reportTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#1a1a1a',
+    textTransform: 'uppercase',
+  },
+  divider: {
+    height: 2,
+    backgroundColor: '#5fa8a6',
+    marginVertical: 15,
   },
   // Section styles
   section: {
     marginTop: 15,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#000',
+    marginBottom: 10,
+    color: '#1a1a1a',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   sectionContent: {
     fontSize: 10,
-    lineHeight: 1.6,
-    color: '#000',
+    lineHeight: 1.7,
+    color: '#1a1a1a',
+    textAlign: 'justify',
   },
   // Signature section
   signatureSection: {
-    marginTop: 25,
-    paddingTop: 15,
-    borderTop: '1pt solid #ccc',
-  },
-  // Image styles
-  reportImage: {
-    maxWidth: '100%',
-    maxHeight: 300,
-    objectFit: 'contain',
-    marginVertical: 10,
-  },
-  imageCaption: {
-    fontSize: 9,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 10,
+    marginTop: 30,
+    paddingTop: 20,
+    borderTop: '2pt solid #5fa8a6',
+    backgroundColor: '#f9fafb',
+    padding: 20,
+    borderRadius: 4,
   },
   endOfReport: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 15,
+    color: '#1a1a1a',
   },
   doctorInfo: {
     fontSize: 10,
     textAlign: 'center',
     marginBottom: 3,
+    color: '#1a1a1a',
   },
   doctorName: {
+    fontSize: 11,
     fontWeight: 'bold',
   },
   reportDate: {
     fontSize: 9,
     textAlign: 'center',
     color: '#666',
-    marginTop: 10,
+    marginTop: 12,
+  },
+  // Image styles
+  imageSection: {
+    marginTop: 20,
+  },
+  imageSectionTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#1a1a1a',
+    textTransform: 'uppercase',
+  },
+  reportImage: {
+    maxWidth: '100%',
+    maxHeight: 280,
+    objectFit: 'contain',
+    marginVertical: 10,
+    border: '1pt solid #e5e5e5',
+  },
+  imageCaption: {
+    fontSize: 9,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 5,
+    marginBottom: 15,
   },
   // Footer
   footer: {
@@ -153,6 +182,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 8,
     color: '#999',
+    borderTop: '0.5pt solid #e5e5e5',
+    paddingTop: 10,
   },
 });
 
@@ -169,22 +200,26 @@ interface ReportData {
     patient_name: string;
     patient_dob: string;
     patient_id: string;
+    patient_internal_id?: string;
     folder_name: string;
     clinical_question: string;
     field_of_view: string;
     upload_date: string;
+    urgency?: string;
+    created_at?: string;
     clinic: {
       name: string;
     };
   };
   reportData: {
-    clinical_history: string;
-    technique: string;
-    findings: string;
-    impression: string;
+    clinical_history?: string;
+    technique?: string;
+    findings?: string;
+    impression?: string;
     signatory_name?: string;
     signatory_credentials?: string;
     signed_at?: string;
+    is_signed?: boolean;
     version?: number;
   };
   images?: ReportImage[];
@@ -193,63 +228,103 @@ interface ReportData {
 export const generateReportPDF = async (data: ReportData) => {
   const { caseData, reportData, images = [] } = data;
 
+  // Calculate patient age from DOB
+  const calculateAge = (dob: string) => {
+    if (!dob) return 'N/A';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return `${age} years`;
+  };
+
+  // Format field of view
+  const formatFieldOfView = (fov: string) => {
+    return fov?.replace(/_/g, ' ').toUpperCase() || 'N/A';
+  };
+
   const ReportDocument = () => (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* DentaRad Header */}
         <View style={styles.brandHeader}>
-          <View style={styles.logoContainer}>
-            <Image src={dentaradLogo} style={styles.logo} />
-          </View>
+          <Image src={dentaradLogo} style={styles.logo} />
           <View>
             <Text style={styles.contactInfo}>Email: Admin@dentarad.com</Text>
             <Text style={styles.contactInfo}>Your workplace address</Text>
           </View>
         </View>
 
-        {/* Patient Information Grid */}
-        <View style={styles.infoGrid}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Patient:</Text>
-            <Text style={styles.infoValue}>{caseData.patient_name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Referring Physician:</Text>
-            <Text style={styles.infoValue}>{caseData.clinic.name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Study:</Text>
-            <Text style={styles.infoValue}>CBCT Scan - {caseData.field_of_view.replace(/_/g, ' ')}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Study date:</Text>
-            <Text style={styles.infoValue}>
-              {new Date(caseData.upload_date).toLocaleDateString('en-GB')}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Accession Number:</Text>
-            <Text style={styles.infoValue}>{caseData.patient_id}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Completion flag:</Text>
-            <Text style={styles.infoValue}>Complete</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Verification flag:</Text>
-            <Text style={styles.infoValue}>
-              {reportData.signed_at ? 'Verified' : 'Pending'}
-            </Text>
+        {/* Patient Information */}
+        <View style={styles.infoSection}>
+          <Text style={styles.infoSectionTitle}>Patient Information</Text>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Patient Name</Text>
+              <Text style={styles.infoValue}>{caseData.patient_name || 'N/A'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Age</Text>
+              <Text style={styles.infoValue}>{calculateAge(caseData.patient_dob)}</Text>
+            </View>
+            {caseData.patient_internal_id && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Internal ID</Text>
+                <Text style={styles.infoValue}>{caseData.patient_internal_id}</Text>
+              </View>
+            )}
+            {caseData.patient_dob && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Date of Birth</Text>
+                <Text style={styles.infoValue}>
+                  {new Date(caseData.patient_dob).toLocaleDateString('en-GB')}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Main Title */}
-        <Text style={styles.mainTitle}>Diagnostic Report</Text>
+        {/* Case Information */}
+        <View style={styles.infoSection}>
+          <Text style={styles.infoSectionTitle}>Case Information</Text>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Clinical Question</Text>
+              <Text style={styles.infoValue}>{caseData.clinical_question || 'N/A'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Field of View</Text>
+              <Text style={styles.infoValue}>{formatFieldOfView(caseData.field_of_view)}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Urgency Level</Text>
+              <Text style={styles.infoValue}>
+                {caseData.urgency ? caseData.urgency.charAt(0).toUpperCase() + caseData.urgency.slice(1) : 'N/A'}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Upload Date</Text>
+              <Text style={styles.infoValue}>
+                {caseData.created_at || caseData.upload_date 
+                  ? new Date(caseData.created_at || caseData.upload_date).toLocaleDateString('en-GB')
+                  : 'N/A'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Report Title */}
+        <Text style={styles.reportTitle}>Diagnostic Report</Text>
 
         {/* Clinical History */}
         {reportData.clinical_history && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>CLINICAL HISTORY</Text>
+            <Text style={styles.sectionTitle}>Clinical History</Text>
             <Text style={styles.sectionContent}>
               {stripHtmlTags(reportData.clinical_history)}
             </Text>
@@ -259,7 +334,7 @@ export const generateReportPDF = async (data: ReportData) => {
         {/* Technique */}
         {reportData.technique && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>TECHNIQUE</Text>
+            <Text style={styles.sectionTitle}>Technique</Text>
             <Text style={styles.sectionContent}>
               {stripHtmlTags(reportData.technique)}
             </Text>
@@ -269,50 +344,39 @@ export const generateReportPDF = async (data: ReportData) => {
         {/* Findings */}
         {reportData.findings && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>FINDINGS</Text>
+            <Text style={styles.sectionTitle}>Findings</Text>
             <Text style={styles.sectionContent}>
               {stripHtmlTags(reportData.findings)}
             </Text>
             
             {/* Include images attached to findings */}
-            {images.filter(img => img.section === 'findings').map((img) => (
-              <View key={img.id} style={{ marginTop: 10 }}>
-                <Image src={img.image_url} style={styles.reportImage} />
-                {img.caption && (
-                  <Text style={styles.imageCaption}>{img.caption}</Text>
-                )}
+            {images.filter(img => img.section === 'findings').length > 0 && (
+              <View style={{ marginTop: 15 }}>
+                {images.filter(img => img.section === 'findings').map((img) => (
+                  <View key={img.id} style={{ marginBottom: 10 }}>
+                    <Image src={img.image_url} style={styles.reportImage} />
+                    {img.caption && (
+                      <Text style={styles.imageCaption}>{img.caption}</Text>
+                    )}
+                  </View>
+                ))}
               </View>
-            ))}
+            )}
           </View>
         )}
 
         {/* Impression */}
         {reportData.impression && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>IMPRESSION</Text>
+            <Text style={styles.sectionTitle}>Impression</Text>
             <Text style={styles.sectionContent}>
               {stripHtmlTags(reportData.impression)}
             </Text>
           </View>
         )}
 
-        {/* All Report Images Gallery */}
-        {images.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>REPORT IMAGES ({images.length})</Text>
-            {images.map((img) => (
-              <View key={img.id} style={{ marginTop: 10 }}>
-                <Image src={img.image_url} style={styles.reportImage} />
-                {img.caption && (
-                  <Text style={styles.imageCaption}>{img.caption}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* Signature Section */}
-        {reportData.signatory_name && reportData.signed_at && (
+        {reportData.is_signed && reportData.signatory_name && reportData.signed_at && (
           <View style={styles.signatureSection}>
             <Text style={styles.endOfReport}>***End of Report***</Text>
             <Text style={[styles.doctorInfo, styles.doctorName]}>
@@ -336,9 +400,24 @@ export const generateReportPDF = async (data: ReportData) => {
           </View>
         )}
 
+        {/* All Report Images */}
+        {images.length > 0 && (
+          <View style={styles.imageSection}>
+            <Text style={styles.imageSectionTitle}>Report Images ({images.length})</Text>
+            {images.map((img) => (
+              <View key={img.id} style={{ marginBottom: 15 }}>
+                <Image src={img.image_url} style={styles.reportImage} />
+                {img.caption && (
+                  <Text style={styles.imageCaption}>{img.caption}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>1 - 1</Text>
+          <Text>DentaRad - Professional CBCT Reporting</Text>
         </View>
       </Page>
     </Document>
