@@ -15,7 +15,8 @@ const loadPDFSettings = async () => {
       logo_dimensions: { width: 1100, height: 175 },
       contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
       header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
-      branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" }
+      branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
+      footer_logo: { show_logo: false, width: 80, height: 25 }
     };
 
     if (data) {
@@ -32,7 +33,8 @@ const loadPDFSettings = async () => {
       logo_dimensions: { width: 1100, height: 175 },
       contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
       header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
-      branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" }
+      branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
+      footer_logo: { show_logo: false, width: 80, height: 25 }
     };
   }
 };
@@ -457,6 +459,18 @@ export const generateReportPDF = async (data: ReportData) => {
 
         {/* Footer */}
         <View style={styles.footer}>
+          {settings.footer_logo.show_logo && (
+            <Image 
+              src={dentaradLogo} 
+              style={{
+                width: settings.footer_logo.width,
+                height: settings.footer_logo.height,
+                objectFit: 'contain',
+                marginBottom: 5,
+                alignSelf: 'center',
+              }} 
+            />
+          )}
           <Text>{settings.branding.footer_text}</Text>
         </View>
       </Page>

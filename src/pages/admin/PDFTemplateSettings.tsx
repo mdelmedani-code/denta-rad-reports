@@ -17,6 +17,7 @@ interface PDFSettings {
   contact_info: { email: string; address: string };
   header_colors: { border_color: string; label_color: string };
   branding: { company_name: string; footer_text: string };
+  footer_logo: { show_logo: boolean; width: number; height: number };
 }
 
 const PDFTemplateSettings = () => {
@@ -28,7 +29,8 @@ const PDFTemplateSettings = () => {
     logo_dimensions: { width: 1100, height: 175 },
     contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
     header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
-    branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" }
+    branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
+    footer_logo: { show_logo: false, width: 80, height: 25 }
   });
 
   useEffect(() => {
@@ -88,6 +90,11 @@ const PDFTemplateSettings = () => {
         {
           setting_key: 'branding',
           setting_value: settings.branding,
+          updated_by: user?.id
+        },
+        {
+          setting_key: 'footer_logo',
+          setting_value: settings.footer_logo,
           updated_by: user?.id
         }
       ];
@@ -356,6 +363,18 @@ const PDFTemplateSettings = () => {
 
             {/* Footer */}
             <View style={styles.footer}>
+              {settings.footer_logo.show_logo && (
+                <Image 
+                  src={dentaradLogo} 
+                  style={{
+                    width: settings.footer_logo.width,
+                    height: settings.footer_logo.height,
+                    objectFit: 'contain',
+                    marginBottom: 5,
+                    alignSelf: 'center',
+                  }} 
+                />
+              )}
               <Text>{settings.branding.footer_text}</Text>
             </View>
           </Page>
@@ -430,7 +449,7 @@ const PDFTemplateSettings = () => {
       </div>
 
       <Tabs defaultValue="logo" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="logo">
             <FileText className="w-4 h-4 mr-2" />
             Logo
@@ -446,6 +465,10 @@ const PDFTemplateSettings = () => {
           <TabsTrigger value="branding">
             <Eye className="w-4 h-4 mr-2" />
             Branding
+          </TabsTrigger>
+          <TabsTrigger value="footer">
+            <FileText className="w-4 h-4 mr-2" />
+            Footer
           </TabsTrigger>
         </TabsList>
 
@@ -659,6 +682,80 @@ const PDFTemplateSettings = () => {
                   placeholder="DentaRad - Professional CBCT Reporting"
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="footer">
+          <Card>
+            <CardHeader>
+              <CardTitle>Footer Logo Settings</CardTitle>
+              <CardDescription>
+                Configure logo display in the PDF footer
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="show-footer-logo"
+                  checked={settings.footer_logo.show_logo}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    footer_logo: {
+                      ...settings.footer_logo,
+                      show_logo: e.target.checked
+                    }
+                  })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="show-footer-logo">Show logo in footer</Label>
+              </div>
+
+              {settings.footer_logo.show_logo && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="footer-logo-width">Logo Width (px)</Label>
+                      <Input
+                        id="footer-logo-width"
+                        type="number"
+                        value={settings.footer_logo.width}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          footer_logo: {
+                            ...settings.footer_logo,
+                            width: parseInt(e.target.value) || 0
+                          }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="footer-logo-height">Logo Height (px)</Label>
+                      <Input
+                        id="footer-logo-height"
+                        type="number"
+                        value={settings.footer_logo.height}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          footer_logo: {
+                            ...settings.footer_logo,
+                            height: parseInt(e.target.value) || 0
+                          }
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Footer logo dimensions: {settings.footer_logo.width}px × {settings.footer_logo.height}px
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      The logo will appear centered above the footer text.
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
