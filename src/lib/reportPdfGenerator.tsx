@@ -41,8 +41,8 @@ const styles = StyleSheet.create({
     borderBottom: '2pt solid #5fa8a6',
   },
   logo: {
-    width: 160,
-    height: 50,
+    width: 220,
+    height: 35,
     objectFit: 'contain',
   },
   contactInfo: {
