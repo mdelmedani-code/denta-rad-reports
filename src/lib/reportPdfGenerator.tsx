@@ -1,5 +1,41 @@
 import { pdf, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import dentaradLogo from '@/assets/dentarad-logo-pdf.jpg';
+import { supabase } from '@/integrations/supabase/client';
+
+// Load PDF template settings from database
+const loadPDFSettings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('pdf_template_settings')
+      .select('setting_key, setting_value');
+
+    if (error) throw error;
+
+    const settings: any = {
+      logo_dimensions: { width: 1100, height: 175 },
+      contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
+      header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
+      branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" }
+    };
+
+    if (data) {
+      data.forEach((item) => {
+        settings[item.setting_key] = item.setting_value;
+      });
+    }
+
+    return settings;
+  } catch (error) {
+    console.error('Error loading PDF settings:', error);
+    // Return defaults if loading fails
+    return {
+      logo_dimensions: { width: 1100, height: 175 },
+      contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
+      header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
+      branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" }
+    };
+  }
+};
 
 // Helper function to strip HTML tags and convert to plain text
 const stripHtmlTags = (html: string | null | undefined): string => {
@@ -23,8 +59,8 @@ const stripHtmlTags = (html: string | null | undefined): string => {
   return text;
 };
 
-// PDF Styles
-const styles = StyleSheet.create({
+// PDF Styles - now created dynamically with settings
+const createStyles = (settings: any) => StyleSheet.create({
   page: {
     padding: 40,
     fontSize: 10,
@@ -38,11 +74,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 25,
     paddingBottom: 20,
-    borderBottom: '2pt solid #5fa8a6',
+    borderBottom: `2pt solid ${settings.header_colors.border_color}`,
   },
   logo: {
-    width: 1100,
-    height: 175,
+    width: settings.logo_dimensions.width,
+    height: settings.logo_dimensions.height,
     objectFit: 'contain',
   },
   contactInfo: {
@@ -74,7 +110,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold',
     width: 140,
-    color: '#5fa8a6',
+    color: settings.header_colors.label_color,
     textTransform: 'uppercase',
   },
   infoValue: {
@@ -93,7 +129,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 2,
-    backgroundColor: '#5fa8a6',
+    backgroundColor: settings.header_colors.border_color,
     marginVertical: 15,
   },
   // Section styles
@@ -119,7 +155,7 @@ const styles = StyleSheet.create({
   signatureSection: {
     marginTop: 30,
     paddingTop: 20,
-    borderTop: '2pt solid #5fa8a6',
+    borderTop: `2pt solid ${settings.header_colors.border_color}`,
     backgroundColor: '#f9fafb',
     padding: 20,
     borderRadius: 4,
@@ -228,6 +264,10 @@ interface ReportData {
 export const generateReportPDF = async (data: ReportData) => {
   const { caseData, reportData, images = [] } = data;
 
+  // Load PDF settings from database
+  const settings = await loadPDFSettings();
+  const styles = createStyles(settings);
+
   // Calculate patient age from DOB
   const calculateAge = (dob: string) => {
     if (!dob) return 'N/A';
@@ -253,8 +293,8 @@ export const generateReportPDF = async (data: ReportData) => {
         <View style={styles.brandHeader}>
           <Image src={dentaradLogo} style={styles.logo} />
           <View>
-            <Text style={styles.contactInfo}>Email: Admin@dentarad.com</Text>
-            <Text style={styles.contactInfo}>Your workplace address</Text>
+            <Text style={styles.contactInfo}>Email: {settings.contact_info.email}</Text>
+            <Text style={styles.contactInfo}>{settings.contact_info.address}</Text>
           </View>
         </View>
 
@@ -417,7 +457,7 @@ export const generateReportPDF = async (data: ReportData) => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>DentaRad - Professional CBCT Reporting</Text>
+          <Text>{settings.branding.footer_text}</Text>
         </View>
       </Page>
     </Document>
