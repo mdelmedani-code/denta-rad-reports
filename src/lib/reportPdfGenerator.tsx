@@ -13,6 +13,7 @@ const loadPDFSettings = async () => {
 
     const settings: any = {
       logo_dimensions: { width: 1100, height: 175 },
+      header_logo: { show_logo: true, width: 1100, height: 175 },
       contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
       header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
       branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
@@ -31,6 +32,7 @@ const loadPDFSettings = async () => {
     // Return defaults if loading fails
     return {
       logo_dimensions: { width: 1100, height: 175 },
+      header_logo: { show_logo: true, width: 1100, height: 175 },
       contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
       header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
       branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
@@ -79,8 +81,8 @@ const createStyles = (settings: any) => StyleSheet.create({
     borderBottom: `2pt solid ${settings.header_colors.border_color}`,
   },
   logo: {
-    width: settings.logo_dimensions.width,
-    height: settings.logo_dimensions.height,
+    width: settings.header_logo?.width || settings.logo_dimensions.width,
+    height: settings.header_logo?.height || settings.logo_dimensions.height,
     objectFit: 'contain',
   },
   contactInfo: {
@@ -293,7 +295,9 @@ export const generateReportPDF = async (data: ReportData) => {
       <Page size="A4" style={styles.page}>
         {/* DentaRad Header */}
         <View style={styles.brandHeader}>
-          <Image src={dentaradLogo} style={styles.logo} />
+          {(!settings.header_logo || settings.header_logo.show_logo) && (
+            <Image src={dentaradLogo} style={styles.logo} />
+          )}
           <View>
             <Text style={styles.contactInfo}>Email: {settings.contact_info.email}</Text>
             <Text style={styles.contactInfo}>{settings.contact_info.address}</Text>

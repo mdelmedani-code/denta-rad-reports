@@ -14,6 +14,7 @@ import dentaradLogo from '@/assets/dentarad-logo-pdf.jpg';
 
 interface PDFSettings {
   logo_dimensions: { width: number; height: number };
+  header_logo: { show_logo: boolean; width: number; height: number };
   contact_info: { email: string; address: string };
   header_colors: { border_color: string; label_color: string };
   branding: { company_name: string; footer_text: string };
@@ -27,6 +28,7 @@ const PDFTemplateSettings = () => {
   const [previewing, setPreviewing] = useState(false);
   const [settings, setSettings] = useState<PDFSettings>({
     logo_dimensions: { width: 1100, height: 175 },
+    header_logo: { show_logo: true, width: 1100, height: 175 },
     contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
     header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
     branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
@@ -75,6 +77,11 @@ const PDFTemplateSettings = () => {
         {
           setting_key: 'logo_dimensions',
           setting_value: settings.logo_dimensions,
+          updated_by: user?.id
+        },
+        {
+          setting_key: 'header_logo',
+          setting_value: settings.header_logo,
           updated_by: user?.id
         },
         {
@@ -148,8 +155,8 @@ const PDFTemplateSettings = () => {
           borderBottom: `2pt solid ${settings.header_colors.border_color}`,
         },
         logo: {
-          width: settings.logo_dimensions.width,
-          height: settings.logo_dimensions.height,
+          width: settings.header_logo.width,
+          height: settings.header_logo.height,
           objectFit: 'contain',
         },
         contactInfo: {
@@ -269,7 +276,9 @@ const PDFTemplateSettings = () => {
           <Page size="A4" style={styles.page}>
             {/* Header */}
             <View style={styles.brandHeader}>
-              <Image src={dentaradLogo} style={styles.logo} />
+              {settings.header_logo.show_logo && (
+                <Image src={dentaradLogo} style={styles.logo} />
+              )}
               <View>
                 <Text style={styles.contactInfo}>Email: {settings.contact_info.email}</Text>
                 <Text style={styles.contactInfo}>{settings.contact_info.address}</Text>
@@ -475,51 +484,115 @@ const PDFTemplateSettings = () => {
         <TabsContent value="logo">
           <Card>
             <CardHeader>
-              <CardTitle>Logo Dimensions</CardTitle>
+              <CardTitle>Header Logo Settings</CardTitle>
               <CardDescription>
-                Adjust the size of the logo in PDF reports (in pixels)
+                Configure logo display and size in PDF header
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="logo-width">Width (px)</Label>
-                  <Input
-                    id="logo-width"
-                    type="number"
-                    value={settings.logo_dimensions.width}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      logo_dimensions: {
-                        ...settings.logo_dimensions,
-                        width: parseInt(e.target.value) || 0
-                      }
-                    })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="logo-height">Height (px)</Label>
-                  <Input
-                    id="logo-height"
-                    type="number"
-                    value={settings.logo_dimensions.height}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      logo_dimensions: {
-                        ...settings.logo_dimensions,
-                        height: parseInt(e.target.value) || 0
-                      }
-                    })}
-                  />
-                </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="show-header-logo"
+                  checked={settings.header_logo.show_logo}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    header_logo: {
+                      ...settings.header_logo,
+                      show_logo: e.target.checked
+                    }
+                  })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="show-header-logo">Show logo in header</Label>
               </div>
-              <div className="p-4 bg-muted rounded-lg">
+
+              {settings.header_logo.show_logo && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="header-logo-width">Width (px)</Label>
+                      <Input
+                        id="header-logo-width"
+                        type="number"
+                        value={settings.header_logo.width}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          header_logo: {
+                            ...settings.header_logo,
+                            width: parseInt(e.target.value) || 0
+                          }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="header-logo-height">Height (px)</Label>
+                      <Input
+                        id="header-logo-height"
+                        type="number"
+                        value={settings.header_logo.height}
+                        onChange={(e) => setSettings({
+                          ...settings,
+                          header_logo: {
+                            ...settings.header_logo,
+                            height: parseInt(e.target.value) || 0
+                          }
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Current dimensions: {settings.header_logo.width}px × {settings.header_logo.height}px
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Recommended: Keep aspect ratio similar to your logo image for best results.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h4 className="font-semibold">Legacy Logo Dimensions (Deprecated)</h4>
                 <p className="text-sm text-muted-foreground">
-                  Current dimensions: {settings.logo_dimensions.width}px × {settings.logo_dimensions.height}px
+                  These settings are kept for backward compatibility. Use header logo settings above instead.
                 </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Recommended: Keep aspect ratio similar to your logo image for best results.
-                </p>
+                <div className="grid grid-cols-2 gap-4 opacity-50">
+                  <div className="space-y-2">
+                    <Label htmlFor="logo-width">Width (px)</Label>
+                    <Input
+                      id="logo-width"
+                      type="number"
+                      value={settings.logo_dimensions.width}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        logo_dimensions: {
+                          ...settings.logo_dimensions,
+                          width: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      disabled
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="logo-height">Height (px)</Label>
+                    <Input
+                      id="logo-height"
+                      type="number"
+                      value={settings.logo_dimensions.height}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        logo_dimensions: {
+                          ...settings.logo_dimensions,
+                          height: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      disabled
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
