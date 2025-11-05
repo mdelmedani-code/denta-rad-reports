@@ -17,7 +17,8 @@ const loadPDFSettings = async () => {
       contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
       header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
       branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
-      footer_logo: { show_logo: false, width: 80, height: 25 }
+      footer_logo: { show_logo: false, width: 80, height: 25 },
+      logo_urls: { header_logo_url: null, footer_logo_url: null }
     };
 
     if (data) {
@@ -36,7 +37,8 @@ const loadPDFSettings = async () => {
       contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
       header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
       branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
-      footer_logo: { show_logo: false, width: 80, height: 25 }
+      footer_logo: { show_logo: false, width: 80, height: 25 },
+      logo_urls: { header_logo_url: null, footer_logo_url: null }
     };
   }
 };
@@ -296,7 +298,10 @@ export const generateReportPDF = async (data: ReportData) => {
         {/* DentaRad Header */}
         <View style={styles.brandHeader}>
           {(!settings.header_logo || settings.header_logo.show_logo) && (
-            <Image src={dentaradLogo} style={styles.logo} />
+            <Image 
+              src={settings.logo_urls?.header_logo_url || dentaradLogo} 
+              style={styles.logo} 
+            />
           )}
           <View>
             <Text style={styles.contactInfo}>Email: {settings.contact_info.email}</Text>
@@ -465,7 +470,7 @@ export const generateReportPDF = async (data: ReportData) => {
         <View style={styles.footer}>
           {settings.footer_logo.show_logo && (
             <Image 
-              src={dentaradLogo} 
+              src={settings.logo_urls?.footer_logo_url || dentaradLogo} 
               style={{
                 width: settings.footer_logo.width,
                 height: settings.footer_logo.height,

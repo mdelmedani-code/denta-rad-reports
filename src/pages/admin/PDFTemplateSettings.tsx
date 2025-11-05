@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Eye, FileText, Palette, Download } from "lucide-react";
+import { Loader2, Save, Eye, FileText, Palette, Download, Upload, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { pdf, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
@@ -19,6 +19,7 @@ interface PDFSettings {
   header_colors: { border_color: string; label_color: string };
   branding: { company_name: string; footer_text: string };
   footer_logo: { show_logo: boolean; width: number; height: number };
+  logo_urls: { header_logo_url: string | null; footer_logo_url: string | null };
 }
 
 const PDFTemplateSettings = () => {
@@ -26,13 +27,17 @@ const PDFTemplateSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const headerLogoInputRef = useRef<HTMLInputElement>(null);
+  const footerLogoInputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<PDFSettings>({
     logo_dimensions: { width: 1100, height: 175 },
     header_logo: { show_logo: true, width: 1100, height: 175 },
     contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
     header_colors: { border_color: "#5fa8a6", label_color: "#5fa8a6" },
     branding: { company_name: "DentaRad", footer_text: "DentaRad - Professional CBCT Reporting" },
-    footer_logo: { show_logo: false, width: 80, height: 25 }
+    footer_logo: { show_logo: false, width: 80, height: 25 },
+    logo_urls: { header_logo_url: null, footer_logo_url: null }
   });
 
   useEffect(() => {
@@ -103,6 +108,11 @@ const PDFTemplateSettings = () => {
           setting_key: 'footer_logo',
           setting_value: settings.footer_logo,
           updated_by: user?.id
+        },
+        {
+          setting_key: 'logo_urls',
+          setting_value: settings.logo_urls,
+          updated_by: user?.id
         }
       ];
 
@@ -131,6 +141,100 @@ const PDFTemplateSettings = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (file: File, type: 'header' | 'footer') => {
+    try {
+      setUploading(true);
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please upload an image file (JPG, PNG, etc.)');
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('Image file size must be less than 5MB');
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}-logo-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('template-assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('template-assets')
+        .getPublicUrl(filePath);
+
+      // Update settings
+      setSettings({
+        ...settings,
+        logo_urls: {
+          ...settings.logo_urls,
+          [`${type}_logo_url`]: publicUrl
+        }
+      });
+
+      toast({
+        title: "Logo Uploaded",
+        description: `${type === 'header' ? 'Header' : 'Footer'} logo has been uploaded successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = async (type: 'header' | 'footer') => {
+    try {
+      const logoUrl = type === 'header' ? settings.logo_urls.header_logo_url : settings.logo_urls.footer_logo_url;
+      
+      if (logoUrl) {
+        // Extract file path from URL
+        const urlParts = logoUrl.split('/');
+        const filePath = urlParts[urlParts.length - 1];
+
+        // Delete from storage
+        await supabase.storage
+          .from('template-assets')
+          .remove([filePath]);
+      }
+
+      // Update settings
+      setSettings({
+        ...settings,
+        logo_urls: {
+          ...settings.logo_urls,
+          [`${type}_logo_url`]: null
+        }
+      });
+
+      toast({
+        title: "Logo Removed",
+        description: `${type === 'header' ? 'Header' : 'Footer'} logo has been removed.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Remove Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -277,7 +381,10 @@ const PDFTemplateSettings = () => {
             {/* Header */}
             <View style={styles.brandHeader}>
               {settings.header_logo.show_logo && (
-                <Image src={dentaradLogo} style={styles.logo} />
+                <Image 
+                  src={settings.logo_urls.header_logo_url || dentaradLogo} 
+                  style={styles.logo} 
+                />
               )}
               <View>
                 <Text style={styles.contactInfo}>Email: {settings.contact_info.email}</Text>
@@ -374,7 +481,7 @@ const PDFTemplateSettings = () => {
             <View style={styles.footer}>
               {settings.footer_logo.show_logo && (
                 <Image 
-                  src={dentaradLogo} 
+                  src={settings.logo_urls.footer_logo_url || dentaradLogo} 
                   style={{
                     width: settings.footer_logo.width,
                     height: settings.footer_logo.height,
@@ -554,6 +661,75 @@ const PDFTemplateSettings = () => {
 
               <Separator />
 
+              {/* Logo Upload Section */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Upload Custom Header Logo</h4>
+                <p className="text-sm text-muted-foreground">
+                  Upload your own logo image (JPG, PNG, max 5MB)
+                </p>
+                
+                {settings.logo_urls.header_logo_url ? (
+                  <div className="space-y-2">
+                    <div className="relative border rounded-lg p-4 bg-muted">
+                      <img 
+                        src={settings.logo_urls.header_logo_url} 
+                        alt="Header Logo Preview" 
+                        className="max-h-32 mx-auto object-contain"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleRemoveLogo('header')}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => headerLogoInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Replace Logo
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => headerLogoInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Header Logo
+                      </>
+                    )}
+                  </Button>
+                )}
+                <input
+                  ref={headerLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file, 'header');
+                  }}
+                  className="hidden"
+                />
+              </div>
+
+              <Separator />
+
+              <Separator />
+
               <div className="space-y-4">
                 <h4 className="font-semibold">Legacy Logo Dimensions (Deprecated)</h4>
                 <p className="text-sm text-muted-foreground">
@@ -593,6 +769,73 @@ const PDFTemplateSettings = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Logo Upload Section */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Upload Custom Header Logo</h4>
+                <p className="text-sm text-muted-foreground">
+                  Upload your own logo image (JPG, PNG, max 5MB)
+                </p>
+                
+                {settings.logo_urls.header_logo_url ? (
+                  <div className="space-y-2">
+                    <div className="relative border rounded-lg p-4 bg-muted">
+                      <img 
+                        src={settings.logo_urls.header_logo_url} 
+                        alt="Header Logo Preview" 
+                        className="max-h-32 mx-auto object-contain"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleRemoveLogo('header')}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => headerLogoInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Replace Logo
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => headerLogoInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Header Logo
+                      </>
+                    )}
+                  </Button>
+                )}
+                <input
+                  ref={headerLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file, 'header');
+                  }}
+                  className="hidden"
+                />
               </div>
             </CardContent>
           </Card>
@@ -829,6 +1072,73 @@ const PDFTemplateSettings = () => {
                   </div>
                 </>
               )}
+
+              <Separator />
+
+              {/* Footer Logo Upload Section */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Upload Custom Footer Logo</h4>
+                <p className="text-sm text-muted-foreground">
+                  Upload a separate logo for the footer (JPG, PNG, max 5MB)
+                </p>
+                
+                {settings.logo_urls.footer_logo_url ? (
+                  <div className="space-y-2">
+                    <div className="relative border rounded-lg p-4 bg-muted">
+                      <img 
+                        src={settings.logo_urls.footer_logo_url} 
+                        alt="Footer Logo Preview" 
+                        className="max-h-16 mx-auto object-contain"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => handleRemoveLogo('footer')}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => footerLogoInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Replace Logo
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => footerLogoInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Footer Logo
+                      </>
+                    )}
+                  </Button>
+                )}
+                <input
+                  ref={footerLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file, 'footer');
+                  }}
+                  className="hidden"
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
