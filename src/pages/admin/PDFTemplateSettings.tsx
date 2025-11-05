@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Save, Eye, FileText, Palette } from "lucide-react";
+import { Loader2, Save, Eye, FileText, Palette, Download } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { pdf, Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import dentaradLogo from '@/assets/dentarad-logo-pdf.jpg';
 
 interface PDFSettings {
   logo_dimensions: { width: number; height: number };
@@ -21,6 +23,7 @@ const PDFTemplateSettings = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [settings, setSettings] = useState<PDFSettings>({
     logo_dimensions: { width: 1100, height: 175 },
     contact_info: { email: "Admin@dentarad.com", address: "Your workplace address" },
@@ -117,6 +120,270 @@ const PDFTemplateSettings = () => {
     }
   };
 
+  const generatePreview = async () => {
+    try {
+      setPreviewing(true);
+
+      // Create styles with current settings
+      const styles = StyleSheet.create({
+        page: {
+          padding: 40,
+          fontSize: 10,
+          fontFamily: 'Helvetica',
+          backgroundColor: '#ffffff',
+        },
+        brandHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 25,
+          paddingBottom: 20,
+          borderBottom: `2pt solid ${settings.header_colors.border_color}`,
+        },
+        logo: {
+          width: settings.logo_dimensions.width,
+          height: settings.logo_dimensions.height,
+          objectFit: 'contain',
+        },
+        contactInfo: {
+          fontSize: 9,
+          color: '#666',
+          textAlign: 'right',
+          marginBottom: 3,
+        },
+        infoSection: {
+          marginBottom: 20,
+        },
+        infoSectionTitle: {
+          fontSize: 13,
+          fontWeight: 'bold',
+          marginBottom: 12,
+          color: '#1a1a1a',
+        },
+        infoGrid: {
+          marginBottom: 15,
+        },
+        infoRow: {
+          flexDirection: 'row',
+          marginBottom: 8,
+          paddingBottom: 6,
+          borderBottom: '0.5pt solid #e5e5e5',
+        },
+        infoLabel: {
+          fontSize: 9,
+          fontWeight: 'bold',
+          width: 140,
+          color: settings.header_colors.label_color,
+          textTransform: 'uppercase',
+        },
+        infoValue: {
+          fontSize: 10,
+          flex: 1,
+          color: '#1a1a1a',
+        },
+        reportTitle: {
+          fontSize: 18,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          marginVertical: 20,
+          color: '#1a1a1a',
+          textTransform: 'uppercase',
+        },
+        divider: {
+          height: 2,
+          backgroundColor: settings.header_colors.border_color,
+          marginVertical: 15,
+        },
+        section: {
+          marginTop: 15,
+          marginBottom: 15,
+        },
+        sectionTitle: {
+          fontSize: 11,
+          fontWeight: 'bold',
+          marginBottom: 10,
+          color: '#1a1a1a',
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+        },
+        sectionContent: {
+          fontSize: 10,
+          lineHeight: 1.7,
+          color: '#1a1a1a',
+          textAlign: 'justify',
+        },
+        signatureSection: {
+          marginTop: 30,
+          paddingTop: 20,
+          borderTop: `2pt solid ${settings.header_colors.border_color}`,
+          backgroundColor: '#f9fafb',
+          padding: 20,
+          borderRadius: 4,
+        },
+        endOfReport: {
+          fontSize: 12,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          marginBottom: 15,
+          color: '#1a1a1a',
+        },
+        doctorInfo: {
+          fontSize: 10,
+          textAlign: 'center',
+          marginBottom: 3,
+          color: '#1a1a1a',
+        },
+        doctorName: {
+          fontSize: 11,
+          fontWeight: 'bold',
+        },
+        reportDate: {
+          fontSize: 9,
+          textAlign: 'center',
+          color: '#666',
+          marginTop: 12,
+        },
+        footer: {
+          position: 'absolute',
+          bottom: 30,
+          left: 40,
+          right: 40,
+          textAlign: 'center',
+          fontSize: 8,
+          color: '#999',
+          borderTop: '0.5pt solid #e5e5e5',
+          paddingTop: 10,
+        },
+      });
+
+      // Sample preview document
+      const PreviewDocument = () => (
+        <Document>
+          <Page size="A4" style={styles.page}>
+            {/* Header */}
+            <View style={styles.brandHeader}>
+              <Image src={dentaradLogo} style={styles.logo} />
+              <View>
+                <Text style={styles.contactInfo}>Email: {settings.contact_info.email}</Text>
+                <Text style={styles.contactInfo}>{settings.contact_info.address}</Text>
+              </View>
+            </View>
+
+            {/* Patient Information */}
+            <View style={styles.infoSection}>
+              <Text style={styles.infoSectionTitle}>Patient Information</Text>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Patient Name</Text>
+                  <Text style={styles.infoValue}>John Smith (Sample)</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Age</Text>
+                  <Text style={styles.infoValue}>45 years</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Date of Birth</Text>
+                  <Text style={styles.infoValue}>15/03/1979</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Case Information */}
+            <View style={styles.infoSection}>
+              <Text style={styles.infoSectionTitle}>Case Information</Text>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Clinical Question</Text>
+                  <Text style={styles.infoValue}>Sample CBCT evaluation for implant planning</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Field of View</Text>
+                  <Text style={styles.infoValue}>UP TO 8X8</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Urgency Level</Text>
+                  <Text style={styles.infoValue}>Standard</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Upload Date</Text>
+                  <Text style={styles.infoValue}>{new Date().toLocaleDateString('en-GB')}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Report Title */}
+            <Text style={styles.reportTitle}>Diagnostic Report (Sample)</Text>
+
+            {/* Sample Findings */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Findings</Text>
+              <Text style={styles.sectionContent}>
+                This is a sample preview of how your PDF reports will appear with the current template settings. 
+                The actual report content will vary based on the radiologist's findings for each case.
+              </Text>
+            </View>
+
+            {/* Sample Impression */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Impression</Text>
+              <Text style={styles.sectionContent}>
+                Sample impression text demonstrating the layout and styling of the diagnostic report.
+              </Text>
+            </View>
+
+            {/* Signature Section */}
+            <View style={styles.signatureSection}>
+              <Text style={styles.endOfReport}>***End of Report***</Text>
+              <Text style={[styles.doctorInfo, styles.doctorName]}>
+                Dr. Sample Radiologist
+              </Text>
+              <Text style={styles.doctorInfo}>
+                (BDS, MSc Oral Radiology)
+              </Text>
+              <Text style={styles.reportDate}>
+                Report Date: {new Date().toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })} - {new Date().toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text>{settings.branding.footer_text}</Text>
+            </View>
+          </Page>
+        </Document>
+      );
+
+      // Generate PDF blob
+      const blob = await pdf(<PreviewDocument />).toBlob();
+      const url = URL.createObjectURL(blob);
+      
+      // Open in new window
+      window.open(url, '_blank');
+
+      toast({
+        title: "Preview Generated",
+        description: "Opening preview in new window...",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Preview Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -132,19 +399,34 @@ const PDFTemplateSettings = () => {
           <h1 className="text-3xl font-bold">PDF Template Settings</h1>
           <p className="text-muted-foreground">Customize the appearance of generated PDF reports</p>
         </div>
-        <Button onClick={saveSettings} disabled={saving}>
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={generatePreview} disabled={previewing} variant="outline">
+            {previewing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </>
+            )}
+          </Button>
+          <Button onClick={saveSettings} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="logo" className="w-full">
