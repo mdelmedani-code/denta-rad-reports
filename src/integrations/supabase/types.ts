@@ -392,6 +392,71 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_templates: {
+        Row: {
+          color_scheme: Json | null
+          content: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          footer_config: Json | null
+          header_config: Json | null
+          id: string
+          indication_type: string | null
+          is_default: boolean | null
+          is_published: boolean | null
+          layout_config: Json | null
+          name: string
+          thumbnail_url: string | null
+          typography_config: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          color_scheme?: Json | null
+          content?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          footer_config?: Json | null
+          header_config?: Json | null
+          id?: string
+          indication_type?: string | null
+          is_default?: boolean | null
+          is_published?: boolean | null
+          layout_config?: Json | null
+          name: string
+          thumbnail_url?: string | null
+          typography_config?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          color_scheme?: Json | null
+          content?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          footer_config?: Json | null
+          header_config?: Json | null
+          id?: string
+          indication_type?: string | null
+          is_default?: boolean | null
+          is_published?: boolean | null
+          layout_config?: Json | null
+          name?: string
+          thumbnail_url?: string | null
+          typography_config?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_rules: {
         Row: {
           created_at: string | null
@@ -758,6 +823,7 @@ export type Database = {
           superseded_by: string | null
           supersedes: string | null
           technique: string | null
+          template_id: string | null
           template_used: string | null
           version: number | null
         }
@@ -799,6 +865,7 @@ export type Database = {
           superseded_by?: string | null
           supersedes?: string | null
           technique?: string | null
+          template_id?: string | null
           template_used?: string | null
           version?: number | null
         }
@@ -840,6 +907,7 @@ export type Database = {
           superseded_by?: string | null
           supersedes?: string | null
           technique?: string | null
+          template_id?: string | null
           template_used?: string | null
           version?: number | null
         }
@@ -891,6 +959,13 @@ export type Database = {
             columns: ["supersedes"]
             isOneToOne: false
             referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1016,6 +1091,52 @@ export type Database = {
             columns: ["superseded_by"]
             isOneToOne: false
             referencedRelation: "signature_audit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_usage_log: {
+        Row: {
+          case_id: string | null
+          generated_by: string | null
+          id: string
+          template_id: string | null
+          used_at: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          generated_by?: string | null
+          id?: string
+          template_id?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          generated_by?: string | null
+          id?: string
+          template_id?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_usage_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_usage_log_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_usage_log_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
             referencedColumns: ["id"]
           },
         ]
