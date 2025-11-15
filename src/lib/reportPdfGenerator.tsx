@@ -267,12 +267,67 @@ interface ReportData {
   images?: ReportImage[];
 }
 
-export const generateReportPDF = async (data: ReportData) => {
+export const generateReportPDF = async (data: ReportData, templateId?: string) => {
   const { caseData, reportData, images = [] } = data;
 
-  // Load PDF settings from database
+  // Load template if provided
+  let template = null;
+  if (templateId) {
+    const { data: templateData } = await supabase
+      .from('pdf_templates')
+      .select('*')
+      .eq('id', templateId)
+      .single();
+    
+    template = templateData;
+  }
+
+  // Load PDF settings from database (legacy)
   const settings = await loadPDFSettings();
-  const styles = createStyles(settings);
+
+  // Use template config or fallback to settings
+  const headerConfig = template?.header_config || settings.header_logo || {
+    logo_url: settings.logo_urls?.header_logo_url,
+    logo_height: settings.logo_dimensions?.height || 175,
+    background_color: '#ffffff',
+    height: 80
+  };
+
+  const footerConfig = template?.footer_config || settings.footer_logo || {
+    text: settings.branding?.footer_text || 'DentaRad - Professional CBCT Reporting',
+    background_color: '#f8f9fa',
+    show_page_numbers: true
+  };
+
+  const colorScheme = template?.color_scheme || {
+    primary: settings.header_colors?.border_color || '#5fa8a6',
+    secondary: '#64748b',
+    background: '#ffffff',
+    text: '#0f172a',
+    heading: settings.header_colors?.label_color || '#5fa8a6'
+  };
+
+  const typography = template?.typography_config || {
+    h1_size: 18,
+    h2_size: 13,
+    body_size: 10,
+    line_height: 1.7
+  };
+
+  const layoutConfig = template?.layout_config || {
+    margin_top: 40,
+    margin_bottom: 40,
+    margin_left: 40,
+    margin_right: 40
+  };
+
+  const styles = createStyles({ 
+    ...settings, 
+    header_colors: { 
+      border_color: colorScheme.primary, 
+      label_color: colorScheme.heading 
+    }
+  });
 
   // Calculate patient age from DOB
   const calculateAge = (dob: string) => {
@@ -297,10 +352,13 @@ export const generateReportPDF = async (data: ReportData) => {
       <Page size="A4" style={styles.page}>
         {/* DentaRad Header */}
         <View style={styles.brandHeader}>
-          {(!settings.header_logo || settings.header_logo.show_logo) && (
+          {(headerConfig.logo_url || (!settings.header_logo || settings.header_logo.show_logo)) && (
             <Image 
-              src={settings.logo_urls?.header_logo_url || dentaradLogo} 
-              style={styles.logo} 
+              src={headerConfig.logo_url || settings.logo_urls?.header_logo_url || dentaradLogo} 
+              style={{ 
+                ...styles.logo,
+                height: headerConfig.logo_height || styles.logo.height
+              }} 
             />
           )}
           <View>
@@ -467,7 +525,7 @@ export const generateReportPDF = async (data: ReportData) => {
         )}
 
         {/* Footer */}
-        <View style={styles.footer}>
+        <View style={styles.footer} fixed>
           {settings.footer_logo.show_logo && (
             <Image 
               src={settings.logo_urls?.footer_logo_url || dentaradLogo} 
@@ -480,7 +538,12 @@ export const generateReportPDF = async (data: ReportData) => {
               }} 
             />
           )}
-          <Text>{settings.branding.footer_text}</Text>
+          <Text>{footerConfig.text || settings.branding.footer_text}</Text>
+          {footerConfig.show_page_numbers && (
+            <Text render={({ pageNumber, totalPages }) => 
+              `Page ${pageNumber} of ${totalPages}`
+            } />
+          )}
         </View>
       </Page>
     </Document>
