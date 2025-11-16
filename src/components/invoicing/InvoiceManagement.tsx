@@ -172,6 +172,47 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
     }
   }
 
+  async function changeInvoiceStatus(invoiceId: string, newStatus: string) {
+    try {
+      const updateData: any = {
+        status: newStatus,
+        status_updated_at: new Date().toISOString()
+      };
+
+      // Set/clear timestamps based on status
+      if (newStatus === 'paid') {
+        updateData.paid_at = new Date().toISOString();
+      } else if (newStatus === 'sent') {
+        updateData.sent_at = new Date().toISOString();
+        updateData.paid_at = null;
+      } else {
+        updateData.sent_at = null;
+        updateData.paid_at = null;
+      }
+
+      const { error } = await supabase
+        .from('invoices')
+        .update(updateData)
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Status Updated',
+        description: `Invoice status changed to ${newStatus}`
+      });
+
+      await loadInvoices();
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  }
+
   const filteredInvoices = invoices.filter(invoice =>
     invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.clinics.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -251,7 +292,22 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
                   <TableCell>{format(new Date(invoice.created_at), 'dd MMM yyyy')}</TableCell>
                   <TableCell>{invoice.case_ids?.length || 0}</TableCell>
                   <TableCell>£{Number(invoice.amount).toFixed(2)}</TableCell>
-                  <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                  <TableCell>
+                    <Select 
+                      value={invoice.status} 
+                      onValueChange={(value) => changeInvoiceStatus(invoice.id, value)}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="overdue">Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button
