@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Calendar, Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { FileText, Download, Calendar, Loader2, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { InvoicePDF } from '@/components/InvoicePDF';
 import { pdf } from '@react-pdf/renderer';
+import JSZip from 'jszip';
 
 interface MonthlyBillingData {
   clinic_id: string;
@@ -31,6 +33,8 @@ interface MonthlyBillingData {
 export default function MonthlyInvoicing() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
   const [billingData, setBillingData] = useState<MonthlyBillingData[]>([]);
   
   // Default to current month
@@ -157,7 +161,7 @@ export default function MonthlyInvoicing() {
           total: c.price
         })),
         subtotal: clinic.total_amount,
-        vat: 0, // Update if VAT applies
+        vat: 0,
         total: clinic.total_amount
       };
 
@@ -180,6 +184,93 @@ export default function MonthlyInvoicing() {
       toast.error('Failed to generate invoice');
     } finally {
       setGenerating(null);
+    }
+  }
+
+  async function generateBulkInvoices() {
+    if (billingData.length === 0) {
+      toast.error('No clinics to generate invoices for');
+      return;
+    }
+
+    setBulkGenerating(true);
+    setBulkProgress(0);
+
+    try {
+      const zip = new JSZip();
+      const invoicesFolder = zip.folder('invoices');
+      
+      if (!invoicesFolder) throw new Error('Failed to create zip folder');
+
+      for (let i = 0; i < billingData.length; i++) {
+        const clinic = billingData[i];
+        
+        try {
+          // Generate invoice number
+          const { data: invoiceNum, error: invoiceError } = await supabase
+            .rpc('generate_invoice_number');
+
+          if (invoiceError) throw invoiceError;
+
+          const invoiceData = {
+            invoice_number: invoiceNum,
+            invoice_date: new Date().toLocaleDateString('en-GB'),
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB'),
+            clinic_name: clinic.clinic_name,
+            clinic_address: clinic.clinic_address || '',
+            clinic_email: clinic.clinic_email,
+            period_start: new Date(startDate).toLocaleDateString('en-GB'),
+            period_end: new Date(endDate).toLocaleDateString('en-GB'),
+            line_items: clinic.cases.map(c => ({
+              description: `CBCT Report - ${c.patient_name}`,
+              case_ref: c.folder_name,
+              date: new Date(c.completed_at).toLocaleDateString('en-GB'),
+              field_of_view: c.field_of_view,
+              quantity: 1,
+              unit_price: c.price,
+              total: c.price
+            })),
+            subtotal: clinic.total_amount,
+            vat: 0,
+            total: clinic.total_amount
+          };
+
+          // Generate PDF
+          const blob = await pdf(<InvoicePDF invoice={invoiceData} />).toBlob();
+          
+          // Add to zip
+          const fileName = `Invoice-${invoiceNum}-${clinic.clinic_name.replace(/\s+/g, '-')}.pdf`;
+          invoicesFolder.file(fileName, blob);
+
+          // Update progress
+          setBulkProgress(Math.round(((i + 1) / billingData.length) * 100));
+        } catch (error) {
+          console.error(`Error generating invoice for ${clinic.clinic_name}:`, error);
+          toast.error(`Failed to generate invoice for ${clinic.clinic_name}`);
+        }
+      }
+
+      // Generate zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Download zip
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const monthYear = new Date(startDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
+      link.download = `Monthly-Invoices-${monthYear.replace(/\s+/g, '-')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Generated ${billingData.length} invoices successfully`);
+    } catch (error) {
+      console.error('Error generating bulk invoices:', error);
+      toast.error('Failed to generate bulk invoices');
+    } finally {
+      setBulkGenerating(false);
+      setBulkProgress(0);
     }
   }
 
@@ -258,11 +349,50 @@ export default function MonthlyInvoicing() {
           </CardContent>
         </Card>
 
+        {/* Bulk Generation Progress */}
+        {bulkGenerating && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Generating Invoices...</CardTitle>
+              <CardDescription>Please wait while we generate all invoices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Progress value={bulkProgress} className="mb-2" />
+              <p className="text-sm text-muted-foreground text-center">
+                {bulkProgress}% complete
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Billing Data by Clinic */}
         <Card>
           <CardHeader>
-            <CardTitle>Clinics & Reports</CardTitle>
-            <CardDescription>Itemized reports for each clinic in selected period</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Clinics & Reports</CardTitle>
+                <CardDescription>Itemized reports for each clinic in selected period</CardDescription>
+              </div>
+              {billingData.length > 0 && (
+                <Button
+                  onClick={generateBulkInvoices}
+                  disabled={bulkGenerating}
+                  size="lg"
+                >
+                  {bulkGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Package className="mr-2 h-4 w-4" />
+                      Generate All Invoices
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
