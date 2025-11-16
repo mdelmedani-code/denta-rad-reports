@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, Mail, Eye, Search, Filter, FileText, Loader2, CheckCircle } from 'lucide-react';
+import { Download, Mail, Eye, Search, Filter, FileText, Loader2, CheckCircle, Bell } from 'lucide-react';
 import { toast } from 'sonner';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface Invoice {
   id: string;
@@ -45,6 +46,10 @@ export default function InvoiceViewer() {
   const [newStatus, setNewStatus] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [reminderInvoice, setReminderInvoice] = useState<Invoice | null>(null);
+  const [reminderType, setReminderType] = useState<'pre_due' | 'overdue'>('pre_due');
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
     loadInvoices();
@@ -110,6 +115,55 @@ export default function InvoiceViewer() {
     } catch (error) {
       console.error('Error downloading invoice:', error);
       toast.error('Failed to download invoice');
+    }
+  }
+
+  function openReminderDialog(invoice: Invoice) {
+    setReminderInvoice(invoice);
+    
+    // Auto-detect reminder type based on due date
+    const dueDate = new Date(invoice.due_date);
+    const today = new Date();
+    const isOverdue = dueDate < today;
+    
+    setReminderType(isOverdue ? 'overdue' : 'pre_due');
+    setReminderDialogOpen(true);
+  }
+
+  async function sendReminderEmail() {
+    if (!reminderInvoice) return;
+    
+    setSendingReminder(true);
+    try {
+      const dueDate = new Date(reminderInvoice.due_date);
+      const today = new Date();
+      const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const daysOverdue = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      const { error } = await supabase.functions.invoke('send-invoice-reminder', {
+        body: {
+          invoice_id: reminderInvoice.id,
+          clinic_email: reminderInvoice.clinics.contact_email,
+          clinic_name: reminderInvoice.clinics.name,
+          invoice_number: reminderInvoice.invoice_number,
+          amount: reminderInvoice.amount,
+          due_date: reminderInvoice.due_date,
+          reminder_type: reminderType,
+          days_until_due: reminderType === 'pre_due' ? daysUntilDue : undefined,
+          days_overdue: reminderType === 'overdue' ? daysOverdue : undefined
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success(`${reminderType === 'pre_due' ? 'Payment reminder' : 'Overdue notice'} sent to ${reminderInvoice.clinics.contact_email}`);
+      setReminderDialogOpen(false);
+      setReminderInvoice(null);
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      toast.error('Failed to send reminder email');
+    } finally {
+      setSendingReminder(false);
     }
   }
 
@@ -381,6 +435,14 @@ export default function InvoiceViewer() {
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => openReminderDialog(invoice)}
+                            title="Send payment reminder"
+                          >
+                            <Bell className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
                             onClick={() => {
                               setSelectedInvoice(invoice);
                               setNewStatus(invoice.status);
@@ -443,6 +505,60 @@ export default function InvoiceViewer() {
               <Button onClick={updateInvoiceStatus}>
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Update Status
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Reminder Dialog */}
+        <Dialog open={reminderDialogOpen} onOpenChange={setReminderDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Payment Reminder</DialogTitle>
+              <DialogDescription>
+                Send a payment reminder email to {reminderInvoice?.clinics.name} ({reminderInvoice?.clinics.contact_email})
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Reminder Type</Label>
+                <RadioGroup value={reminderType} onValueChange={(value) => setReminderType(value as 'pre_due' | 'overdue')}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pre_due" id="pre_due" />
+                    <Label htmlFor="pre_due" className="font-normal cursor-pointer">
+                      Pre-Due Reminder - Friendly reminder before due date
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="overdue" id="overdue" />
+                    <Label htmlFor="overdue" className="font-normal cursor-pointer">
+                      Overdue Notice - Urgent payment request for overdue invoice
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              <div className="bg-muted p-3 rounded-md text-sm">
+                <div><strong>Invoice:</strong> {reminderInvoice?.invoice_number}</div>
+                <div><strong>Amount:</strong> £{reminderInvoice?.amount.toFixed(2)}</div>
+                <div><strong>Due Date:</strong> {reminderInvoice && new Date(reminderInvoice.due_date).toLocaleDateString('en-GB')}</div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReminderDialogOpen(false)} disabled={sendingReminder}>
+                Cancel
+              </Button>
+              <Button onClick={sendReminderEmail} disabled={sendingReminder}>
+                {sendingReminder ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Bell className="mr-2 h-4 w-4" />
+                    Send Reminder
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
