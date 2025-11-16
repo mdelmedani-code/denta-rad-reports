@@ -360,7 +360,11 @@ export default function ReporterDashboard() {
                       {caseData.folder_name && (
                         <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
                       )}
-                      Patient ID: {caseData.patient_id} | DOB: {caseData.patient_dob} | Uploaded: {new Date(caseData.created_at).toLocaleDateString()}
+                      <div className="flex flex-col sm:flex-row sm:gap-4 gap-1 text-xs">
+                        <span>Patient ID: {caseData.patient_id}</span>
+                        <span>DOB: {caseData.patient_dob}</span>
+                        <span className="font-semibold text-primary">Uploaded: {new Date(caseData.created_at).toLocaleDateString('en-GB')}</span>
+                      </div>
                     </CardDescription>
                   </div>
                   <CaseStatusBadge status={caseData.status} />
@@ -441,7 +445,10 @@ export default function ReporterDashboard() {
                       {caseData.folder_name && (
                         <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
                       )}
-                      Completed: {caseData.completed_at ? new Date(caseData.completed_at).toLocaleDateString() : 'Unknown'}
+                      <div className="flex flex-col sm:flex-row sm:gap-4 gap-1 text-xs">
+                        <span className="font-semibold text-primary">Uploaded: {new Date(caseData.created_at).toLocaleDateString('en-GB')}</span>
+                        <span className="font-semibold text-green-600">Completed: {caseData.completed_at ? new Date(caseData.completed_at).toLocaleDateString('en-GB') : 'Unknown'}</span>
+                      </div>
                     </CardDescription>
                   </div>
                   <CaseStatusBadge status={caseData.status} />

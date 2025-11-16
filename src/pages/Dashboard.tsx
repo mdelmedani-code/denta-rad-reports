@@ -20,6 +20,7 @@ interface Case {
   patient_dob?: string;
   patient_internal_id?: string;
   upload_date: string;
+  completed_at?: string;
   clinical_question: string;
   status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
   urgency: 'standard' | 'urgent';
@@ -327,6 +328,7 @@ const Dashboard = () => {
                             <tr className="border-b">
                               <th className="text-left py-8 px-2">Patient Name</th>
                               <th className="text-left py-8 px-2">Upload Date</th>
+                              <th className="text-left py-8 px-2">Completion Date</th>
                               <th className="text-left py-8 px-2">Clinical Question</th>
                               <th className="text-left py-8 px-2">Urgency</th>
                               <th className="text-left py-8 px-2">FOV</th>
@@ -340,7 +342,16 @@ const Dashboard = () => {
                         <tr key={case_.id} className="border-b hover:bg-muted/50 transition-colors">
                           <td className="py-8 px-2 font-medium">{case_.patient_name}</td>
                           <td className="py-8 px-2">
-                            {new Date(case_.upload_date).toLocaleDateString()}
+                            <span className="text-sm">{new Date(case_.upload_date).toLocaleDateString('en-GB')}</span>
+                          </td>
+                          <td className="py-8 px-2">
+                            {case_.completed_at ? (
+                              <span className="text-sm font-semibold text-green-600">
+                                {new Date(case_.completed_at).toLocaleDateString('en-GB')}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
                           </td>
                           <td className="py-8 px-2 max-w-xs">
                             <div className="line-clamp-2">
@@ -420,9 +431,14 @@ const Dashboard = () => {
                           <div className="flex justify-between items-start gap-4">
                             <div className="flex-1">
                               <h3 className="font-semibold text-lg mb-1">{case_.patient_name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(case_.upload_date).toLocaleDateString()}
-                              </p>
+                              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                                <span>Uploaded: {new Date(case_.upload_date).toLocaleDateString('en-GB')}</span>
+                                {case_.completed_at && (
+                                  <span className="font-semibold text-green-600">
+                                    Completed: {new Date(case_.completed_at).toLocaleDateString('en-GB')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <Badge className={getStatusColor(case_.status)}>
                               {formatStatus(case_.status)}
