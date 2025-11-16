@@ -158,7 +158,8 @@ export default function MonthlyInvoicing() {
           field_of_view: c.field_of_view,
           quantity: 1,
           unit_price: c.price,
-          total: c.price
+          total: c.price,
+          case_id: c.id
         })),
         subtotal: clinic.total_amount,
         vat: 0,
@@ -168,6 +169,43 @@ export default function MonthlyInvoicing() {
       // Generate PDF
       const blob = await pdf(<InvoicePDF invoice={invoiceData} />).toBlob();
       
+      // Upload to storage
+      const fileName = `${clinic.clinic_id}/Invoice-${invoiceNum}.pdf`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('invoices')
+        .upload(fileName, blob, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('invoices')
+        .getPublicUrl(fileName);
+
+      // Save invoice to database
+      const { error: dbError } = await supabase
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNum,
+          clinic_id: clinic.clinic_id,
+          case_id: clinic.cases[0]?.id || null, // First case for legacy compatibility
+          case_ids: clinic.cases.map(c => c.id),
+          amount: clinic.total_amount,
+          currency: 'GBP',
+          line_items: invoiceData.line_items,
+          status: 'draft',
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          period_start: startDate,
+          period_end: endDate,
+          pdf_url: publicUrl,
+          pdf_storage_path: fileName
+        });
+
+      if (dbError) throw dbError;
+
       // Download PDF
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -178,7 +216,7 @@ export default function MonthlyInvoicing() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success(`Invoice generated for ${clinic.clinic_name}`);
+      toast.success(`Invoice ${invoiceNum} generated and saved`);
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast.error('Failed to generate invoice');
@@ -201,6 +239,8 @@ export default function MonthlyInvoicing() {
       const invoicesFolder = zip.folder('invoices');
       
       if (!invoicesFolder) throw new Error('Failed to create zip folder');
+
+      const generatedInvoices: any[] = [];
 
       for (let i = 0; i < billingData.length; i++) {
         const clinic = billingData[i];
@@ -228,7 +268,8 @@ export default function MonthlyInvoicing() {
               field_of_view: c.field_of_view,
               quantity: 1,
               unit_price: c.price,
-              total: c.price
+              total: c.price,
+              case_id: c.id
             })),
             subtotal: clinic.total_amount,
             vat: 0,
@@ -238,15 +279,60 @@ export default function MonthlyInvoicing() {
           // Generate PDF
           const blob = await pdf(<InvoicePDF invoice={invoiceData} />).toBlob();
           
-          // Add to zip
-          const fileName = `Invoice-${invoiceNum}-${clinic.clinic_name.replace(/\s+/g, '-')}.pdf`;
-          invoicesFolder.file(fileName, blob);
+          // Upload to storage
+          const storageFileName = `${clinic.clinic_id}/Invoice-${invoiceNum}.pdf`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('invoices')
+            .upload(storageFileName, blob, {
+              contentType: 'application/pdf',
+              upsert: false
+            });
+
+          if (uploadError) throw uploadError;
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('invoices')
+            .getPublicUrl(storageFileName);
+
+          // Save to database
+          generatedInvoices.push({
+            invoice_number: invoiceNum,
+            clinic_id: clinic.clinic_id,
+            case_id: clinic.cases[0]?.id || null,
+            case_ids: clinic.cases.map(c => c.id),
+            amount: clinic.total_amount,
+            currency: 'GBP',
+            line_items: invoiceData.line_items,
+            status: 'draft',
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            period_start: startDate,
+            period_end: endDate,
+            pdf_url: publicUrl,
+            pdf_storage_path: storageFileName
+          });
+
+          // Add to zip for download
+          const zipFileName = `Invoice-${invoiceNum}-${clinic.clinic_name.replace(/\s+/g, '-')}.pdf`;
+          invoicesFolder.file(zipFileName, blob);
 
           // Update progress
           setBulkProgress(Math.round(((i + 1) / billingData.length) * 100));
         } catch (error) {
           console.error(`Error generating invoice for ${clinic.clinic_name}:`, error);
           toast.error(`Failed to generate invoice for ${clinic.clinic_name}`);
+        }
+      }
+
+      // Bulk insert all invoices into database
+      if (generatedInvoices.length > 0) {
+        const { error: bulkInsertError } = await supabase
+          .from('invoices')
+          .insert(generatedInvoices);
+
+        if (bulkInsertError) {
+          console.error('Error saving invoices to database:', bulkInsertError);
+          toast.error('Invoices generated but failed to save some to database');
         }
       }
 
@@ -264,7 +350,7 @@ export default function MonthlyInvoicing() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success(`Generated ${billingData.length} invoices successfully`);
+      toast.success(`Generated and saved ${generatedInvoices.length} invoices successfully`);
     } catch (error) {
       console.error('Error generating bulk invoices:', error);
       toast.error('Failed to generate bulk invoices');
