@@ -239,6 +239,7 @@ interface ReportImage {
 
 interface ReportData {
   caseData: {
+    id?: string;
     patient_name: string;
     patient_dob: string;
     patient_id: string;
@@ -254,12 +255,15 @@ interface ReportData {
     };
   };
   reportData: {
+    id?: string;
     clinical_history?: string;
     technique?: string;
     findings?: string;
     impression?: string;
     signatory_name?: string;
+    signatory_title?: string;
     signatory_credentials?: string;
+    signature_statement?: string;
     signed_at?: string;
     is_signed?: boolean;
     version?: number;
@@ -484,28 +488,75 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
           </View>
         )}
 
-        {/* Signature Section */}
+        {/* Signature and Audit Trail Section */}
         {reportData.is_signed && reportData.signatory_name && reportData.signed_at && (
           <View style={styles.signatureSection}>
             <Text style={styles.endOfReport}>***End of Report***</Text>
-            <Text style={[styles.doctorInfo, styles.doctorName]}>
-              {reportData.signatory_name}
-            </Text>
-            {reportData.signatory_credentials && (
-              <Text style={styles.doctorInfo}>
-                ({reportData.signatory_credentials})
+            
+            {/* Signature Block */}
+            <View style={{ marginTop: 20, padding: 15, backgroundColor: '#f8f9fa', borderRadius: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, color: '#1a1a1a' }}>
+                Electronic Signature
               </Text>
-            )}
-            <Text style={styles.reportDate}>
-              Report Date: {new Date(reportData.signed_at).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })} - {new Date(reportData.signed_at).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
+              
+              <Text style={[styles.doctorInfo, styles.doctorName, { marginBottom: 3 }]}>
+                {reportData.signatory_name}
+              </Text>
+              
+              {reportData.signatory_title && (
+                <Text style={[styles.doctorInfo, { marginBottom: 2, fontStyle: 'italic' }]}>
+                  {reportData.signatory_title}
+                </Text>
+              )}
+              
+              {reportData.signatory_credentials && (
+                <Text style={[styles.doctorInfo, { marginBottom: 8 }]}>
+                  {reportData.signatory_credentials}
+                </Text>
+              )}
+              
+              <View style={{ borderTop: '1pt solid #dee2e6', paddingTop: 8, marginTop: 8 }}>
+                <Text style={[styles.reportDate, { marginBottom: 3 }]}>
+                  Signed: {new Date(reportData.signed_at).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })} at {new Date(reportData.signed_at).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+                
+                {reportData.signature_statement && (
+                  <Text style={{ fontSize: 8, color: '#6c757d', marginTop: 5, fontStyle: 'italic' }}>
+                    {reportData.signature_statement}
+                  </Text>
+                )}
+              </View>
+            </View>
+            
+            {/* Audit Trail */}
+            <View style={{ marginTop: 15, padding: 12, backgroundColor: '#ffffff', border: '1pt solid #dee2e6', borderRadius: 4 }}>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', marginBottom: 8, color: '#495057' }}>
+                Audit Trail
+              </Text>
+              <View style={{ fontSize: 8, color: '#6c757d' }}>
+                <Text style={{ marginBottom: 2 }}>
+                  Report ID: {reportData.id}
+                </Text>
+                <Text style={{ marginBottom: 2 }}>
+                  Case ID: {caseData.id}
+                </Text>
+                <Text style={{ marginBottom: 2 }}>
+                  Generated: {new Date().toLocaleDateString('en-GB')} at {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                {reportData.version && reportData.version > 1 && (
+                  <Text style={{ marginBottom: 2 }}>
+                    Report Version: {reportData.version}
+                  </Text>
+                )}
+              </View>
+            </View>
           </View>
         )}
 
