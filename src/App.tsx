@@ -31,6 +31,7 @@ import CreateInvoicePage from "./pages/admin/CreateInvoicePage";
 import DataRetentionPage from "./pages/admin/DataRetentionPage";
 import PDFTemplateSettings from "./pages/admin/PDFTemplateSettings";
 import TemplateEditor from "./pages/TemplateEditor";
+import MonthlyInvoicing from "./pages/admin/MonthlyInvoicing";
 import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -109,6 +110,14 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <CreateInvoicePage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/monthly-invoicing" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <MonthlyInvoicing />
                 </AppLayout>
               </ProtectedRoute>
             } />
