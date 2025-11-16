@@ -253,42 +253,60 @@ export type Database = {
         Row: {
           amount: number
           case_id: string
+          case_ids: string[] | null
           clinic_id: string
           created_at: string
           currency: string
           due_date: string | null
           exported_at: string | null
           id: string
+          invoice_number: string | null
           line_items: Json
           paid_at: string | null
+          pdf_storage_path: string | null
+          pdf_url: string | null
+          period_end: string | null
+          period_start: string | null
           status: string
           stripe_invoice_id: string | null
         }
         Insert: {
           amount: number
           case_id: string
+          case_ids?: string[] | null
           clinic_id: string
           created_at?: string
           currency?: string
           due_date?: string | null
           exported_at?: string | null
           id?: string
+          invoice_number?: string | null
           line_items?: Json
           paid_at?: string | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          period_end?: string | null
+          period_start?: string | null
           status?: string
           stripe_invoice_id?: string | null
         }
         Update: {
           amount?: number
           case_id?: string
+          case_ids?: string[] | null
           clinic_id?: string
           created_at?: string
           currency?: string
           due_date?: string | null
           exported_at?: string | null
           id?: string
+          invoice_number?: string | null
           line_items?: Json
           paid_at?: string | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          period_end?: string | null
+          period_start?: string | null
           status?: string
           stripe_invoice_id?: string | null
         }
