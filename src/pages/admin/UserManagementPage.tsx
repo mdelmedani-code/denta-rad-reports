@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, UserPlus, KeyRound, Lock, Unlock, Trash2 } from "lucide-react";
+import { Shield, UserPlus, KeyRound, Lock, Unlock, Trash2, FileSignature } from "lucide-react";
 import { logAudit } from "@/lib/auditLog";
 
 interface User {
@@ -52,6 +53,9 @@ interface User {
   clinic_id?: string;
   clinic_name?: string;
   is_locked?: boolean;
+  professional_title?: string;
+  credentials?: string;
+  signature_statement?: string;
 }
 
 export default function UserManagementPage() {
@@ -61,10 +65,14 @@ export default function UserManagementPage() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
+  const [isEditCredentialsOpen, setIsEditCredentialsOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState("clinic");
   const [newPassword, setNewPassword] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editCredentials, setEditCredentials] = useState("");
+  const [editSignature, setEditSignature] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -121,6 +129,9 @@ export default function UserManagementPage() {
         .select(`
           id,
           clinic_id,
+          professional_title,
+          credentials,
+          signature_statement,
           clinics (name)
         `);
 
@@ -160,6 +171,9 @@ export default function UserManagementPage() {
           clinic_id: profile?.clinic_id,
           clinic_name: profile?.clinics?.name,
           is_locked: lockedEmails.has(user.email || ""),
+          professional_title: profile?.professional_title,
+          credentials: profile?.credentials,
+          signature_statement: profile?.signature_statement,
         };
       });
 
@@ -348,9 +362,55 @@ export default function UserManagementPage() {
 
       toast({
         title: "Success",
-        description: `Account ${email} unlocked.`,
+        description: `Account ${email} has been unlocked.`,
       });
 
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditCredentials = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          professional_title: editTitle || null,
+          credentials: editCredentials || null,
+          signature_statement: editSignature || null,
+        })
+        .eq("id", selectedUser.id);
+
+      if (error) throw error;
+
+      await logAudit({
+        action: "credentials_updated",
+        resourceType: "user_profile",
+        resourceId: selectedUser.id,
+        details: {
+          email: selectedUser.email,
+          has_title: !!editTitle,
+          has_credentials: !!editCredentials,
+        },
+      });
+
+      toast({
+        title: "Success",
+        description: "Professional credentials updated successfully.",
+      });
+
+      setIsEditCredentialsOpen(false);
+      setSelectedUser(null);
+      setEditTitle("");
+      setEditCredentials("");
+      setEditSignature("");
       fetchUsers();
     } catch (error: any) {
       toast({
@@ -557,6 +617,21 @@ export default function UserManagementPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-2 justify-end">
+                    {(user.role === 'reporter' || user.role === 'admin') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setEditTitle(user.professional_title || "");
+                          setEditCredentials(user.credentials || "");
+                          setEditSignature(user.signature_statement || "");
+                          setIsEditCredentialsOpen(true);
+                        }}
+                      >
+                        <FileSignature className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -633,6 +708,54 @@ export default function UserManagementPage() {
               Cancel
             </Button>
             <Button onClick={handleResetPassword}>Reset Password</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Credentials Dialog */}
+      <Dialog open={isEditCredentialsOpen} onOpenChange={setIsEditCredentialsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Professional Credentials</DialogTitle>
+            <DialogDescription>
+              Update professional credentials for {selectedUser?.email}. These will appear on PDF reports.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="title">Professional Title</Label>
+              <Input
+                id="title"
+                placeholder="e.g., Specialist in Oral & Maxillofacial Radiology"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="credentials">Credentials</Label>
+              <Input
+                id="credentials"
+                placeholder="e.g., BDS, FDSRCS, MSc, FRCR"
+                value={editCredentials}
+                onChange={(e) => setEditCredentials(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="signature">Signature Statement</Label>
+              <Textarea
+                id="signature"
+                placeholder="e.g., Electronically signed and verified"
+                value={editSignature}
+                onChange={(e) => setEditSignature(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditCredentialsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditCredentials}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

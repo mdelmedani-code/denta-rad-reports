@@ -20,6 +20,7 @@ export type AuditAction =
   | 'role_changed'
   | 'password_reset'
   | 'account_unlocked'
+  | 'credentials_updated'
   | 'invoice_created'
   | 'invoice_updated'
   | 'invoice_sent'
@@ -32,6 +33,7 @@ export type ResourceType =
   | 'dicom'
   | 'pdf'
   | 'user_account'
+  | 'user_profile'
   | 'invoice';
 
 interface AuditLogParams {
