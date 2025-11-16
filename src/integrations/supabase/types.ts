@@ -263,11 +263,14 @@ export type Database = {
           invoice_number: string | null
           line_items: Json
           paid_at: string | null
+          payment_method: string | null
           pdf_storage_path: string | null
           pdf_url: string | null
           period_end: string | null
           period_start: string | null
+          sent_at: string | null
           status: string
+          status_updated_at: string | null
           stripe_invoice_id: string | null
         }
         Insert: {
@@ -283,11 +286,14 @@ export type Database = {
           invoice_number?: string | null
           line_items?: Json
           paid_at?: string | null
+          payment_method?: string | null
           pdf_storage_path?: string | null
           pdf_url?: string | null
           period_end?: string | null
           period_start?: string | null
+          sent_at?: string | null
           status?: string
+          status_updated_at?: string | null
           stripe_invoice_id?: string | null
         }
         Update: {
@@ -303,11 +309,14 @@ export type Database = {
           invoice_number?: string | null
           line_items?: Json
           paid_at?: string | null
+          payment_method?: string | null
           pdf_storage_path?: string | null
           pdf_url?: string | null
           period_end?: string | null
           period_start?: string | null
+          sent_at?: string | null
           status?: string
+          status_updated_at?: string | null
           stripe_invoice_id?: string | null
         }
         Relationships: [
@@ -1371,6 +1380,7 @@ export type Database = {
           table_name: string
         }[]
       }
+      update_overdue_invoices: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "clinic" | "reporter"
@@ -1380,6 +1390,7 @@ export type Database = {
         | "report_ready"
         | "awaiting_payment"
       field_of_view: "up_to_5x5" | "up_to_8x5" | "up_to_8x8" | "over_8x8"
+      invoice_status: "draft" | "sent" | "paid" | "overdue"
       urgency_level: "standard" | "urgent"
       user_role: "clinic" | "admin" | "reporter"
     }
@@ -1517,6 +1528,7 @@ export const Constants = {
         "awaiting_payment",
       ],
       field_of_view: ["up_to_5x5", "up_to_8x5", "up_to_8x8", "over_8x8"],
+      invoice_status: ["draft", "sent", "paid", "overdue"],
       urgency_level: ["standard", "urgent"],
       user_role: ["clinic", "admin", "reporter"],
     },
