@@ -26,13 +26,10 @@ import PrivacyNotice from "./pages/PrivacyNotice";
 import AuditLogs from "./pages/AuditLogs";
 import SecurityDashboard from "./pages/SecurityDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
-import InvoicingPage from "./pages/admin/InvoicingPage";
-import CreateInvoicePage from "./pages/admin/CreateInvoicePage";
 import DataRetentionPage from "./pages/admin/DataRetentionPage";
 import PDFTemplateSettings from "./pages/admin/PDFTemplateSettings";
 import TemplateEditor from "./pages/TemplateEditor";
-import MonthlyInvoicing from "./pages/admin/MonthlyInvoicing";
-import InvoiceViewer from "./pages/admin/InvoiceViewer";
+import UnifiedInvoicing from "./pages/admin/UnifiedInvoicing";
 import EmailTemplateSettings from "./pages/admin/EmailTemplateSettings";
 import { AppLayout } from "./components/AppLayout";
 
@@ -100,42 +97,10 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            <Route path="/admin/invoices" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <InvoicingPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/invoice-viewer" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <InvoiceViewer />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
             <Route path="/admin/email-templates" element={
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <EmailTemplateSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/invoices/create" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <CreateInvoicePage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/monthly-invoicing" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <MonthlyInvoicing />
                 </AppLayout>
               </ProtectedRoute>
             } />
