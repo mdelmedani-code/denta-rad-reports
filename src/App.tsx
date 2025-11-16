@@ -129,6 +129,21 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Unified Invoicing */}
+            <Route path="/admin/invoicing" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <UnifiedInvoicing />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Redirect old invoice routes to unified page */}
+            <Route path="/admin/monthly-invoicing" element={<Navigate to="/admin/invoicing" replace />} />
+            <Route path="/admin/invoicing-page" element={<Navigate to="/admin/invoicing" replace />} />
+            <Route path="/admin/invoice-viewer" element={<Navigate to="/admin/invoicing" replace />} />
+            <Route path="/admin/billing-export" element={<Navigate to="/admin/invoicing" replace />} />
+            
             {/* Unified dashboard for reporter/admin */}
             <Route path="/reporter" element={
               <ProtectedRoute requiredRole="reporter">
