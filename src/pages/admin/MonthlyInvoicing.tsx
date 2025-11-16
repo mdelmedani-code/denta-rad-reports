@@ -216,7 +216,34 @@ export default function MonthlyInvoicing() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success(`Invoice ${invoiceNum} generated and saved`);
+      // Offer to send email
+      const sendEmail = window.confirm(
+        `Invoice generated successfully!\n\nWould you like to email this invoice to ${clinic.clinic_name} (${clinic.clinic_email})?`
+      );
+
+      if (sendEmail) {
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-invoice-email', {
+            body: {
+              invoice_id: (await supabase.from('invoices').select('id').eq('invoice_number', invoiceNum).single()).data?.id,
+              clinic_email: clinic.clinic_email,
+              clinic_name: clinic.clinic_name,
+              invoice_number: invoiceNum,
+              pdf_storage_path: fileName,
+              amount: clinic.total_amount,
+              due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            }
+          });
+
+          if (emailError) throw emailError;
+          toast.success(`Invoice emailed to ${clinic.clinic_email}`);
+        } catch (error) {
+          console.error('Error sending email:', error);
+          toast.error('Invoice saved but failed to send email');
+        }
+      } else {
+        toast.success(`Invoice ${invoiceNum} generated and saved`);
+      }
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast.error('Failed to generate invoice');
