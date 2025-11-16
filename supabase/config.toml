@@ -6,6 +6,12 @@ verify_jwt = false
 [functions.send-notification]
 verify_jwt = true
 
+[functions.send-invoice-reminder]
+verify_jwt = false
+
+[functions.process-invoice-reminders]
+verify_jwt = false
+
 [functions.live-transcription]
 verify_jwt = false
 
