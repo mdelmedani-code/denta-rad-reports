@@ -39,6 +39,40 @@ const handler = async (req: Request): Promise<Response> => {
       due_date
     }: SendInvoiceRequest = await req.json();
 
+    // Fetch email template from database
+    const { data: template, error: templateError } = await supabase
+      .from('email_templates')
+      .select('subject, html_content')
+      .eq('template_key', 'invoice_email')
+      .eq('is_active', true)
+      .single();
+
+    if (templateError || !template) {
+      console.error('Failed to fetch email template:', templateError);
+      throw new Error('Email template not found');
+    }
+
+    // Replace template variables
+    const variables: Record<string, string> = {
+      invoice_number,
+      clinic_name,
+      amount: amount.toFixed(2),
+      due_date: new Date(due_date).toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })
+    };
+
+    let emailSubject = template.subject;
+    let emailHtml = template.html_content;
+
+    Object.keys(variables).forEach(key => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      emailSubject = emailSubject.replace(regex, variables[key]);
+      emailHtml = emailHtml.replace(regex, variables[key]);
+    });
+
     // Get signed URL for PDF (valid for 1 hour)
     const { data: signedUrlData, error: urlError } = await supabase.storage
       .from('invoices')
@@ -59,49 +93,8 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "DentaRad <invoices@dentarad.com>",
       to: [clinic_email],
-      subject: `Invoice ${invoice_number} from DentaRad`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #2563eb;">Invoice ${invoice_number}</h1>
-          
-          <p>Dear ${clinic_name},</p>
-          
-          <p>Thank you for using DentaRad's CBCT reporting services. Please find your invoice attached to this email.</p>
-          
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h2 style="margin-top: 0; color: #1e293b;">Invoice Summary</h2>
-            <table style="width: 100%;">
-              <tr>
-                <td><strong>Invoice Number:</strong></td>
-                <td>${invoice_number}</td>
-              </tr>
-              <tr>
-                <td><strong>Amount Due:</strong></td>
-                <td style="font-size: 18px; color: #2563eb;"><strong>£${amount.toFixed(2)}</strong></td>
-              </tr>
-              <tr>
-                <td><strong>Due Date:</strong></td>
-                <td>${new Date(due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-              </tr>
-            </table>
-          </div>
-          
-          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #92400e;">Payment Instructions</h3>
-            <p style="margin: 5px 0;">Please make payment within 30 days to avoid late fees.</p>
-            <p style="margin: 5px 0;">For bank transfer details or payment queries, please contact us at <a href="mailto:accounts@dentarad.com">accounts@dentarad.com</a></p>
-          </div>
-          
-          <p>If you have any questions about this invoice, please don't hesitate to contact us.</p>
-          
-          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px;">
-            <p><strong>DentaRad Limited</strong><br>
-            Professional CBCT Reporting Services<br>
-            Email: info@dentarad.com<br>
-            Web: www.dentarad.com</p>
-          </div>
-        </div>
-      `,
+      subject: emailSubject,
+      html: emailHtml,
       attachments: [
         {
           filename: `Invoice-${invoice_number}.pdf`,
