@@ -15,7 +15,8 @@ import {
   Receipt,
   Database,
   FileCog,
-  Palette
+  Palette,
+  Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,6 +103,7 @@ export function AppSidebar() {
     { title: "Data Retention", url: "/admin/data-retention", icon: Database },
     { title: "PDF Template", url: "/admin/pdf-template", icon: FileCog },
     { title: "Template Editor", url: "/admin/template-editor", icon: Palette },
+    { title: "Email Templates", url: "/admin/email-templates", icon: Mail },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
   ];

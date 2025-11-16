@@ -33,6 +33,7 @@ import PDFTemplateSettings from "./pages/admin/PDFTemplateSettings";
 import TemplateEditor from "./pages/TemplateEditor";
 import MonthlyInvoicing from "./pages/admin/MonthlyInvoicing";
 import InvoiceViewer from "./pages/admin/InvoiceViewer";
+import EmailTemplateSettings from "./pages/admin/EmailTemplateSettings";
 import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -111,6 +112,14 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <InvoiceViewer />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/email-templates" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <EmailTemplateSettings />
                 </AppLayout>
               </ProtectedRoute>
             } />
