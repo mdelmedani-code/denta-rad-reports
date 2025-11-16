@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { FileText, Download, Calendar, Loader2, Package } from 'lucide-react';
+import { FileText, Download, Calendar, Loader2, Package, Eye, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { InvoicePDF } from '@/components/InvoicePDF';
 import { pdf } from '@react-pdf/renderer';
@@ -31,11 +32,13 @@ interface MonthlyBillingData {
 }
 
 export default function MonthlyInvoicing() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [bulkProgress, setBulkProgress] = useState(0);
   const [billingData, setBillingData] = useState<MonthlyBillingData[]>([]);
+  const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
   
   // Default to current month
   const now = new Date();
@@ -47,7 +50,31 @@ export default function MonthlyInvoicing() {
 
   useEffect(() => {
     loadMonthlyBilling();
+    loadRecentInvoices();
   }, [startDate, endDate]);
+
+  async function loadRecentInvoices() {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          clinics (
+            name,
+            contact_email
+          )
+        `)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setRecentInvoices(data || []);
+    } catch (error) {
+      console.error('Error loading recent invoices:', error);
+    }
+  }
 
   async function loadMonthlyBilling() {
     setLoading(true);
@@ -378,6 +405,7 @@ export default function MonthlyInvoicing() {
       URL.revokeObjectURL(url);
 
       toast.success(`Generated and saved ${generatedInvoices.length} invoices successfully`);
+      loadRecentInvoices(); // Refresh the recent invoices list
     } catch (error) {
       console.error('Error generating bulk invoices:', error);
       toast.error('Failed to generate bulk invoices');
@@ -474,6 +502,59 @@ export default function MonthlyInvoicing() {
               <p className="text-sm text-muted-foreground text-center">
                 {bulkProgress}% complete
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Invoices for this Period */}
+        {recentInvoices.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Recent Invoices</CardTitle>
+                  <CardDescription>Invoices generated for this period</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => navigate('/admin/invoices')}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View All Invoices
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Clinic</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Cases</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{invoice.clinics.name}</div>
+                      </TableCell>
+                      <TableCell>{new Date(invoice.created_at).toLocaleDateString('en-GB')}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{invoice.case_ids?.length || 0} cases</Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold">£{Number(invoice.amount).toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge variant={invoice.status === 'paid' ? 'default' : invoice.status === 'overdue' ? 'destructive' : 'secondary'}>
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}

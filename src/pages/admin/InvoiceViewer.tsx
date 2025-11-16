@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, Mail, Eye, Search, Filter, FileText, Loader2, CheckCircle, Bell } from 'lucide-react';
+import { Download, Mail, Eye, Search, Filter, FileText, Loader2, CheckCircle, Bell, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useNavigate } from 'react-router-dom';
 
 interface Invoice {
   id: string;
@@ -35,6 +36,7 @@ interface Invoice {
 }
 
 export default function InvoiceViewer() {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -247,10 +249,18 @@ export default function InvoiceViewer() {
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Invoice Manager</h1>
-          <p className="text-muted-foreground">
-            Browse, manage, and track all generated invoices
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Invoice Manager</h1>
+              <p className="text-muted-foreground">
+                Browse, manage, and track all generated invoices
+              </p>
+            </div>
+            <Button onClick={() => navigate('/admin/monthly-invoicing')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Generate New Invoices
+            </Button>
+          </div>
         </div>
 
         {/* Summary Cards */}
