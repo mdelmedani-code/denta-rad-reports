@@ -43,7 +43,10 @@ const Dashboard = () => {
       const data = await caseService.fetchAll();
       
       // Filter archived cases if the property exists
-      const activeCases = data.filter((c: any) => !c.archived);
+      const activeCases = data.filter((c) => {
+        const archived = (c as Case & { archived?: boolean }).archived;
+        return !archived;
+      });
       
       // Calculate estimated cost for each case
       const casesWithCost = await Promise.all(
@@ -232,7 +235,7 @@ const Dashboard = () => {
                 </Button>
               </div>
             ) : (
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'pending' | 'reported')} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-6">
                   <TabsTrigger value="all">All Cases ({cases.length})</TabsTrigger>
                   <TabsTrigger value="pending">Pending ({cases.filter(c => c.status === 'uploaded' || c.status === 'in_progress').length})</TabsTrigger>
@@ -295,7 +298,7 @@ const Dashboard = () => {
                             </div>
                           </td>
                           <td className="py-8 px-2">
-                            <StatusBadge status={case_.status as any} />
+                            <StatusBadge status={case_.status} />
                           </td>
                           <td className="py-8 px-2">
                             <div className="flex gap-2 flex-wrap">

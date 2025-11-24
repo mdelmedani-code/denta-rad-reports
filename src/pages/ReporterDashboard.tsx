@@ -43,7 +43,10 @@ export default function ReporterDashboard() {
       setLoading(true);
       const data = await caseService.fetchAll();
       // Filter archived cases - check if archived field exists and is true
-      setCases(data.filter((c) => !(c as any).archived));
+      setCases(data.filter((c) => {
+        const archived = (c as Case & { archived?: boolean }).archived;
+        return !archived;
+      }));
     } catch (error) {
       handleError(error, 'Failed to load cases');
     } finally {
