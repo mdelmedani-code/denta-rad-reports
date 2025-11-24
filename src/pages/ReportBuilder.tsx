@@ -1,21 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, Keyboard } from 'lucide-react';
+import { Save, FileText, ArrowLeft, Loader2, Keyboard } from 'lucide-react';
 import { ReportEditor } from '@/components/ReportBuilder/ReportEditor';
-import { TemplateSelector } from '@/components/ReportBuilder/TemplateSelector';
-import { SnippetInserter } from '@/components/ReportBuilder/SnippetInserter';
 import { AutoSaveIndicator } from '@/components/ReportBuilder/AutoSaveIndicator';
 import { ElectronicSignature } from '@/components/ReportBuilder/ElectronicSignature';
 import { ImageAttachment } from '@/components/ReportBuilder/ImageAttachment';
 import { VersionHistory } from '@/components/ReportBuilder/VersionHistory';
 import { KeyboardShortcuts } from '@/components/ReportBuilder/KeyboardShortcuts';
+import { ReportPatientInfo } from '@/components/report/ReportPatientInfo';
+import { ReportToolbar } from '@/components/report/ReportToolbar';
+import { ReportVersionBanner } from '@/components/report/ReportVersionBanner';
+import { reportService } from '@/services/reportService';
+import { handleError } from '@/utils/errorHandler';
+import { toast } from '@/lib/toast';
 
 interface CaseData {
   id: string;
@@ -54,7 +54,6 @@ interface ReportData {
 export default function ReportBuilder() {
   const { caseId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -65,106 +64,62 @@ export default function ReportBuilder() {
   const [reportImages, setReportImages] = useState<any[]>([]);
   const [versionBanner, setVersionBanner] = useState<string | null>(null);
 
-  // Report content state
   const [clinicalHistory, setClinicalHistory] = useState('');
   const [technique, setTechnique] = useState('');
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
 
-  // Auto-save timer
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (caseId) {
       loadCaseAndReport();
-      loadReportImages();
     }
   }, [caseId]);
 
+  useEffect(() => {
+    if (report?.id) {
+      loadReportImages();
+    }
+  }, [report?.id]);
+
   const loadReportImages = async () => {
     if (!report?.id) return;
-    
+
     try {
-      const { data, error } = await supabase
-        .from('report_images')
-        .select('*')
-        .eq('report_id', report.id)
-        .order('position');
-      
-      if (error) throw error;
-      setReportImages(data || []);
+      const images = await reportService.fetchReportImages(report.id);
+      setReportImages(images);
     } catch (error) {
-      console.error('Error loading images:', error);
+      handleError(error, 'Failed to load report images');
     }
   };
 
   const loadCaseAndReport = async () => {
+    if (!caseId) return;
+
     try {
-      // Load case data
-      const { data: caseData, error: caseError } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          clinics:clinic_id (name)
-        `)
-        .eq('id', caseId)
-        .single();
+      const { caseData, reportData } = await reportService.fetchCaseWithReport(caseId);
+      setCaseData(caseData);
 
-      if (caseError) throw caseError;
-      setCaseData({
-        ...caseData,
-        clinic: caseData.clinics
-      });
-
-      // Load or create report
-      let { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('case_id', caseId)
-        .eq('is_superseded', false)
-        .maybeSingle();
-
-      if (reportError && reportError.code !== 'PGRST116') throw reportError;
-
+      let finalReport = reportData;
       if (!reportData) {
-        // Create new report
-        const { data: newReport, error: createError } = await supabase
-          .from('reports')
-          .insert({
-            case_id: caseId,
-            clinical_history: caseData.clinical_question || '',
-            technique: '',
-            findings: '',
-            impression: '',
-            version: 1,
-            is_superseded: false,
-            can_reopen: true,
-          })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        reportData = newReport;
+        finalReport = await reportService.createReport(caseId, caseData);
       }
 
-      setReport(reportData);
-      setClinicalHistory(reportData.clinical_history || '');
-      setTechnique(reportData.technique || '');
-      setFindings(reportData.findings || '');
-      setImpression(reportData.impression || '');
-      setLastSaved(reportData.last_saved_at ? new Date(reportData.last_saved_at) : undefined);
-      
-      // Check if this report is editing after a signature
-      if (reportData.supersedes) {
-        setVersionBanner(`Editing after signature — Version ${reportData.version}. Previous version(s) preserved and remain auditable.`);
+      setReport(finalReport);
+      setClinicalHistory(finalReport.clinical_history || '');
+      setTechnique(finalReport.technique || '');
+      setFindings(finalReport.findings || '');
+      setImpression(finalReport.impression || '');
+      setLastSaved(finalReport.last_saved_at ? new Date(finalReport.last_saved_at) : undefined);
+
+      if (finalReport.supersedes) {
+        setVersionBanner(
+          `Editing after signature — Version ${finalReport.version}. Previous version(s) preserved and remain auditable.`
+        );
       }
     } catch (error) {
-      console.error('Error loading case/report:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load case data',
-        variant: 'destructive',
-      });
+      handleError(error, 'Failed to load case data');
     } finally {
       setLoading(false);
     }
@@ -190,34 +145,19 @@ export default function ReportBuilder() {
     setSaveStatus('saving');
 
     try {
-      const { error } = await supabase
-        .from('reports')
-        .update({
-          clinical_history: clinicalHistory,
-          technique,
-          findings,
-          impression,
-          last_saved_at: new Date().toISOString(),
-        })
-        .eq('id', report.id);
-
-      if (error) throw error;
+      await reportService.saveReport(report.id, {
+        clinicalHistory,
+        technique,
+        findings,
+        impression,
+      });
 
       setSaveStatus('saved');
       setLastSaved(new Date());
-
-      toast({
-        title: 'Saved',
-        description: 'Report saved successfully',
-      });
+      toast.success('Saved', 'Report saved successfully');
     } catch (error) {
-      console.error('Error saving report:', error);
       setSaveStatus('unsaved');
-      toast({
-        title: 'Save Failed',
-        description: 'Failed to save report',
-        variant: 'destructive',
-      });
+      handleError(error, 'Failed to save report');
     }
   };
 
@@ -249,25 +189,17 @@ export default function ReportBuilder() {
 
   const handleFinalizeReport = async () => {
     if (!report?.is_signed) {
-      toast({
-        title: 'Report Not Signed',
-        description: 'Please sign the report before finalizing',
-        variant: 'destructive',
-      });
+      toast.error('Report Not Signed', 'Please sign the report before finalizing');
       return;
     }
 
     try {
       await saveReport();
 
-      // Generate PDF
-      toast({
-        title: 'Generating PDF',
-        description: 'Please wait while we generate the report PDF...',
-      });
+      toast.info('Generating PDF', 'Please wait while we generate the report PDF...');
 
       const { generateReportPDF } = await import('@/lib/reportPdfGenerator.tsx');
-      
+
       const pdfBlob = await generateReportPDF({
         caseData,
         reportData: {
@@ -282,50 +214,14 @@ export default function ReportBuilder() {
         },
       });
 
-      // Upload PDF to storage
-      const pdfPath = `${caseData.folder_name}/report.pdf`;
-      const { error: uploadError } = await supabase.storage
-        .from('reports')
-        .upload(pdfPath, pdfBlob, {
-          contentType: 'application/pdf',
-          upsert: true,
-        });
+      const pdfPath = await reportService.uploadReportPDF(caseData!.folder_name, pdfBlob);
+      await reportService.finalizeReport(report.id, pdfPath);
+      await reportService.updateCaseStatus(caseId!, 'report_ready');
 
-      if (uploadError) throw uploadError;
-
-      // Update report with PDF info
-      const { error: reportError } = await supabase
-        .from('reports')
-        .update({ 
-          finalized_at: new Date().toISOString(),
-          pdf_generated: true,
-          pdf_storage_path: pdfPath,
-        })
-        .eq('id', report.id);
-
-      if (reportError) throw reportError;
-
-      // Update case status
-      const { error: caseError } = await supabase
-        .from('cases')
-        .update({ status: 'report_ready' })
-        .eq('id', caseId);
-
-      if (caseError) throw caseError;
-
-      toast({
-        title: 'Report Finalized',
-        description: 'Report PDF generated and case updated',
-      });
-
+      toast.success('Report Finalized', 'Report PDF generated and case updated');
       navigate('/reporter');
     } catch (error) {
-      console.error('Error finalizing report:', error);
-      toast({
-        title: 'Finalization Failed',
-        description: 'Failed to finalize report',
-        variant: 'destructive',
-      });
+      handleError(error, 'Failed to finalize report');
     }
   };
 
@@ -333,32 +229,22 @@ export default function ReportBuilder() {
     if (!report) return;
 
     try {
-      // Call database function to create new version
-      const { data: newReportId, error } = await supabase
-        .rpc('create_report_version', {
-          p_original_report_id: report.id,
-          p_new_version_number: report.version + 1,
-        });
+      const newReportId = await reportService.createReportVersion(
+        report.id,
+        report.version + 1
+      );
 
-      if (error) throw error;
+      toast.success(
+        'Report Re-opened',
+        `Creating new version ${report.version + 1}. Redirecting...`
+      );
 
-      toast({
-        title: 'Report Re-opened',
-        description: `Creating new version ${report.version + 1}. Redirecting...`,
-      });
-
-      // Redirect to the new version
       setTimeout(() => {
         navigate(`/reporter/report/${caseId}`);
-        window.location.reload(); // Force reload to get new version
+        window.location.reload();
       }, 1500);
     } catch (error) {
-      console.error('Error reopening report:', error);
-      toast({
-        title: 'Reopen Failed',
-        description: 'Failed to re-open report. Please try again.',
-        variant: 'destructive',
-      });
+      handleError(error, 'Failed to re-open report. Please try again.');
     }
   };
 
@@ -442,74 +328,21 @@ export default function ReportBuilder() {
         </div>
       </div>
 
-      {/* Patient Info */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <div className="text-muted-foreground">Patient</div>
-              <div className="font-medium">{caseData.patient_name}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">DOB</div>
-              <div className="font-medium">
-                {new Date(caseData.patient_dob).toLocaleDateString()}
-              </div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Patient ID</div>
-              <div className="font-medium">{caseData.patient_id}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Scan Date</div>
-              <div className="font-medium">
-                {new Date(caseData.upload_date).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-          <Separator className="my-4" />
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="text-muted-foreground">Referring Practice</div>
-              <div className="font-medium">{caseData.clinic.name}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Field of View</div>
-              <div className="font-medium">
-                <Badge>{caseData.field_of_view.replace(/_/g, ' ')}</Badge>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ReportPatientInfo caseData={caseData} />
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 mb-6 p-4 bg-muted/50 rounded-lg">
-        <TemplateSelector 
-          onSelectTemplate={handleTemplateSelect}
-          disabled={report.is_signed}
-        />
-        <SnippetInserter 
-          onInsertSnippet={(content) => handleSnippetInsert(content, 'findings')}
-          disabled={report.is_signed}
-        />
-      </div>
+      <ReportToolbar
+        onSelectTemplate={handleTemplateSelect}
+        onInsertSnippet={(content) => handleSnippetInsert(content, 'findings')}
+        disabled={report.is_signed}
+      />
 
       {report.is_signed && (
-        <Alert className="mb-6 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-          <AlertDescription className="text-amber-900 dark:text-amber-100">
-            ⚠️ This report is signed. Use "Re-open for Edit" button below to create a new version.
-          </AlertDescription>
-        </Alert>
+        <ReportVersionBanner
+          message="⚠️ This report is signed. Use 'Re-open for Edit' button below to create a new version."
+        />
       )}
 
-      {versionBanner && (
-        <Alert className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-          <AlertDescription className="text-blue-900 dark:text-blue-100">
-            ℹ️ {versionBanner}
-          </AlertDescription>
-        </Alert>
-      )}
+      {versionBanner && <ReportVersionBanner message={`ℹ️ ${versionBanner}`} />}
 
       {/* Report Sections */}
       <div className="space-y-6">

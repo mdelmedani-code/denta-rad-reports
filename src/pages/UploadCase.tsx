@@ -2,27 +2,22 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileArchive, CheckCircle2, Upload, Clock, PoundSterling } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { toast as sonnerToast } from "sonner";
-import { validateDICOMZip, getReadableFileSize } from "@/services/fileValidationService";
-import { sanitizePatientRef, sanitizeText } from "@/utils/sanitization";
-import { logCaseCreation } from "@/lib/auditLog";
-import { Progress } from "@/components/ui/progress";
 import { useChunkedUpload } from "@/hooks/useChunkedUpload";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { UploadForm } from "@/components/upload/UploadForm";
+import { UploadProgress } from "@/components/upload/UploadProgress";
+import { PricingDisplay } from "@/components/upload/PricingDisplay";
+import { uploadService } from "@/services/uploadService";
+import { handleError } from "@/utils/errorHandler";
+import { toast } from "@/lib/toast";
+import { logCaseCreation } from "@/lib/auditLog";
 
 const UploadCase = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -32,6 +27,7 @@ const UploadCase = () => {
   const [currentCaseFolderName, setCurrentCaseFolderName] = useState<string>('');
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
+  const [validating, setValidating] = useState(false);
   
   const [formData, setFormData] = useState({
     patientName: "",
@@ -43,63 +39,36 @@ const UploadCase = () => {
     urgency: "standard" as "standard" | "urgent"
   });
 
-  const [validating, setValidating] = useState(false);
-
-  // Fetch pricing based on field of view
   useEffect(() => {
-    const fetchPrice = async () => {
-      setLoadingPrice(true);
-      try {
-        const { data, error } = await supabase
-          .from('pricing_rules')
-          .select('price, currency')
-          .eq('field_of_view', formData.fieldOfView)
-          .is('effective_to', null)
-          .order('effective_from', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (error) {
-          console.error('Error fetching price:', error);
-          setEstimatedCost(null);
-        } else if (data) {
-          setEstimatedCost(Number(data.price));
-        }
-      } catch (err) {
-        console.error('Unexpected error fetching price:', err);
-        setEstimatedCost(null);
-      } finally {
-        setLoadingPrice(false);
-      }
-    };
-
     fetchPrice();
   }, [formData.fieldOfView]);
 
-  // Chunked upload with progress tracking
+  const fetchPrice = async () => {
+    setLoadingPrice(true);
+    try {
+      const price = await uploadService.fetchPrice(formData.fieldOfView);
+      setEstimatedCost(price);
+    } catch (error) {
+      handleError(error, 'Failed to fetch pricing');
+    } finally {
+      setLoadingPrice(false);
+    }
+  };
+
   const { upload, uploading, progress, cancel } = useChunkedUpload({
     bucketName: 'cbct-scans',
     onSuccess: async (filePath) => {
-      console.log('[Upload] File uploaded successfully:', filePath);
-      
-      // Log case creation
       if (createdCaseId) {
         await logCaseCreation(createdCaseId);
       }
-      
       setUploadSuccess(true);
-      sonnerToast.success('Case uploaded successfully!');
+      toast.success('Case uploaded successfully!');
     },
     onError: async (error) => {
-      console.error('[Upload] Upload failed:', error);
-      
-      // Rollback: delete case if upload failed
       if (createdCaseId) {
-        console.log('Rolling back: deleting case record');
         await supabase.from('cases').delete().eq('id', createdCaseId);
       }
-      
-      sonnerToast.error(error.message || 'Upload failed');
+      handleError(error, 'Upload failed');
     }
   });
 
@@ -109,49 +78,28 @@ const UploadCase = () => {
     
     setValidating(true);
     try {
-      const validation = await validateDICOMZip(file);
+      const validation = await uploadService.validateFile(file);
       
       if (!validation.valid) {
-        toast({
-          title: 'Invalid File',
-          description: validation.error,
-          variant: 'destructive',
-          duration: 8000
-        });
-        
+        toast.error('Invalid File', validation.error || 'File validation failed');
         e.target.value = '';
         setZipFile(null);
         return;
       }
 
       if (validation.warnings && validation.warnings.length > 0) {
-        toast({
-          title: 'File Validation Warnings',
-          description: validation.warnings.join('. '),
-          variant: 'default',
-          duration: 6000
-        });
+        toast.warning('File Validation Warnings', validation.warnings.join('. '));
       }
 
       setZipFile(file);
       
       const statsMessage = validation.stats 
-        ? `Contains ${validation.stats.dicomFiles} DICOM files (${validation.stats.totalFiles} total files)`
+        ? `Contains ${validation.stats.dicomFiles} DICOM files`
         : '';
       
-      toast({
-        title: 'File Validated Successfully',
-        description: `${file.name} (${getReadableFileSize(file.size)}) is ready to upload. ${statsMessage}`,
-      });
-      
+      toast.success('File Validated', `${file.name} is ready to upload. ${statsMessage}`);
     } catch (error) {
-      console.error('File validation error:', error);
-      toast({
-        title: 'Validation Error',
-        description: 'Failed to validate file. Please try again.',
-        variant: 'destructive'
-      });
-      
+      handleError(error, 'Failed to validate file');
       e.target.value = '';
       setZipFile(null);
     } finally {
@@ -160,69 +108,25 @@ const UploadCase = () => {
   };
 
 
-  const generateFolderName = async (patientName: string, patientId: string): Promise<string> => {
-    // Sanitize name: uppercase, remove special chars, replace spaces with underscores
-    const cleanName = patientName
-      .toUpperCase()
-      .replace(/[^A-Z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .trim();
-
-    // Get highest counter for this patient
-    const { data: existingCases } = await supabase
-      .from('cases')
-      .select('folder_name')
-      .ilike('folder_name', `${cleanName}_%`)
-      .order('created_at', { ascending: false });
-
-    let maxCounter = 0;
-    if (existingCases && existingCases.length > 0) {
-      for (const c of existingCases) {
-        const match = c.folder_name?.match(/_(\d{5})$/);
-        if (match) {
-          const counter = parseInt(match[1], 10);
-          if (counter > maxCounter) maxCounter = counter;
-        }
-      }
-    }
-
-    const newCounter = maxCounter + 1;
-    const paddedCounter = String(newCounter).padStart(5, '0');
-    
-    return `${cleanName}_${paddedCounter}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!zipFile) {
-      toast({ 
-        title: 'No File', 
-        description: 'Please select a ZIP file', 
-        variant: 'destructive' 
-      });
+      toast.error('No File', 'Please select a ZIP file');
       return;
     }
 
-    // Sanitize inputs
-    const sanitizedPatientName = sanitizeText(formData.patientName);
-    const sanitizedPatientInternalId = formData.patientInternalId ? sanitizePatientRef(formData.patientInternalId) : '';
-    const sanitizedClinicalQuestion = sanitizeText(formData.clinicalQuestion);
-    
-    if (!sanitizedPatientName || !sanitizedClinicalQuestion) {
-      toast({
-        title: 'Invalid Input',
-        description: 'Patient Name and Clinical Question contain invalid characters',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
     try {
-      setUploadSuccess(false);
-      setCreatedPatientName(sanitizedPatientName);
+      const sanitized = uploadService.sanitizeFormData(formData);
       
-      // Get user and clinic
+      if (!sanitized.patientName || !sanitized.clinicalQuestion) {
+        toast.error('Invalid Input', 'Patient Name and Clinical Question contain invalid characters');
+        return;
+      }
+      
+      setUploadSuccess(false);
+      setCreatedPatientName(sanitized.patientName);
+      
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       if (authError || !authUser) {
         throw new Error('Not authenticated');
@@ -237,22 +141,21 @@ const UploadCase = () => {
       if (profileError) throw profileError;
       if (!profile?.clinic_id) throw new Error('No clinic associated with your account');
       
-      // Generate unique folder name
-      const folderName = await generateFolderName(sanitizedPatientName, sanitizedPatientInternalId || 'UNKNOWN');
+      const folderName = await uploadService.generateFolderName(
+        sanitized.patientName,
+        sanitized.patientInternalId || 'UNKNOWN'
+      );
       setCurrentCaseFolderName(folderName);
-      
-      // Create case record
-      const sanitizedSpecialInstructions = formData.specialInstructions ? sanitizeText(formData.specialInstructions) : null;
       
       const { data: newCase, error: caseError } = await supabase
         .from('cases')
         .insert({
           clinic_id: profile.clinic_id,
-          patient_name: sanitizedPatientName,
-          patient_internal_id: sanitizedPatientInternalId || null,
+          patient_name: sanitized.patientName,
+          patient_internal_id: sanitized.patientInternalId || null,
           patient_dob: formData.patientDob || null,
-          clinical_question: sanitizedClinicalQuestion,
-          special_instructions: sanitizedSpecialInstructions,
+          clinical_question: sanitized.clinicalQuestion,
+          special_instructions: sanitized.specialInstructions,
           field_of_view: formData.fieldOfView,
           urgency: formData.urgency,
           folder_name: folderName,
@@ -266,15 +169,10 @@ const UploadCase = () => {
       setCreatedCaseId(newCase.id);
       setCreatedSimpleId(String(newCase.simple_id).padStart(5, '0'));
       
-      console.log('[Upload] Case created, starting chunked upload:', newCase.id);
-      
-      // Start chunked upload with progress tracking
       const storagePath = `${folderName}/scan.zip`;
       await upload(zipFile, storagePath);
-      
     } catch (error) {
-      console.error('Upload failed:', error);
-      sonnerToast.error(error instanceof Error ? error.message : 'Upload failed');
+      handleError(error, 'Upload failed');
     }
   };
 
@@ -371,7 +269,6 @@ const UploadCase = () => {
           </motion.div>
         )}
 
-        {/* Main Form */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -380,223 +277,36 @@ const UploadCase = () => {
           <form onSubmit={handleSubmit}>
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileArchive className="w-5 h-5 mr-2" />
-                  Case Information
-                </CardTitle>
+                <CardTitle>Case Information</CardTitle>
                 <CardDescription>
                   Provide patient details and upload DICOM files
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Patient Information */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="patientName">
-                      Patient Name <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="patientName"
-                      placeholder="John Smith"
-                      value={formData.patientName}
-                      onChange={(e) => setFormData({...formData, patientName: e.target.value})}
-                      required
-                      disabled={uploading}
-                    />
-                  </div>
+                <UploadForm
+                  formData={formData}
+                  onFormChange={setFormData}
+                  onFileSelect={handleZipSelect}
+                  zipFile={zipFile}
+                  validating={validating}
+                  disabled={uploading}
+                />
 
-                  <div>
-                    <Label htmlFor="patientInternalId">
-                      Patient Internal ID
-                    </Label>
-                    <Input
-                      id="patientInternalId"
-                      placeholder="Optional clinic reference"
-                      value={formData.patientInternalId}
-                      onChange={(e) => setFormData({...formData, patientInternalId: e.target.value})}
-                      disabled={uploading}
-                    />
-                  </div>
+                <PricingDisplay estimatedCost={estimatedCost} loading={loadingPrice} />
 
-                  <div>
-                    <Label htmlFor="patientDob">Date of Birth</Label>
-                    <Input
-                      id="patientDob"
-                      type="date"
-                      value={formData.patientDob}
-                      onChange={(e) => setFormData({...formData, patientDob: e.target.value})}
-                      disabled={uploading}
-                    />
-                  </div>
+                <UploadProgress
+                  uploading={uploading}
+                  progress={progress.percentage}
+                  onCancel={cancel}
+                />
 
-                  <div>
-                    <Label htmlFor="clinicalQuestion">
-                      Clinical Question <span className="text-destructive">*</span>
-                    </Label>
-                    <Textarea
-                      id="clinicalQuestion"
-                      placeholder="What specific information are you seeking?"
-                      value={formData.clinicalQuestion}
-                      onChange={(e) => setFormData({...formData, clinicalQuestion: e.target.value})}
-                      required
-                      disabled={uploading}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="specialInstructions">
-                      Special Instructions or Questions (Optional)
-                    </Label>
-                    <Textarea
-                      id="specialInstructions"
-                      placeholder="Any additional notes, preferences, or questions for the radiologist..."
-                      value={formData.specialInstructions}
-                      onChange={(e) => setFormData({...formData, specialInstructions: e.target.value})}
-                      disabled={uploading}
-                      rows={2}
-                    />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Use this to communicate directly with your radiologist
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="fieldOfView">Field of View</Label>
-                      <Select 
-                        value={formData.fieldOfView} 
-                        onValueChange={(value: any) => setFormData({...formData, fieldOfView: value})}
-                        disabled={uploading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="up_to_5x5">Up to 5x5</SelectItem>
-                          <SelectItem value="up_to_8x5">Up to 8x5</SelectItem>
-                          <SelectItem value="up_to_8x8">Up to 8x8</SelectItem>
-                          <SelectItem value="over_8x8">Over 8x8</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="urgency">Urgency</Label>
-                      <Select 
-                        value={formData.urgency} 
-                        onValueChange={(value: any) => setFormData({...formData, urgency: value})}
-                        disabled={uploading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Cost Calculator */}
-                  {estimatedCost !== null && !loadingPrice && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Alert className="bg-primary/5 border-primary/20">
-                        <PoundSterling className="h-4 w-4 text-primary" />
-                        <AlertDescription className="ml-2">
-                          <span className="font-medium">Estimated Cost:</span>{' '}
-                          <span className="text-lg font-bold text-primary">
-                            £{estimatedCost.toFixed(2)}
-                          </span>
-                          <span className="text-sm text-muted-foreground ml-2">
-                            (for {formData.fieldOfView.replace(/_/g, ' ')})
-                          </span>
-                        </AlertDescription>
-                      </Alert>
-                    </motion.div>
-                  )}
-                  
-                  {loadingPrice && (
-                    <div className="text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4 inline animate-spin mr-1" />
-                      Loading pricing...
-                    </div>
-                  )}
-                </div>
-
-                {/* File Upload */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div>
-                    <Label htmlFor="zipFile">
-                      Upload DICOM ZIP File <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="zipFile"
-                      type="file"
-                      accept=".zip"
-                      onChange={handleZipSelect}
-                      disabled={uploading || validating}
-                      required
-                    />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Please upload your CBCT scan as a single ZIP file
-                    </p>
-                    {validating && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        <Clock className="w-4 h-4 inline animate-spin mr-1" />
-                        Validating file...
-                      </p>
-                    )}
-                    {zipFile && !validating && (
-                      <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                        <CheckCircle2 className="w-4 h-4 inline mr-1" />
-                        {zipFile.name} ({getReadableFileSize(zipFile.size)})
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Upload Progress */}
-                {uploading && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Uploading... {progress.uploadedMB.toFixed(1)}MB / {progress.totalMB.toFixed(1)}MB
-                      </span>
-                      <span className="font-medium">{Math.round(progress.percentage)}%</span>
-                    </div>
-                    <Progress value={progress.percentage} />
-                    {progress.speedMBps > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {progress.speedMBps.toFixed(1)} MB/s • ETA: {progress.etaSeconds}s
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Submit Button */}
                 <Button 
                   type="submit" 
                   className="w-full" 
                   size="lg"
                   disabled={uploading || validating || !zipFile}
                 >
-                  {uploading ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Case
-                    </>
-                  )}
+                  {uploading ? 'Uploading...' : 'Upload Case'}
                 </Button>
               </CardContent>
             </Card>
