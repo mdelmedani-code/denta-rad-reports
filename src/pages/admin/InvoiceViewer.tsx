@@ -15,24 +15,24 @@ import { useNavigate } from 'react-router-dom';
 
 interface Invoice {
   id: string;
-  invoice_number: string;
+  invoice_number: string | null;
   clinic_id: string;
   clinics: {
     name: string;
     contact_email: string;
-  };
+  } | null;
   amount: number;
   currency: string;
   status: string;
   created_at: string;
-  due_date: string;
+  due_date: string | null;
   sent_at: string | null;
   paid_at: string | null;
-  period_start: string;
-  period_end: string;
-  pdf_url: string;
-  pdf_storage_path: string;
-  case_ids: string[];
+  period_start: string | null;
+  period_end: string | null;
+  pdf_url: string | null;
+  pdf_storage_path: string | null;
+  case_ids: string[] | null;
 }
 
 export default function InvoiceViewer() {
@@ -87,7 +87,7 @@ export default function InvoiceViewer() {
 
       if (error) throw error;
 
-      setInvoices((data as any) || []);
+      setInvoices(data as unknown as Invoice[]);
     } catch (error) {
       console.error('Error loading invoices:', error);
       toast.error('Failed to load invoices');
