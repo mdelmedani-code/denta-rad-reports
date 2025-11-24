@@ -60,6 +60,7 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
   async function generateInvoice(clinic: UnbilledReport, index: number) {
     try {
       setGeneratingIndex(index);
+      console.log('Starting invoice generation for:', clinic.clinic_name);
 
       const invoiceNumber = `INV-${Date.now()}`;
       const issueDate = new Date().toISOString().split('T')[0];
@@ -97,29 +98,43 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         total: clinic.total_amount
       };
 
+      console.log('Generating PDF with data:', invoiceData);
       const pdfBlob = await pdf(
         <InvoicePDF invoice={invoiceData} />
       ).toBlob();
+      console.log('PDF generated successfully');
 
       const fileName = `invoice-${invoiceNumber}.pdf`;
+      console.log('Uploading PDF to storage:', fileName);
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('invoices')
         .upload(fileName, pdfBlob, { contentType: 'application/pdf' });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
+      console.log('PDF uploaded successfully');
 
       const { data: { publicUrl } } = supabase.storage
         .from('invoices')
         .getPublicUrl(fileName);
 
-      const { data: clinicData } = await supabase
+      console.log('Looking up clinic:', clinic.clinic_email);
+      const { data: clinicData, error: clinicError } = await supabase
         .from('clinics')
         .select('id')
         .eq('contact_email', clinic.clinic_email)
         .single();
 
+      if (clinicError) {
+        console.error('Clinic lookup error:', clinicError);
+        throw new Error(`Clinic not found: ${clinicError.message}`);
+      }
       if (!clinicData) throw new Error('Clinic not found');
+      console.log('Clinic found:', clinicData.id);
 
+      console.log('Creating invoice record in database');
       const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
@@ -137,7 +152,11 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
           period_end: endDate || null
         });
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) {
+        console.error('Invoice insert error:', invoiceError);
+        throw invoiceError;
+      }
+      console.log('Invoice created successfully:', invoiceNumber);
 
       toast({
         title: 'Invoice Generated',

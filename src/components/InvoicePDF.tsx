@@ -1,5 +1,4 @@
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
-import dentaradLogo from '@/assets/dentarad-logo-pdf.jpg';
 
 const styles = StyleSheet.create({
   page: {
@@ -141,7 +140,7 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
       <Page size="A4" style={styles.page}>
         {/* Header with Logo and Invoice Title */}
         <View style={styles.header}>
-          <Image src={dentaradLogo} style={styles.logo} />
+          <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />
           <View>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.invoiceNumber}>#{invoice.invoice_number}</Text>
