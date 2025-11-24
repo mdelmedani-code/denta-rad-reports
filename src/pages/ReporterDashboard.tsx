@@ -3,16 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Download, Upload, Eye, Loader2, CheckCircle, Clock, FileEdit } from 'lucide-react';
+import { Loader2, Eye } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
-import { formatCaseTitle } from '@/lib/caseUtils';
 import { useCaseDownload } from '@/hooks/useCaseDownload';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Case } from '@/types/case';
+import { CaseCard } from '@/components/shared/CaseCard';
+import { CaseActions } from '@/components/shared/CaseActions';
 
 export default function ReporterDashboard() {
   const navigate = useNavigate();
@@ -217,80 +215,25 @@ export default function ReporterDashboard() {
 
         <TabsContent value="pending" className="space-y-4 mt-4">
           {pendingCases.map(caseData => (
-            <Card key={caseData.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{formatCaseTitle(caseData.simple_id, caseData.patient_name)}</CardTitle>
-                    <CardDescription>
-                      {caseData.folder_name && (
-                        <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
-                      )}
-                      <div className="flex flex-col sm:flex-row sm:gap-4 gap-1 text-xs">
-                        <span>Patient ID: {caseData.patient_id}</span>
-                        <span>DOB: {caseData.patient_dob}</span>
-                        <span className="font-semibold text-primary">Uploaded: {new Date(caseData.created_at).toLocaleDateString('en-GB')}</span>
-                      </div>
-                    </CardDescription>
-                  </div>
-                  <StatusBadge status={caseData.status as any} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm font-semibold">Clinical Question:</p>
-                  <p className="text-sm text-muted-foreground">{caseData.clinical_question}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-semibold">Field of View:</p>
-                    <p className="text-muted-foreground">{caseData.field_of_view.replace(/_/g, ' ')}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Urgency:</p>
-                    <p className="text-muted-foreground capitalize">{caseData.urgency}</p>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-wrap gap-2">
-                <Button 
-                  onClick={() => navigate(`/reporter/report/${caseData.id}`)}
-                  variant="default"
-                  size="sm"
-                >
-                  <FileEdit className="h-4 w-4 mr-2" />
-                  Create Report
-                </Button>
-                
-                <Button 
-                  onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  disabled={downloadingId === caseData.id}
-                  variant="outline"
-                  size="sm"
-                >
-                  {downloadingId === caseData.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Download DICOM
-                </Button>
-
-                <Button 
-                  onClick={() => uploadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  disabled={uploadingReport === caseData.id}
-                  size="sm"
-                  variant="outline"
-                >
-                  {uploadingReport === caseData.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  Upload PDF (Legacy)
-                </Button>
-              </CardFooter>
-            </Card>
+            <CaseCard
+              key={caseData.id}
+              case={caseData}
+              layout="detailed"
+              actions={
+                <CaseActions
+                  caseId={caseData.id}
+                  folderName={caseData.folder_name || `${caseData.patient_id}_${caseData.id}`}
+                  status={caseData.status}
+                  role="reporter"
+                  isDownloading={downloadingId === caseData.id}
+                  isUploading={uploadingReport === caseData.id}
+                  onCreateReport={() => navigate(`/reporter/report/${caseData.id}`)}
+                  onDownloadScan={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  onUploadReport={() => uploadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  layout="vertical"
+                />
+              }
+            />
           ))}
 
           {pendingCases.length === 0 && (
@@ -302,76 +245,35 @@ export default function ReporterDashboard() {
 
         <TabsContent value="completed" className="space-y-4 mt-4">
           {completedCases.map(caseData => (
-            <Card key={caseData.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{formatCaseTitle(caseData.simple_id, caseData.patient_name)}</CardTitle>
-                    <CardDescription>
-                      {caseData.folder_name && (
-                        <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
-                      )}
-                      <div className="flex flex-col sm:flex-row sm:gap-4 gap-1 text-xs">
-                        <span className="font-semibold text-primary">Uploaded: {new Date(caseData.created_at).toLocaleDateString('en-GB')}</span>
-                        <span className="font-semibold text-green-600">Completed: {caseData.completed_at ? new Date(caseData.completed_at).toLocaleDateString('en-GB') : 'Unknown'}</span>
-                      </div>
-                    </CardDescription>
-                  </div>
-                  <StatusBadge status={caseData.status as any} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-sm font-semibold">Clinical Question:</p>
-                    <p className="text-sm text-muted-foreground">{caseData.clinical_question}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-semibold">Field of View:</p>
-                      <p className="text-muted-foreground">{caseData.field_of_view.replace(/_/g, ' ')}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold">Patient ID:</p>
-                      <p className="text-muted-foreground">{caseData.patient_id}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-wrap gap-2">
-                <Button 
-                  onClick={() => accessReport(caseData.id)}
-                  variant="default"
-                  size="sm"
-                >
-                  <FileEdit className="h-4 w-4 mr-2" />
-                  Access Report
-                </Button>
-                
-                <Button 
-                  onClick={() => downloadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Report
-                </Button>
-
-                <Button 
-                  onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  disabled={downloadingId === caseData.id}
-                  variant="outline"
-                  size="sm"
-                >
-                  {downloadingId === caseData.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  Download DICOM
-                </Button>
-              </CardFooter>
-            </Card>
+            <CaseCard
+              key={caseData.id}
+              case={caseData}
+              layout="detailed"
+              actions={
+                <CaseActions
+                  caseId={caseData.id}
+                  folderName={caseData.folder_name || `${caseData.patient_id}_${caseData.id}`}
+                  status={caseData.status}
+                  role="reporter"
+                  isDownloading={downloadingId === caseData.id}
+                  onAccessReport={() => accessReport(caseData.id)}
+                  onDownloadReport={() => downloadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  onDownloadScan={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  layout="vertical"
+                  additionalActions={
+                    <Button 
+                      onClick={() => accessReport(caseData.id)}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View in Builder
+                    </Button>
+                  }
+                />
+              }
+            />
           ))}
 
           {completedCases.length === 0 && (
