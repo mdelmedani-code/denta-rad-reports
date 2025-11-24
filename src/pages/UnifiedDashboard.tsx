@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, PoundSterling, BarChart3 } from 'lucide-react';
+import { FileText, BarChart3 } from 'lucide-react';
 import ReporterDashboard from './ReporterDashboard';
 import AdminDashboard from './AdminDashboard';
-import { BillingDashboard } from '@/components/BillingDashboard';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function UnifiedDashboard() {
@@ -30,10 +29,6 @@ export default function UnifiedDashboard() {
               <BarChart3 className="w-4 h-4" />
               Statistics
             </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center gap-2">
-              <PoundSterling className="w-4 h-4" />
-              Billing
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="cases">
@@ -42,10 +37,6 @@ export default function UnifiedDashboard() {
 
           <TabsContent value="stats">
             <AdminDashboard />
-          </TabsContent>
-
-          <TabsContent value="billing">
-            <BillingDashboard />
           </TabsContent>
         </Tabs>
       </div>

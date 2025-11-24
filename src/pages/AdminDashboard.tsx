@@ -35,6 +35,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UrgencyBadge } from "@/components/shared/UrgencyBadge";
 import { Case } from "@/types/case";
 import { useCaseFilters } from "@/hooks/useCaseFilters";
 import { useCaseActions } from "@/hooks/useCaseActions";
@@ -438,23 +439,19 @@ const AdminDashboard = () => {
                           </p>
                         </td>
                         <td className="py-2">
-                          <Badge 
-                            variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
-                          >
-                            {case_.urgency}
-                          </Badge>
+                          <UrgencyBadge urgency={case_.urgency} />
                         </td>
                         <td className="py-2">{case_.field_of_view}</td>
                         <td className="py-2">
                           <Select
                             value={case_.status}
                             onValueChange={(value) => 
-                              handleUpdateStatus(case_.id, value as any)
+                              handleUpdateStatus(case_.id, value as 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment')
                             }
                             disabled={actionLoading}
                           >
                             <SelectTrigger className="w-40">
-                              <StatusBadge status={case_.status as any} />
+                              <StatusBadge status={case_.status} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="uploaded">Uploaded</SelectItem>
