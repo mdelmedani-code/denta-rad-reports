@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Download, Upload, Eye, Loader2, CheckCircle, Clock, FileEdit } from 'lucide-react';
 import { toast } from 'sonner';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
+import { formatCaseTitle } from '@/lib/caseUtils';
+import { useCaseDownload } from '@/hooks/useCaseDownload';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 
 interface Case {
   id: string;
@@ -30,8 +33,8 @@ export default function ReporterDashboard() {
   const { user } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloadingCase, setDownloadingCase] = useState<string | null>(null);
   const [uploadingReport, setUploadingReport] = useState<string | null>(null);
+  const { downloadScan, downloadReport, downloadingId } = useCaseDownload();
   const [searchFilters, setSearchFilters] = useState({
     patientName: '',
     patientId: '',
@@ -64,93 +67,7 @@ export default function ReporterDashboard() {
     }
   }
 
-  async function downloadScan(caseId: string, folderName: string) {
-    setDownloadingCase(caseId);
-    try {
-      toast.info('Downloading scan...');
-
-      // Try multiple possible paths
-      let data = null;
-      let error = null;
-
-      // Try scan.zip first
-      ({ data, error } = await supabase.storage
-        .from('cbct-scans')
-        .download(`${folderName}/scan.zip`));
-
-      // If that fails, try direct folder path
-      if (error) {
-        ({ data, error } = await supabase.storage
-          .from('cbct-scans')
-          .download(`${folderName}.zip`));
-      }
-
-      if (error) {
-        console.error('Download error:', error);
-        throw new Error(`Failed to download scan: ${error.message}`);
-      }
-
-      // Trigger browser download
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${folderName}_dicom.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Scan downloaded successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to download scan');
-      console.error('Download error:', error);
-    } finally {
-      setDownloadingCase(null);
-    }
-  }
-
-  async function downloadReport(caseId: string, folderName: string) {
-    try {
-      toast.info('Downloading report...');
-
-      // Get report to check for PDF path
-      const { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .select('pdf_storage_path')
-        .eq('case_id', caseId)
-        .eq('is_superseded', false)
-        .single();
-
-      if (reportError) throw reportError;
-
-      const pdfPath = reportData?.pdf_storage_path || `${folderName}/report.pdf`;
-
-      // Get report from storage
-      const { data, error } = await supabase.storage
-        .from('reports')
-        .download(pdfPath);
-
-      if (error) {
-        console.error('Download error:', error);
-        throw new Error(`Failed to download report: ${error.message}`);
-      }
-
-      // Trigger browser download
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${folderName}_report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('Report downloaded successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to download report');
-      console.error('Download error:', error);
-    }
-  }
+  // Removed: Now using useCaseDownload hook
 
   async function accessReport(caseId: string) {
     try {
@@ -238,46 +155,9 @@ export default function ReporterDashboard() {
     input.click();
   }
 
-  function formatCaseTitle(caseData: Case): string {
-    if (caseData.simple_id) {
-      const id = String(caseData.simple_id).padStart(5, '0');
-      const nameParts = caseData.patient_name.split(' ');
-      const lastName = nameParts[nameParts.length - 1].toUpperCase();
-      const firstName = nameParts[0].toUpperCase();
-      return `${id} - ${lastName}, ${firstName}`;
-    }
-    return caseData.patient_name;
-  }
+  // Removed: Now using formatCaseTitle from lib/caseUtils.ts
 
-  function CaseStatusBadge({ status }: { status: string }) {
-    const statusConfig: Record<string, { label: string; variant: any; icon: any }> = {
-      uploaded: {
-        label: 'Awaiting Report',
-        variant: 'secondary',
-        icon: Clock
-      },
-      in_progress: {
-        label: 'In Progress',
-        variant: 'default',
-        icon: Clock
-      },
-      report_ready: {
-        label: 'Report Ready',
-        variant: 'default',
-        icon: CheckCircle
-      }
-    };
-
-    const config = statusConfig[status] || statusConfig.uploaded;
-    const Icon = config.icon;
-
-    return (
-      <Badge variant={config.variant} className="gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
-  }
+  // Removed: Now using StatusBadge component
 
   // Filter cases
   const filteredCases = useMemo(() => {
@@ -355,7 +235,7 @@ export default function ReporterDashboard() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
+                    <CardTitle>{formatCaseTitle(caseData.simple_id, caseData.patient_name)}</CardTitle>
                     <CardDescription>
                       {caseData.folder_name && (
                         <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
@@ -367,7 +247,7 @@ export default function ReporterDashboard() {
                       </div>
                     </CardDescription>
                   </div>
-                  <CaseStatusBadge status={caseData.status} />
+                  <StatusBadge status={caseData.status as any} />
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -398,11 +278,11 @@ export default function ReporterDashboard() {
                 
                 <Button 
                   onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  disabled={downloadingCase === caseData.id}
+                  disabled={downloadingId === caseData.id}
                   variant="outline"
                   size="sm"
                 >
-                  {downloadingCase === caseData.id ? (
+                  {downloadingId === caseData.id ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
@@ -440,7 +320,7 @@ export default function ReporterDashboard() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{formatCaseTitle(caseData)}</CardTitle>
+                    <CardTitle>{formatCaseTitle(caseData.simple_id, caseData.patient_name)}</CardTitle>
                     <CardDescription>
                       {caseData.folder_name && (
                         <span className="block text-xs font-mono mb-1">Folder: {caseData.folder_name}</span>
@@ -451,7 +331,7 @@ export default function ReporterDashboard() {
                       </div>
                     </CardDescription>
                   </div>
-                  <CaseStatusBadge status={caseData.status} />
+                  <StatusBadge status={caseData.status as any} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -493,11 +373,11 @@ export default function ReporterDashboard() {
 
                 <Button 
                   onClick={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  disabled={downloadingCase === caseData.id}
+                  disabled={downloadingId === caseData.id}
                   variant="outline"
                   size="sm"
                 >
-                  {downloadingCase === caseData.id ? (
+                  {downloadingId === caseData.id ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
