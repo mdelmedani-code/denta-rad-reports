@@ -1,6 +1,6 @@
-import { Badge } from '@/components/ui/badge';
-import { formatStatus, getStatusVariant } from '@/lib/caseUtils';
+import { formatStatus, getStatusColorClasses } from '@/lib/caseUtils';
 import { CaseStatus } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
   status: CaseStatus;
@@ -9,8 +9,12 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
-    <Badge variant={getStatusVariant(status)} className={className}>
+    <span className={cn(
+      'inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold',
+      getStatusColorClasses(status),
+      className
+    )}>
       {formatStatus(status)}
-    </Badge>
+    </span>
   );
 }

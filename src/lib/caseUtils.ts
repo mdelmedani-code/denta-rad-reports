@@ -29,20 +29,20 @@ export function formatCaseTitle(simpleId?: number, patientName?: string): string
 }
 
 /**
- * Gets status variant for Badge component
+ * Gets status color classes for Badge component using semantic tokens
  */
-export function getStatusVariant(status: CaseStatus): 'default' | 'secondary' | 'destructive' | 'outline' {
+export function getStatusColorClasses(status: CaseStatus): string {
   switch (status) {
     case 'uploaded':
-      return 'secondary';
+      return 'bg-status-uploaded text-status-uploaded-foreground';
     case 'in_progress':
-      return 'default';
+      return 'bg-status-in-progress text-status-in-progress-foreground';
     case 'report_ready':
-      return 'default';
+      return 'bg-status-ready text-status-ready-foreground';
     case 'awaiting_payment':
-      return 'outline';
+      return 'bg-status-awaiting text-status-awaiting-foreground';
     default:
-      return 'secondary';
+      return 'bg-status-uploaded text-status-uploaded-foreground';
   }
 }
 

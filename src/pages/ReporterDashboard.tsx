@@ -7,26 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Download, Upload, Eye, Loader2, CheckCircle, Clock, FileEdit } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
 import { formatCaseTitle } from '@/lib/caseUtils';
 import { useCaseDownload } from '@/hooks/useCaseDownload';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-
-interface Case {
-  id: string;
-  patient_name: string;
-  patient_id: string;
-  patient_dob: string;
-  created_at: string;
-  clinical_question: string;
-  field_of_view: string;
-  urgency: string;
-  status: string;
-  completed_at?: string;
-  simple_id?: number;
-  folder_name?: string;
-}
+import { Case } from '@/types/case';
 
 export default function ReporterDashboard() {
   const navigate = useNavigate();
