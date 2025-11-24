@@ -114,7 +114,12 @@ export default function MonthlyInvoicing() {
 
       if (pricingError) throw pricingError;
 
-      const priceMap = (pricing as any[] || []).reduce((acc: Record<string, number>, p: any) => {
+      interface PricingRule {
+        field_of_view: string;
+        price: number;
+      }
+
+      const priceMap = (pricing as PricingRule[] || []).reduce((acc: Record<string, number>, p) => {
         if (!acc[p.field_of_view]) {
           acc[p.field_of_view] = p.price;
         }

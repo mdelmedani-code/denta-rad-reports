@@ -36,17 +36,15 @@ import { format } from "date-fns";
 
 interface Invoice {
   id: string;
-  invoice_number: string;
+  invoice_number: string | null;
   clinics: {
     name: string;
     contact_email: string;
-  };
-  issue_date: string;
-  due_date: string;
-  total: number;
-  paid_amount: number;
+  } | null;
+  created_at: string;
+  due_date: string | null;
+  amount: number;
   status: string;
-  payment_status: string;
 }
 
 interface Stats {
@@ -102,22 +100,20 @@ export default function InvoicingPage() {
     setLoading(true);
     try {
       let query = supabase
-        .from("invoices" as any)
+        .from("invoices")
         .select(`
           id,
           invoice_number,
-          issue_date,
+          created_at,
           due_date,
-          total,
-          paid_amount,
+          amount,
           status,
-          payment_status,
           clinics (
             name,
             contact_email
           )
         `)
-        .order("issue_date", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
         query = query.eq("status", statusFilter);
@@ -127,8 +123,9 @@ export default function InvoicingPage() {
 
       if (error) throw error;
 
-      setInvoices(data as any || []);
-      calculateStats(data as any || []);
+      const invoiceData = (data as unknown as Invoice[]) || [];
+      setInvoices(invoiceData);
+      calculateStats(invoiceData);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -143,8 +140,8 @@ export default function InvoicingPage() {
   const calculateStats = (invoices: Invoice[]) => {
     const stats = {
       totalInvoices: invoices.length,
-      totalAmount: invoices.reduce((sum, inv) => sum + Number(inv.total), 0),
-      paidAmount: invoices.reduce((sum, inv) => sum + Number(inv.paid_amount), 0),
+      totalAmount: invoices.reduce((sum, inv) => sum + Number(inv.amount), 0),
+      paidAmount: invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0),
       overdueCount: invoices.filter(inv => inv.status === 'overdue').length,
     };
     setStats(stats);
@@ -152,14 +149,13 @@ export default function InvoicingPage() {
 
   const handleExportCSV = async () => {
     const csv = [
-      ["Invoice #", "Clinic", "Issue Date", "Due Date", "Total", "Paid", "Status"],
+      ["Invoice #", "Clinic", "Created Date", "Due Date", "Amount", "Status"],
       ...filteredInvoices.map(inv => [
-        inv.invoice_number,
-        inv.clinics.name,
-        format(new Date(inv.issue_date), "yyyy-MM-dd"),
-        format(new Date(inv.due_date), "yyyy-MM-dd"),
-        `£${Number(inv.total).toFixed(2)}`,
-        `£${Number(inv.paid_amount).toFixed(2)}`,
+        inv.invoice_number || inv.id,
+        inv.clinics?.name || 'Unknown',
+        format(new Date(inv.created_at), "yyyy-MM-dd"),
+        inv.due_date ? format(new Date(inv.due_date), "yyyy-MM-dd") : 'N/A',
+        `£${Number(inv.amount).toFixed(2)}`,
         inv.status,
       ])
     ].map(row => row.join(",")).join("\n");
@@ -193,8 +189,8 @@ export default function InvoicingPage() {
   };
 
   const filteredInvoices = invoices.filter(inv =>
-    inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    inv.clinics.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (inv.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) || inv.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (inv.clinics?.name.toLowerCase().includes(searchTerm.toLowerCase()) || false)
   );
 
   if (loading) {
@@ -320,10 +316,9 @@ export default function InvoicingPage() {
               <TableRow>
                 <TableHead>Invoice #</TableHead>
                 <TableHead>Clinic</TableHead>
-                <TableHead>Issue Date</TableHead>
+                <TableHead>Created Date</TableHead>
                 <TableHead>Due Date</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Paid</TableHead>
+                <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -331,7 +326,7 @@ export default function InvoicingPage() {
             <TableBody>
               {filteredInvoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No invoices found
                   </TableCell>
                 </TableRow>
@@ -339,27 +334,24 @@ export default function InvoicingPage() {
                 filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">
-                      {invoice.invoice_number}
+                      {invoice.invoice_number || invoice.id}
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{invoice.clinics.name}</div>
+                        <div className="font-medium">{invoice.clinics?.name || 'Unknown'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {invoice.clinics.contact_email}
+                          {invoice.clinics?.contact_email || 'N/A'}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(invoice.issue_date), "MMM dd, yyyy")}
+                      {format(new Date(invoice.created_at), "MMM dd, yyyy")}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(invoice.due_date), "MMM dd, yyyy")}
+                      {invoice.due_date ? format(new Date(invoice.due_date), "MMM dd, yyyy") : 'N/A'}
                     </TableCell>
                     <TableCell className="font-medium">
-                      £{Number(invoice.total).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-medium text-green-600">
-                      £{Number(invoice.paid_amount).toFixed(2)}
+                      £{Number(invoice.amount).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(invoice.status)}

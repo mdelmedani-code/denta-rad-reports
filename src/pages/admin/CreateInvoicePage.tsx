@@ -130,8 +130,8 @@ export default function CreateInvoicePage() {
 
   const getPriceForCase = async (fieldOfView: string, urgency: string): Promise<number> => {
     const { data, error } = await supabase.rpc('calculate_case_price', {
-      p_field_of_view: fieldOfView as any,
-      p_urgency: urgency as any,
+      p_field_of_view: fieldOfView as 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8',
+      p_urgency: urgency as 'standard' | 'urgent',
       p_addons: []
     });
 
@@ -293,12 +293,14 @@ export default function CreateInvoicePage() {
         }
       }
 
+      const invoiceNumber = invoice.invoice_number ?? invoice.id;
+      
       await logAudit({
         action: "invoice_created",
         resourceType: "invoice",
         resourceId: invoice.id,
         details: {
-          invoice_number: (invoice as any).invoice_number || invoice.id,
+          invoice_number: invoiceNumber,
           clinic_id: selectedClinic,
           total: calculateTotal(),
           line_items_count: lineItems.length,
@@ -307,7 +309,7 @@ export default function CreateInvoicePage() {
 
       toast({
         title: "Success",
-        description: `Invoice ${(invoice as any).invoice_number || 'created'} successfully.`,
+        description: `Invoice ${invoiceNumber} successfully.`,
       });
 
       navigate("/admin/invoices");
