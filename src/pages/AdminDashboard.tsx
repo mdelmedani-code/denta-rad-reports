@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,26 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   FileText, 
   Upload, 
-  Search, 
-  Filter, 
   Download, 
   Eye, 
-  Edit, 
   LogOut,
-  Users,
-  BarChart3,
   Clock,
-  TrendingUp,
-  PoundSterling,
-  Calendar,
   Trash2,
-  Database,
-  Loader2
+  Database
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
 import {
   AlertDialog,
@@ -44,8 +34,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { formatStatus } from "@/lib/caseUtils";
 import { Case } from "@/types/case";
+import { useCaseFilters } from "@/hooks/useCaseFilters";
+import { useCaseActions } from "@/hooks/useCaseActions";
+import { caseService } from "@/services/caseService";
+import { handleError } from "@/utils/errorHandler";
+import { toast } from "@/lib/toast";
+import { StatsCards } from "@/components/admin/StatsCards";
+import { IncomeTracker } from "@/components/admin/IncomeTracker";
+import { CaseFilters } from "@/components/admin/CaseFilters";
 
 interface IncomeStats {
   projected_income: number;
@@ -54,15 +51,10 @@ interface IncomeStats {
   reported_cases: number;
 }
 
-// Admin Dashboard Component - Updated icons to use PoundSterling
 const AdminDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
-  const [filteredCases, setFilteredCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [urgencyFilter, setUrgencyFilter] = useState("all");
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [reportText, setReportText] = useState("");
   const [weeklyStats, setWeeklyStats] = useState<IncomeStats | null>(null);
@@ -71,173 +63,65 @@ const AdminDashboard = () => {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
   const [batchDeletePassword, setBatchDeletePassword] = useState("");
-  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+
+  const { updateCaseStatus, deleteCases, loading: actionLoading } = useCaseActions();
+  const {
+    searchTerm,
+    setSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    urgencyFilter,
+    setUrgencyFilter,
+    filteredCases,
+  } = useCaseFilters({ cases });
 
   useEffect(() => {
-    fetchCases();
-    fetchIncomeStats();
+    loadData();
   }, []);
 
-  useEffect(() => {
-    filterCases();
-  }, [cases, searchTerm, statusFilter, urgencyFilter]);
-
-  const fetchCases = async () => {
+  const loadData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          clinics (
-            name,
-            contact_email
-          )
-        `)
-        .order('upload_date', { ascending: false });
+      const [casesData, stats] = await Promise.all([
+        caseService.fetchAll(),
+        caseService.fetchIncomeStats(),
+      ]);
 
-      if (error) throw error;
-      setCases(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load cases: " + error.message,
-        variant: "destructive",
-      });
+      setCases(casesData);
+      setWeeklyStats(stats.weekly);
+      setMonthlyStats(stats.monthly);
+    } catch (error) {
+      handleError(error, 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchIncomeStats = async () => {
-    try {
-      // Fetch weekly stats
-      const { data: weeklyData, error: weeklyError } = await supabase
-        .rpc('get_weekly_income_stats');
-      
-      if (weeklyError) throw weeklyError;
-      setWeeklyStats(weeklyData?.[0] || null);
-
-      // Fetch monthly stats
-      const { data: monthlyData, error: monthlyError } = await supabase
-        .rpc('get_monthly_income_stats');
-      
-      if (monthlyError) throw monthlyError;
-      setMonthlyStats(monthlyData?.[0] || null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load income stats: " + error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const filterCases = () => {
-    let filtered = cases;
-
-    if (searchTerm) {
-      filtered = filtered.filter(case_ => 
-        case_.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        case_.clinical_question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        case_.clinics.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(case_ => case_.status === statusFilter);
-    }
-
-    if (urgencyFilter !== "all") {
-      filtered = filtered.filter(case_ => case_.urgency === urgencyFilter);
-    }
-
-    setFilteredCases(filtered);
-  };
-
-  const updateCaseStatus = async (caseId: string, newStatus: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment') => {
-    try {
-      const { error } = await supabase
-        .from('cases')
-        .update({ status: newStatus })
-        .eq('id', caseId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Status updated",
-        description: "Case status has been updated successfully",
-      });
-
-      fetchCases();
-      fetchIncomeStats(); // Refresh income stats when case status changes
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update status: " + error.message,
-        variant: "destructive",
-      });
+  const handleUpdateStatus = async (
+    caseId: string,
+    newStatus: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment'
+  ) => {
+    const success = await updateCaseStatus(caseId, newStatus);
+    if (success) {
+      await loadData();
     }
   };
 
   const handleBatchDelete = async () => {
     if (selectedCases.length === 0) return;
-
-    // Validate password
     if (!batchDeletePassword) {
-      toast({
-        title: "Password Required",
-        description: "Please enter your password to confirm deletion",
-        variant: "destructive",
-      });
+      toast.error('Password Required', 'Please enter your password to confirm deletion');
       return;
     }
 
-    setIsDeletingBatch(true);
-    try {
-      // Verify user's password
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) {
-        throw new Error("User not found");
-      }
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: batchDeletePassword,
-      });
-
-      if (signInError) {
-        throw new Error("Incorrect password");
-      }
-
-      // Delete cases
-      const { error } = await supabase
-        .from('cases')
-        .delete()
-        .in('id', selectedCases);
-
-      if (error) throw error;
-
-      toast({
-        title: "Cases deleted",
-        description: `${selectedCases.length} cases have been permanently deleted`,
-      });
-
+    const success = await deleteCases(selectedCases, batchDeletePassword);
+    if (success) {
       setSelectedCases([]);
-      setBatchDeletePassword("");
+      setBatchDeletePassword('');
       setBatchDeleteOpen(false);
-      fetchCases();
-      fetchIncomeStats();
-    } catch (error: any) {
-      toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete cases",
-        variant: "destructive",
-      });
-      setBatchDeletePassword("");
-    } finally {
-      setIsDeletingBatch(false);
+      await loadData();
+    } else {
+      setBatchDeletePassword('');
     }
   };
 
@@ -266,39 +150,29 @@ const AdminDashboard = () => {
     setIsBackingUp(true);
     try {
       const { data, error } = await supabase.functions.invoke('backup-to-gcs', {
-        body: {}
+        body: {},
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Backup completed",
-        description: `Successfully backed up ${data.successCount} files to Google Cloud Storage`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Backup failed",
-        description: error.message || "Failed to backup files",
-        variant: "destructive",
-      });
+      toast.success(
+        'Backup completed',
+        `Successfully backed up ${data.successCount} files to Google Cloud Storage`
+      );
+    } catch (error) {
+      handleError(error, 'Failed to backup files');
     } finally {
       setIsBackingUp(false);
     }
   };
 
-  // Removed: Now using shared utilities from lib/caseUtils.ts and components/shared/StatusBadge.tsx
-
-  const getStats = () => {
-    const total = cases.length;
-    const uploaded = cases.filter(c => c.status === 'uploaded').length;
-    const inProgress = cases.filter(c => c.status === 'in_progress').length;
-    const ready = cases.filter(c => c.status === 'report_ready').length;
-    const urgent = cases.filter(c => c.urgency === 'urgent').length;
-
-    return { total, uploaded, inProgress, ready, urgent };
-  };
-
-  const stats = getStats();
+  const stats = useMemo(() => ({
+    total: cases.length,
+    uploaded: cases.filter((c) => c.status === 'uploaded').length,
+    inProgress: cases.filter((c) => c.status === 'in_progress').length,
+    ready: cases.filter((c) => c.status === 'report_ready').length,
+    urgent: cases.filter((c) => c.urgency === 'urgent').length,
+  }), [cases]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -342,225 +216,18 @@ const AdminDashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <BarChart3 className="w-8 h-8 text-blue-600" />
-                <div className="ml-3">
-                  <p className="text-sm text-muted-foreground">Total Cases</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <Upload className="w-8 h-8 text-blue-600" />
-                <div className="ml-3">
-                  <p className="text-sm text-muted-foreground">Uploaded</p>
-                  <p className="text-2xl font-bold">{stats.uploaded}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <Clock className="w-8 h-8 text-yellow-600" />
-                <div className="ml-3">
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold">{stats.inProgress}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <FileText className="w-8 h-8 text-green-600" />
-                <div className="ml-3">
-                  <p className="text-sm text-muted-foreground">Reports Ready</p>
-                  <p className="text-2xl font-bold">{stats.ready}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <Clock className="w-8 h-8 text-red-600" />
-                <div className="ml-3">
-                  <p className="text-sm text-muted-foreground">Urgent</p>
-                  <p className="text-2xl font-bold">{stats.urgent}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <StatsCards {...stats} />
 
-        {/* Income Tracker */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Weekly Income Tracker */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                This Week
-              </CardTitle>
-              <CardDescription>Income tracking for current week</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <TrendingUp className="w-8 h-8 text-green-600" />
-                    <div className="ml-3">
-                      <p className="text-sm text-muted-foreground">Projected Income</p>
-                      <p className="text-2xl font-bold">
-                        £{weeklyStats?.projected_income?.toFixed(2) || '0.00'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {weeklyStats?.total_cases || 0} total cases
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between border-t pt-4">
-                  <div className="flex items-center">
-                    <PoundSterling className="w-8 h-8 text-blue-600" />
-                    <div className="ml-3">
-                      <p className="text-sm text-muted-foreground">Income So Far</p>
-                      <p className="text-2xl font-bold">
-                        £{weeklyStats?.income_so_far?.toFixed(2) || '0.00'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {weeklyStats?.reported_cases || 0} completed cases
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <IncomeTracker weeklyStats={weeklyStats} monthlyStats={monthlyStats} />
 
-          {/* Monthly Income Tracker */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2 text-purple-600" />
-                This Month
-              </CardTitle>
-              <CardDescription>Income tracking for current month</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <TrendingUp className="w-8 h-8 text-green-600" />
-                    <div className="ml-3">
-                      <p className="text-sm text-muted-foreground">Projected Income</p>
-                      <p className="text-2xl font-bold">
-                        £{monthlyStats?.projected_income?.toFixed(2) || '0.00'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {monthlyStats?.total_cases || 0} total cases
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between border-t pt-4">
-                  <div className="flex items-center">
-                    <PoundSterling className="w-8 h-8 text-blue-600" />
-                    <div className="ml-3">
-                      <p className="text-sm text-muted-foreground">Income So Far</p>
-                      <p className="text-2xl font-bold">
-                        £{monthlyStats?.income_so_far?.toFixed(2) || '0.00'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {monthlyStats?.reported_cases || 0} completed cases
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Filter className="w-5 h-5 mr-2" />
-              Filters & Search
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="search">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    placeholder="Patient, clinic, or question..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="uploaded">Uploaded</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="report_ready">Report Ready</SelectItem>
-                    <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="urgency">Urgency</Label>
-                <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All urgencies" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Urgencies</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>&nbsp;</Label>
-                <Button variant="outline" onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                  setUrgencyFilter("all");
-                }} className="w-full">
-                  Clear Filters
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <CaseFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          urgencyFilter={urgencyFilter}
+          setUrgencyFilter={setUrgencyFilter}
+        />
 
         {/* Cases Table */}
         <Card>
@@ -607,10 +274,10 @@ const AdminDashboard = () => {
                             placeholder="Enter your password"
                             value={batchDeletePassword}
                             onChange={(e) => setBatchDeletePassword(e.target.value)}
-                            disabled={isDeletingBatch}
+                            disabled={actionLoading}
                             className="w-full"
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !isDeletingBatch) {
+                              if (e.key === 'Enter' && !actionLoading) {
                                 handleBatchDelete();
                               }
                             }}
@@ -619,16 +286,16 @@ const AdminDashboard = () => {
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isDeletingBatch}>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={(e) => {
                           e.preventDefault();
                           handleBatchDelete();
                         }}
-                        disabled={isDeletingBatch}
+                        disabled={actionLoading}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        {isDeletingBatch ? (
+                        {actionLoading ? (
                           <>
                             <Clock className="mr-2 h-4 w-4 animate-spin" />
                             Deleting...
@@ -713,7 +380,10 @@ const AdminDashboard = () => {
                         <td className="py-2">
                           <Select
                             value={case_.status}
-                            onValueChange={(value) => updateCaseStatus(case_.id, value as 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment')}
+                            onValueChange={(value) => 
+                              handleUpdateStatus(case_.id, value as any)
+                            }
+                            disabled={actionLoading}
                           >
                             <SelectTrigger className="w-40">
                               <StatusBadge status={case_.status as any} />
@@ -792,10 +462,7 @@ const AdminDashboard = () => {
                               caseId={case_.id}
                               caseStatus={case_.status}
                               patientName={case_.patient_name}
-                              onDeleteSuccess={() => {
-                                fetchCases();
-                                fetchIncomeStats();
-                              }}
+                              onDeleteSuccess={loadData}
                             />
                           </div>
                         </td>
