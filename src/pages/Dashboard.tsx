@@ -1,23 +1,28 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, FileText, Clock, LogOut, Download, Loader2, FileEdit, ChevronDown, PoundSterling } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
-import { toast as sonnerToast } from "@/lib/toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { UrgencyBadge } from "@/components/shared/UrgencyBadge";
 import { useCaseDownload } from "@/hooks/useCaseDownload";
 import { Case } from "@/types/case";
 import { CaseCard } from "@/components/shared/CaseCard";
 import { CaseActions } from "@/components/shared/CaseActions";
+import { caseService } from '@/services/caseService';
+import { handleError } from '@/utils/errorHandler';
+import { toast } from '@/lib/toast';
+import { TableSkeleton } from '@/components/shared/TableSkeleton';
+import { CardListSkeleton } from '@/components/shared/CardListSkeleton';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/shared/PaginationControls';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -26,7 +31,6 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'reported'>('all');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { downloadReport, downloadingId } = useCaseDownload();
 
   useEffect(() => {
@@ -35,23 +39,15 @@ const Dashboard = () => {
 
   const fetchCases = async () => {
     try {
-      const { data, error } = await supabase
-        .from('cases')
-        .select(`
-          *,
-          clinics (
-            name,
-            contact_email
-          )
-        `)
-        .eq('archived', false)
-        .order('upload_date', { ascending: false });
-
-      if (error) throw error;
+      setLoading(true);
+      const data = await caseService.fetchAll();
+      
+      // Filter archived cases if the property exists
+      const activeCases = data.filter((c: any) => !c.archived);
       
       // Calculate estimated cost for each case
       const casesWithCost = await Promise.all(
-        (data || []).map(async (caseItem) => {
+        activeCases.map(async (caseItem) => {
           try {
             const { data: costData } = await supabase.rpc('calculate_case_price', {
               p_field_of_view: caseItem.field_of_view,
@@ -67,12 +63,8 @@ const Dashboard = () => {
       );
       
       setCases(casesWithCost);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load cases: " + error.message,
-        variant: "destructive",
-      });
+    } catch (error) {
+      handleError(error, 'Failed to load cases');
     } finally {
       setLoading(false);
     }
@@ -89,7 +81,6 @@ const Dashboard = () => {
 
   const accessReport = async (caseData: Case) => {
     try {
-      // Get report ID for this case
       const { data: reportData, error: reportError } = await supabase
         .from('reports')
         .select('id')
@@ -104,9 +95,8 @@ const Dashboard = () => {
       } else {
         throw new Error('Report not found');
       }
-    } catch (error: any) {
-      console.error('Error accessing report:', error);
-      sonnerToast.error(error.message || 'Failed to access report');
+    } catch (error) {
+      handleError(error, 'Failed to access report');
     }
   };
 
@@ -123,6 +113,11 @@ const Dashboard = () => {
   };
 
   const filteredCases = getFilteredCases();
+  const { currentPage, totalPages, paginatedItems, goToPage, hasNextPage, hasPrevPage } = usePagination({
+    items: filteredCases,
+    itemsPerPage: 10,
+  });
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -217,10 +212,14 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8">
-                <Clock className="w-8 h-8 animate-spin mx-auto mb-4" />
-                <p>Loading cases...</p>
-              </div>
+              <>
+                <div className="hidden lg:block">
+                  <TableSkeleton rows={10} columns={9} />
+                </div>
+                <div className="lg:hidden">
+                  <CardListSkeleton count={5} />
+                </div>
+              </>
             ) : cases.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -265,7 +264,7 @@ const Dashboard = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {filteredCases.map((case_) => (
+                            {paginatedItems.map((case_) => (
                         <tr key={case_.id} className="border-b hover:bg-muted/50 transition-colors">
                           <td className="py-8 px-2 font-medium">{case_.patient_name}</td>
                           <td className="py-8 px-2">
@@ -286,11 +285,7 @@ const Dashboard = () => {
                             </div>
                           </td>
                           <td className="py-8 px-2">
-                            <Badge 
-                              variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
-                            >
-                              {case_.urgency}
-                            </Badge>
+                            <UrgencyBadge urgency={case_.urgency} />
                           </td>
                           <td className="py-8 px-2">{case_.field_of_view}</td>
                           <td className="py-8 px-2">
@@ -345,11 +340,19 @@ const Dashboard = () => {
                             ))}
                           </tbody>
                         </table>
+
+                        <PaginationControls
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={goToPage}
+                          hasNextPage={hasNextPage}
+                          hasPrevPage={hasPrevPage}
+                        />
                       </div>
 
                       {/* Mobile Card View */}
                       <div className="lg:hidden space-y-12">
-                        {filteredCases.map((case_) => (
+                        {paginatedItems.map((case_) => (
                           <CaseCard
                             key={case_.id}
                             case={case_}
@@ -376,6 +379,14 @@ const Dashboard = () => {
                             }
                           />
                         ))}
+
+                        <PaginationControls
+                          currentPage={currentPage}
+                          totalPages={totalPages}
+                          onPageChange={goToPage}
+                          hasNextPage={hasNextPage}
+                          hasPrevPage={hasPrevPage}
+                        />
                       </div>
                     </>
                   )}
