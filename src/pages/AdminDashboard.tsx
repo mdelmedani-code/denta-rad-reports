@@ -16,7 +16,8 @@ import {
   LogOut,
   Clock,
   Trash2,
-  Database
+  Database,
+  ArrowUpDown
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +44,10 @@ import { toast } from "@/lib/toast";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { IncomeTracker } from "@/components/admin/IncomeTracker";
 import { CaseFilters } from "@/components/admin/CaseFilters";
+import { usePagination } from '@/hooks/usePagination';
+import { useTableSort } from '@/hooks/useTableSort';
+import { PaginationControls } from '@/components/shared/PaginationControls';
+import { TableSkeleton } from '@/components/shared/TableSkeleton';
 
 interface IncomeStats {
   projected_income: number;
@@ -75,6 +80,23 @@ const AdminDashboard = () => {
     setUrgencyFilter,
     filteredCases,
   } = useCaseFilters({ cases });
+
+  // Add sorting
+  const { sortedItems, sortKey, sortDirection, toggleSort } = useTableSort({
+    items: filteredCases,
+    initialSortKey: 'upload_date' as keyof Case,
+    initialDirection: 'desc',
+  });
+
+  // Add pagination
+  const {
+    currentPage,
+    totalPages,
+    paginatedItems,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
+  } = usePagination({ items: sortedItems, itemsPerPage: 10 });
 
   useEffect(() => {
     loadData();
@@ -173,6 +195,25 @@ const AdminDashboard = () => {
     ready: cases.filter((c) => c.status === 'report_ready').length,
     urgent: cases.filter((c) => c.urgency === 'urgent').length,
   }), [cases]);
+
+  const getSortIcon = (columnKey: keyof Case) => {
+    if (sortKey !== columnKey) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-30" />;
+    return <ArrowUpDown className={`h-4 w-4 ml-1 ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />;
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
+          ))}
+        </div>
+        <TableSkeleton rows={10} columns={8} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -314,12 +355,7 @@ const AdminDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <Clock className="w-8 h-8 animate-spin mx-auto mb-4" />
-                <p>Loading cases...</p>
-              </div>
-            ) : filteredCases.length === 0 ? (
+            {filteredCases.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground">No cases found</p>
@@ -336,17 +372,49 @@ const AdminDashboard = () => {
                         />
                       </th>
                       <th className="text-left py-2">Clinic</th>
-                      <th className="text-left py-2">Patient</th>
-                      <th className="text-left py-2">Upload Date</th>
+                      <th 
+                        className="text-left py-2 cursor-pointer hover:bg-muted/50"
+                        onClick={() => toggleSort('patient_name')}
+                      >
+                        <div className="flex items-center">
+                          Patient
+                          {getSortIcon('patient_name')}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-left py-2 cursor-pointer hover:bg-muted/50"
+                        onClick={() => toggleSort('upload_date')}
+                      >
+                        <div className="flex items-center">
+                          Upload Date
+                          {getSortIcon('upload_date')}
+                        </div>
+                      </th>
                       <th className="text-left py-2">Clinical Question</th>
-                      <th className="text-left py-2">Urgency</th>
+                      <th 
+                        className="text-left py-2 cursor-pointer hover:bg-muted/50"
+                        onClick={() => toggleSort('urgency')}
+                      >
+                        <div className="flex items-center">
+                          Urgency
+                          {getSortIcon('urgency')}
+                        </div>
+                      </th>
                       <th className="text-left py-2">FOV</th>
-                      <th className="text-left py-2">Status</th>
+                      <th 
+                        className="text-left py-2 cursor-pointer hover:bg-muted/50"
+                        onClick={() => toggleSort('status')}
+                      >
+                        <div className="flex items-center">
+                          Status
+                          {getSortIcon('status')}
+                        </div>
+                      </th>
                       <th className="text-left py-2">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {filteredCases.map((case_) => (
+            <tbody>
+              {paginatedItems.map((case_) => (
                       <tr key={case_.id} className="border-b">
                         <td className="py-2">
                           <Checkbox
@@ -470,6 +538,14 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  hasNextPage={hasNextPage}
+                  hasPrevPage={hasPrevPage}
+                />
               </div>
             )}
           </CardContent>

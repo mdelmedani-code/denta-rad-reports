@@ -1,16 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
 import { useCaseDownload } from '@/hooks/useCaseDownload';
 import { Case } from '@/types/case';
 import { CaseCard } from '@/components/shared/CaseCard';
 import { CaseActions } from '@/components/shared/CaseActions';
+import { caseService } from '@/services/caseService';
+import { reportService } from '@/services/reportService';
+import { handleError } from '@/utils/errorHandler';
+import { CardListSkeleton } from '@/components/shared/CardListSkeleton';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/shared/PaginationControls';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function ReporterDashboard() {
   const navigate = useNavigate();
@@ -34,18 +40,12 @@ export default function ReporterDashboard() {
 
   async function fetchCases() {
     try {
-      const { data, error } = await supabase
-        .from('cases')
-        .select('*')
-        .eq('archived', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setCases(data || []);
-    } catch (error: any) {
-      toast.error('Failed to load cases');
-      console.error('Error fetching cases:', error);
+      setLoading(true);
+      const data = await caseService.fetchAll();
+      // Filter archived cases - check if archived field exists and is true
+      setCases(data.filter((c) => !(c as any).archived));
+    } catch (error) {
+      handleError(error, 'Failed to load cases');
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,6 @@ export default function ReporterDashboard() {
 
   async function accessReport(caseId: string) {
     try {
-      // Get report ID for this case
       const { data: reportData, error: reportError } = await supabase
         .from('reports')
         .select('id')
@@ -70,9 +69,8 @@ export default function ReporterDashboard() {
       } else {
         throw new Error('Report not found');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to access report');
-      console.error('Access report error:', error);
+    } catch (error) {
+      handleError(error, 'Failed to access report');
     }
   }
 
@@ -110,27 +108,13 @@ export default function ReporterDashboard() {
           throw new Error(`Failed to upload report: ${uploadError.message}`);
         }
 
-        // Update case status
-        const { error: updateError } = await supabase
-          .from('cases')
-          .update({
-            status: 'report_ready',
-            updated_at: new Date().toISOString(),
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', caseId);
-
-        if (updateError) {
-          throw new Error('Failed to update case status');
-        }
+        // Update case status using service
+        await reportService.updateCaseStatus(caseId, 'report_ready');
 
         toast.success('Report uploaded successfully!');
-        
-        // Refresh case list
         await fetchCases();
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to upload report');
-        console.error('Upload error:', error);
+      } catch (error) {
+        handleError(error, 'Failed to upload report');
       } finally {
         setUploadingReport(null);
       }
@@ -179,10 +163,15 @@ export default function ReporterDashboard() {
   const pendingCases = filteredCases.filter(c => c.status === 'uploaded' || c.status === 'in_progress');
   const completedCases = filteredCases.filter(c => c.status === 'report_ready');
 
+  // Pagination for pending cases
+  const pendingPagination = usePagination({ items: pendingCases, itemsPerPage: 10 });
+  const completedPagination = usePagination({ items: completedCases, itemsPerPage: 10 });
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-6">Reporter Dashboard</h1>
+        <CardListSkeleton count={5} />
       </div>
     );
   }
@@ -214,7 +203,7 @@ export default function ReporterDashboard() {
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4 mt-4">
-          {pendingCases.map(caseData => (
+          {pendingPagination.paginatedItems.map(caseData => (
             <CaseCard
               key={caseData.id}
               case={caseData}
@@ -241,10 +230,20 @@ export default function ReporterDashboard() {
               <p className="text-muted-foreground">No pending cases</p>
             </div>
           )}
+
+          {pendingCases.length > 0 && (
+            <PaginationControls
+              currentPage={pendingPagination.currentPage}
+              totalPages={pendingPagination.totalPages}
+              onPageChange={pendingPagination.goToPage}
+              hasNextPage={pendingPagination.hasNextPage}
+              hasPrevPage={pendingPagination.hasPrevPage}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-4 mt-4">
-          {completedCases.map(caseData => (
+          {completedPagination.paginatedItems.map(caseData => (
             <CaseCard
               key={caseData.id}
               case={caseData}
@@ -280,6 +279,16 @@ export default function ReporterDashboard() {
             <div className="text-center py-12">
               <p className="text-muted-foreground">No completed cases</p>
             </div>
+          )}
+
+          {completedCases.length > 0 && (
+            <PaginationControls
+              currentPage={completedPagination.currentPage}
+              totalPages={completedPagination.totalPages}
+              onPageChange={completedPagination.goToPage}
+              hasNextPage={completedPagination.hasNextPage}
+              hasPrevPage={completedPagination.hasPrevPage}
+            />
           )}
         </TabsContent>
       </Tabs>
