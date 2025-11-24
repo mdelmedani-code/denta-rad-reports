@@ -43,6 +43,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { formatStatus } from "@/lib/caseUtils";
 
 interface Case {
   id: string;
@@ -298,21 +300,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'uploaded': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'report_ready': return 'bg-green-100 text-green-800';
-      case 'awaiting_payment': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatStatus = (status: string) => {
-    return status.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
+  // Removed: Now using shared utilities from lib/caseUtils.ts and components/shared/StatusBadge.tsx
 
   const getStats = () => {
     const total = cases.length;
@@ -742,9 +730,7 @@ const AdminDashboard = () => {
                             onValueChange={(value) => updateCaseStatus(case_.id, value as 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment')}
                           >
                             <SelectTrigger className="w-40">
-                              <Badge className={getStatusColor(case_.status)}>
-                                {formatStatus(case_.status)}
-                              </Badge>
+                              <StatusBadge status={case_.status as any} />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="uploaded">Uploaded</SelectItem>

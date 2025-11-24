@@ -13,6 +13,8 @@ import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
 import { toast as sonnerToast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { useCaseDownload } from "@/hooks/useCaseDownload";
 
 interface Case {
   id: string;
@@ -37,11 +39,11 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'reported'>('all');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { downloadReport, downloadingId } = useCaseDownload();
 
   useEffect(() => {
     fetchCases();
@@ -97,68 +99,9 @@ const Dashboard = () => {
     navigate("/login");
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'uploaded': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'report_ready': return 'bg-green-100 text-green-800';
-      case 'awaiting_payment': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Removed: Now using shared utilities from lib/caseUtils.ts and components/shared/StatusBadge.tsx
 
-  const formatStatus = (status: string) => {
-    return status.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
-  const downloadReport = async (caseData: Case) => {
-    setDownloadingReport(caseData.id);
-    
-    try {
-      sonnerToast.info('Downloading report...');
-
-      // Get report to check for PDF path
-      const { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .select('pdf_storage_path')
-        .eq('case_id', caseData.id)
-        .eq('is_superseded', false)
-        .single();
-
-      if (reportError) throw reportError;
-
-      const pdfPath = reportData?.pdf_storage_path || `${caseData.folder_name}/report.pdf`;
-
-      // Download from Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('reports')
-        .download(pdfPath);
-
-      if (error) {
-        console.error('Download error:', error);
-        throw new Error(`Failed to download report: ${error.message}`);
-      }
-
-      // Trigger browser download
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${caseData.folder_name}_report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      sonnerToast.success('Report downloaded successfully');
-    } catch (error: any) {
-      console.error('Error downloading report:', error);
-      sonnerToast.error(error.message || 'Failed to download report');
-    } finally {
-      setDownloadingReport(null);
-    }
-  };
+  // Removed: Now using useCaseDownload hook
 
   const accessReport = async (caseData: Case) => {
     try {
@@ -373,9 +316,7 @@ const Dashboard = () => {
                             </div>
                           </td>
                           <td className="py-8 px-2">
-                            <Badge className={getStatusColor(case_.status)}>
-                              {formatStatus(case_.status)}
-                            </Badge>
+                            <StatusBadge status={case_.status as any} />
                           </td>
                           <td className="py-8 px-2">
                             <div className="flex gap-2 flex-wrap">
@@ -392,10 +333,10 @@ const Dashboard = () => {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => downloadReport(case_)}
-                                    disabled={downloadingReport === case_.id}
+                                    onClick={() => downloadReport(case_.id, case_.folder_name || '')}
+                                    disabled={downloadingId === case_.id}
                                   >
-                                    {downloadingReport === case_.id ? (
+                                    {downloadingId === case_.id ? (
                                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                     ) : (
                                       <Download className="h-4 w-4 mr-2" />
@@ -440,9 +381,7 @@ const Dashboard = () => {
                                 )}
                               </div>
                             </div>
-                            <Badge className={getStatusColor(case_.status)}>
-                              {formatStatus(case_.status)}
-                            </Badge>
+                            <StatusBadge status={case_.status as any} />
                           </div>
                           
                           <div className="space-y-3">
@@ -487,10 +426,10 @@ const Dashboard = () => {
                                   variant="outline" 
                                   size="sm" 
                                   className="w-full"
-                                  onClick={() => downloadReport(case_)}
-                                  disabled={downloadingReport === case_.id}
+                                  onClick={() => downloadReport(case_.id, case_.folder_name || '')}
+                                  disabled={downloadingId === case_.id}
                                 >
-                                  {downloadingReport === case_.id ? (
+                                  {downloadingId === case_.id ? (
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                   ) : (
                                     <Download className="h-4 w-4 mr-2" />
