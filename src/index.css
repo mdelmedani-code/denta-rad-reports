@@ -32,6 +32,16 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
+    /* Status semantic tokens */
+    --status-uploaded: 210 40% 96%;
+    --status-uploaded-foreground: 215 25% 27%;
+    --status-in-progress: 45 86% 58%;
+    --status-in-progress-foreground: 215 84% 16%;
+    --status-ready: 142 76% 36%;
+    --status-ready-foreground: 0 0% 98%;
+    --status-awaiting: 25 95% 53%;
+    --status-awaiting-foreground: 215 84% 16%;
+
     --border: 215 20% 91%;
     --input: 215 20% 91%;
     --ring: 215 84% 16%;

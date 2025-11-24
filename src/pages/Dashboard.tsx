@@ -10,30 +10,12 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { NotificationPreferences } from "@/components/NotificationPreferences";
 import { DeleteCaseDialog } from "@/components/DeleteCaseDialog";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast } from "@/lib/toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useCaseDownload } from "@/hooks/useCaseDownload";
-
-interface Case {
-  id: string;
-  patient_name: string;
-  patient_dob?: string;
-  patient_internal_id?: string;
-  upload_date: string;
-  completed_at?: string;
-  clinical_question: string;
-  status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
-  urgency: 'standard' | 'urgent';
-  field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
-  folder_name?: string;
-  estimated_cost?: number;
-  clinics?: {
-    name: string;
-    contact_email: string;
-  };
-}
+import { Case } from "@/types/case";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();

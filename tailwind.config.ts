@@ -63,6 +63,16 @@ export default {
 				},
 				silver: 'hsl(var(--silver))',
 				'white-soft': 'hsl(var(--white-soft))',
+				status: {
+					uploaded: 'hsl(var(--status-uploaded))',
+					'uploaded-foreground': 'hsl(var(--status-uploaded-foreground))',
+					'in-progress': 'hsl(var(--status-in-progress))',
+					'in-progress-foreground': 'hsl(var(--status-in-progress-foreground))',
+					ready: 'hsl(var(--status-ready))',
+					'ready-foreground': 'hsl(var(--status-ready-foreground))',
+					awaiting: 'hsl(var(--status-awaiting))',
+					'awaiting-foreground': 'hsl(var(--status-awaiting-foreground))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

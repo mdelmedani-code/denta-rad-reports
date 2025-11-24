@@ -45,21 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatStatus } from "@/lib/caseUtils";
-
-interface Case {
-  id: string;
-  patient_name: string;
-  upload_date: string;
-  clinical_question: string;
-  status: 'uploaded' | 'in_progress' | 'report_ready' | 'awaiting_payment';
-  urgency: 'standard' | 'urgent';
-  field_of_view: 'up_to_5x5' | 'up_to_8x5' | 'up_to_8x8' | 'over_8x8';
-  clinic_id: string;
-  clinics: {
-    name: string;
-    contact_email: string;
-  };
-}
+import { Case } from "@/types/case";
 
 interface IncomeStats {
   projected_income: number;
