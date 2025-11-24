@@ -73,12 +73,12 @@ export function BillingDashboard() {
       // Get pricing rules
       const { data: pricing, error: pricingError } = await supabase
         .from('pricing_rules')
-        .select('field_of_view, price_gbp');
+        .select('field_of_view, price');
 
       if (pricingError) throw pricingError;
 
       const priceMap = (pricing as any[] || []).reduce((acc: Record<string, number>, p: any) => {
-        acc[p.field_of_view] = p.price_gbp;
+        acc[p.field_of_view] = p.price;
         return acc;
       }, {} as Record<string, number>);
 
