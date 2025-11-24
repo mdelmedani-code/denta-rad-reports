@@ -17,7 +17,7 @@ export function formatFieldOfView(fov: FieldOfView): string {
 /**
  * Formats a case title with simple ID and patient name
  */
-export function formatCaseTitle(simpleId?: number, patientName?: string): string {
+export function formatCaseTitle(simpleId?: number | null, patientName?: string): string {
   if (simpleId && patientName) {
     const id = String(simpleId).padStart(5, '0');
     const nameParts = patientName.split(' ');
@@ -26,6 +26,22 @@ export function formatCaseTitle(simpleId?: number, patientName?: string): string
     return `${id} - ${lastName}, ${firstName}`;
   }
   return patientName || 'Unknown';
+}
+
+/**
+ * Formats a date string to GB locale
+ */
+export function formatDate(date: string | null | undefined): string {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('en-GB');
+}
+
+/**
+ * Formats a date string with a label
+ */
+export function formatDateWithLabel(date: string | null | undefined, label: string): string | null {
+  if (!date) return null;
+  return `${label}: ${formatDate(date)}`;
 }
 
 /**

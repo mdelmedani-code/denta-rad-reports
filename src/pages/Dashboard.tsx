@@ -16,6 +16,8 @@ import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useCaseDownload } from "@/hooks/useCaseDownload";
 import { Case } from "@/types/case";
+import { CaseCard } from "@/components/shared/CaseCard";
+import { CaseActions } from "@/components/shared/CaseActions";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -348,92 +350,31 @@ const Dashboard = () => {
                       {/* Mobile Card View */}
                       <div className="lg:hidden space-y-12">
                         {filteredCases.map((case_) => (
-                    <Card key={case_.id} className="border border-border shadow-sm hover:shadow-md transition-shadow">
-                      <CardContent className="p-12">
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg mb-1">{case_.patient_name}</h3>
-                              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                                <span>Uploaded: {new Date(case_.upload_date).toLocaleDateString('en-GB')}</span>
-                                {case_.completed_at && (
-                                  <span className="font-semibold text-green-600">
-                                    Completed: {new Date(case_.completed_at).toLocaleDateString('en-GB')}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <StatusBadge status={case_.status as any} />
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-sm font-medium">Clinical Question:</p>
-                              <p className="text-sm text-muted-foreground">
-                                {case_.clinical_question}
-                              </p>
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2">
-                              <Badge 
-                                variant={case_.urgency === 'urgent' ? 'destructive' : 'secondary'}
-                                className="text-xs"
-                              >
-                                {case_.urgency}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                FOV: {case_.field_of_view}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs flex items-center gap-1">
-                                <PoundSterling className="h-3 w-3" />
-                                {case_.estimated_cost?.toFixed(2) || '0.00'}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {/* Mobile Actions */}
-                          <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                            {case_.status === 'report_ready' ? (
-                              <>
-                                <Button 
-                                  variant="default" 
-                                  size="sm" 
-                                  className="w-full"
-                                  onClick={() => accessReport(case_)}
-                                >
-                                  <FileEdit className="h-4 w-4 mr-2" />
-                                  Access Report
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full"
-                                  onClick={() => downloadReport(case_.id, case_.folder_name || '')}
-                                  disabled={downloadingId === case_.id}
-                                >
-                                  {downloadingId === case_.id ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Download className="h-4 w-4 mr-2" />
-                                  )}
-                                  Download Report
-                                </Button>
-                              </>
-                            ) : (
-                              <p className="text-sm text-muted-foreground text-center py-2">
-                                Report in progress...
-                              </p>
-                            )}
-                            <DeleteCaseDialog
-                              caseId={case_.id}
-                              caseStatus={case_.status}
-                              patientName={case_.patient_name}
-                              onDeleteSuccess={fetchCases}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                        </Card>
+                          <CaseCard
+                            key={case_.id}
+                            case={case_}
+                            showCost={true}
+                            actions={
+                              <CaseActions
+                                caseId={case_.id}
+                                folderName={case_.folder_name || ''}
+                                status={case_.status}
+                                role="clinic"
+                                isDownloading={downloadingId === case_.id}
+                                onAccessReport={() => accessReport(case_)}
+                                onDownloadReport={() => downloadReport(case_.id, case_.folder_name || '')}
+                                layout="vertical"
+                                additionalActions={
+                                  <DeleteCaseDialog
+                                    caseId={case_.id}
+                                    caseStatus={case_.status}
+                                    patientName={case_.patient_name}
+                                    onDeleteSuccess={fetchCases}
+                                  />
+                                }
+                              />
+                            }
+                          />
                         ))}
                       </div>
                     </>
