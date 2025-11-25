@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invoiceService } from '@/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,27 +105,7 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
   async function sendInvoiceEmail(invoice: Invoice) {
     try {
       setSendingEmail(invoice.id);
-
-      const { error } = await supabase.functions.invoke('send-invoice-email', {
-        body: {
-          invoiceId: invoice.id,
-          recipientEmail: invoice.clinics.contact_email,
-          clinicName: invoice.clinics.name,
-          invoiceNumber: invoice.invoice_number,
-          amount: invoice.amount,
-          pdfUrl: invoice.pdf_url
-        }
-      });
-
-      if (error) throw error;
-
-      await supabase
-        .from('invoices')
-        .update({ 
-          status: 'sent',
-          sent_at: new Date().toISOString()
-        })
-        .eq('id', invoice.id);
+      await invoiceService.sendInvoiceEmail(invoice.id);
 
       toast({
         title: 'Invoice Sent',
