@@ -57,6 +57,27 @@ export const invoiceService = {
     if (error) throw error;
   },
 
+  async deleteInvoice(invoiceId: string, pdfStoragePath?: string) {
+    // Delete PDF from storage if exists
+    if (pdfStoragePath) {
+      const { error: storageError } = await supabase.storage
+        .from('invoices')
+        .remove([pdfStoragePath]);
+
+      if (storageError) {
+        console.error('Error deleting PDF:', storageError);
+      }
+    }
+
+    // Delete invoice record
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', invoiceId);
+
+    if (error) throw error;
+  },
+
   generateInvoiceNumber(): string {
     const now = new Date();
     const year = now.getFullYear();

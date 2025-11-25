@@ -21,7 +21,17 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Mail, Clock, CheckCircle, Search } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Download, Mail, Clock, CheckCircle, Search, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Invoice {
@@ -31,6 +41,7 @@ interface Invoice {
   amount: number;
   status: string;
   pdf_url: string;
+  pdf_storage_path: string;
   case_ids: string[];
   clinics: {
     name: string;
@@ -45,6 +56,9 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadInvoices();
@@ -194,6 +208,38 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
     }
   }
 
+  function confirmDelete(invoice: Invoice) {
+    setInvoiceToDelete(invoice);
+    setDeleteDialogOpen(true);
+  }
+
+  async function deleteInvoice() {
+    if (!invoiceToDelete) return;
+
+    try {
+      setDeleting(true);
+      await invoiceService.deleteInvoice(invoiceToDelete.id, invoiceToDelete.pdf_storage_path);
+
+      toast({
+        title: 'Invoice Deleted',
+        description: `Invoice ${invoiceToDelete.invoice_number} has been deleted`
+      });
+
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+      await loadInvoices();
+      onUpdate();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete invoice',
+        variant: 'destructive'
+      });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const filteredInvoices = invoices.filter(invoice =>
     invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.clinics.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -317,6 +363,13 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
                           </Button>
                         </>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => confirmDelete(invoice)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -332,6 +385,28 @@ export function InvoiceManagement({ onUpdate }: { onUpdate: () => void }) {
           </Table>
         </div>
       </CardContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete invoice {invoiceToDelete?.invoice_number}?
+              This action cannot be undone and will permanently delete the invoice and its PDF file.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteInvoice}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
