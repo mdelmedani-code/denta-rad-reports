@@ -116,9 +116,13 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       }
       console.log('PDF uploaded successfully');
 
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL (valid for 1 year) since bucket is private
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('invoices')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 31536000); // 1 year in seconds
+      
+      if (urlError) throw urlError;
+      const publicUrl = urlData.signedUrl;
 
       console.log('Looking up clinic:', clinic.clinic_email);
       const { data: clinicData, error: clinicError } = await supabase

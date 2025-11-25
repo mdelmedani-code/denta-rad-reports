@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invoiceService } from '@/services/invoiceService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -172,20 +173,7 @@ export default function InvoiceViewer() {
   async function sendInvoiceEmail(invoice: Invoice) {
     setSendingEmail(invoice.id);
     try {
-      const { data, error } = await supabase.functions.invoke('send-invoice-email', {
-        body: {
-          invoice_id: invoice.id,
-          clinic_email: invoice.clinics.contact_email,
-          clinic_name: invoice.clinics.name,
-          invoice_number: invoice.invoice_number,
-          pdf_storage_path: invoice.pdf_storage_path,
-          amount: invoice.amount,
-          due_date: invoice.due_date
-        }
-      });
-
-      if (error) throw error;
-
+      await invoiceService.sendInvoiceEmail(invoice.id);
       toast.success(`Invoice emailed to ${invoice.clinics.contact_email}`);
       loadInvoices(); // Reload to show updated status
     } catch (error) {

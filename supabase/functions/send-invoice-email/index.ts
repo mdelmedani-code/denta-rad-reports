@@ -8,13 +8,7 @@ const corsHeaders = {
 };
 
 interface SendInvoiceRequest {
-  invoice_id: string;
-  clinic_email: string;
-  clinic_name: string;
-  invoice_number: string;
-  pdf_storage_path: string;
-  amount: number;
-  due_date: string;
+  invoiceId: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,15 +23,35 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { 
-      invoice_id, 
-      clinic_email, 
-      clinic_name, 
-      invoice_number,
-      pdf_storage_path,
-      amount,
-      due_date
-    }: SendInvoiceRequest = await req.json();
+    const { invoiceId }: SendInvoiceRequest = await req.json();
+    
+    // Fetch invoice details from database
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select(`
+        id,
+        invoice_number,
+        amount,
+        due_date,
+        pdf_storage_path,
+        clinics:clinic_id (
+          name,
+          contact_email
+        )
+      `)
+      .eq('id', invoiceId)
+      .single();
+    
+    if (invoiceError || !invoice) {
+      throw new Error('Invoice not found');
+    }
+    
+    const clinic_email = invoice.clinics.contact_email;
+    const clinic_name = invoice.clinics.name;
+    const invoice_number = invoice.invoice_number;
+    const pdf_storage_path = invoice.pdf_storage_path;
+    const amount = invoice.amount;
+    const due_date = invoice.due_date;
 
     // Fetch email template from database
     const { data: template, error: templateError } = await supabase
@@ -114,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
         status: 'sent',
         sent_at: new Date().toISOString()
       })
-      .eq('id', invoice_id);
+      .eq('id', invoiceId);
 
     if (updateError) {
       console.error('Failed to update invoice status:', updateError);
