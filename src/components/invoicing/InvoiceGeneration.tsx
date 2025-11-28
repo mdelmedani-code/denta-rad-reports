@@ -29,6 +29,7 @@ interface UnbilledReport {
     amount: number;
     case_id: string;
     field_of_view: string;
+    urgency: string;
   }>;
 }
 
@@ -82,7 +83,8 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       show_patient_name: false,
       show_field_of_view: true,
       show_case_ref: false,
-      show_report_date: true
+      show_report_date: true,
+      show_urgency: true
     };
 
     const invoiceNumber = `INV-${Date.now()}`;
@@ -111,6 +113,7 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         unitPrice: c.amount,
         amount: c.amount,
         field_of_view: c.field_of_view,
+        urgency: c.urgency,
         report_date: c.report_date ? new Date(c.report_date).toLocaleDateString('en-GB', { 
           year: 'numeric', 
           month: 'short', 
@@ -135,6 +138,7 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         case_ref: item.case_ref || '',
         date: item.report_date,
         field_of_view: item.field_of_view,
+        urgency: item.urgency,
         quantity: 1,
         unit_price: item.amount,
         total: item.amount

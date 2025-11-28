@@ -26,6 +26,7 @@ interface MonthlyBillingData {
     folder_name: string;
     patient_name: string;
     field_of_view: string;
+    urgency: string;
     price: number;
     completed_at: string;
   }>;
@@ -87,6 +88,7 @@ export default function MonthlyInvoicing() {
           folder_name,
           patient_name,
           field_of_view,
+          urgency,
           completed_at,
           clinic_id,
           clinics (
@@ -149,6 +151,7 @@ export default function MonthlyInvoicing() {
           folder_name: c.folder_name,
           patient_name: c.patient_name,
           field_of_view: c.field_of_view,
+          urgency: c.urgency,
           price: price,
           completed_at: c.completed_at
         });
@@ -188,6 +191,7 @@ export default function MonthlyInvoicing() {
           case_ref: c.folder_name,
           date: new Date(c.completed_at).toLocaleDateString('en-GB'),
           field_of_view: c.field_of_view,
+          urgency: c.urgency,
           quantity: 1,
           unit_price: c.price,
           total: c.price,
@@ -325,6 +329,7 @@ export default function MonthlyInvoicing() {
               case_ref: c.folder_name,
               date: new Date(c.completed_at).toLocaleDateString('en-GB'),
               field_of_view: c.field_of_view,
+              urgency: c.urgency,
               quantity: 1,
               unit_price: c.price,
               total: c.price,
