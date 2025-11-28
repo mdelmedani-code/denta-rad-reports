@@ -120,6 +120,13 @@ interface InvoiceData {
   clinic_email: string;
   period_start: string;
   period_end: string;
+  settings?: {
+    patient_identifier: string;
+    show_patient_name: boolean;
+    show_field_of_view: boolean;
+    show_case_ref: boolean;
+    show_report_date: boolean;
+  };
   line_items: Array<{
     description: string;
     case_ref: string;
@@ -135,6 +142,12 @@ interface InvoiceData {
 }
 
 export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
+  const settings = invoice.settings || {
+    show_field_of_view: true,
+    show_case_ref: false,
+    show_report_date: true
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -182,18 +195,18 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={styles.col1}>Description</Text>
-            <Text style={styles.col2}>Case Reference</Text>
-            <Text style={styles.col3}>Date</Text>
-            <Text style={styles.col4}>FOV</Text>
+            {settings.show_case_ref && <Text style={styles.col2}>Case Reference</Text>}
+            {settings.show_report_date && <Text style={styles.col3}>Date</Text>}
+            {settings.show_field_of_view && <Text style={styles.col4}>FOV</Text>}
             <Text style={styles.col5}>Amount</Text>
           </View>
 
           {invoice.line_items.map((item, index) => (
             <View key={index} style={styles.tableRow}>
               <Text style={styles.col1}>{item.description}</Text>
-              <Text style={styles.col2}>{item.case_ref}</Text>
-              <Text style={styles.col3}>{item.date}</Text>
-              <Text style={styles.col4}>{item.field_of_view}</Text>
+              {settings.show_case_ref && <Text style={styles.col2}>{item.case_ref}</Text>}
+              {settings.show_report_date && <Text style={styles.col3}>{item.date}</Text>}
+              {settings.show_field_of_view && <Text style={styles.col4}>{item.field_of_view}</Text>}
               <Text style={styles.col5}>£{item.total.toFixed(2)}</Text>
             </View>
           ))}
