@@ -16,6 +16,7 @@ interface UnbilledReport {
   total_amount: number;
   cases: Array<{
     patient_name: string;
+    patient_id: string;
     report_date: string;
     amount: number;
     case_id: string;
@@ -67,7 +68,7 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const lineItems = clinic.cases.map(c => ({
-        description: `Radiology Report - ${c.patient_name}`,
+        description: `Patient ID: ${c.patient_id || 'N/A'}`,
         quantity: 1,
         unitPrice: c.amount,
         amount: c.amount,
