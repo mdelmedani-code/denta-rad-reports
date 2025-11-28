@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    width: 150,
+    height: 60,
   },
   invoiceTitle: {
     fontSize: 24,
