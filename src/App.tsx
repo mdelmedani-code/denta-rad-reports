@@ -30,6 +30,7 @@ import DataRetentionPage from "./pages/admin/DataRetentionPage";
 import PDFTemplateSettings from "./pages/admin/PDFTemplateSettings";
 import TemplateEditor from "./pages/TemplateEditor";
 import UnifiedInvoicing from "./pages/admin/UnifiedInvoicing";
+import InvoiceSettings from "./pages/admin/InvoiceSettings";
 import EmailTemplateSettings from "./pages/admin/EmailTemplateSettings";
 import { AppLayout } from "./components/AppLayout";
 
@@ -134,6 +135,14 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <UnifiedInvoicing />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/invoice-settings" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <InvoiceSettings />
                 </AppLayout>
               </ProtectedRoute>
             } />

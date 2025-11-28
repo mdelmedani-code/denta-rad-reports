@@ -17,6 +17,7 @@ interface UnbilledReport {
   cases: Array<{
     patient_name: string;
     patient_id: string;
+    patient_internal_id: string;
     report_date: string;
     amount: number;
     case_id: string;
@@ -63,18 +64,51 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       setGeneratingIndex(index);
       console.log('Starting invoice generation for:', clinic.clinic_name);
 
+      // Load invoice template settings
+      const { data: settingsData } = await supabase
+        .from('pdf_template_settings')
+        .select('setting_value')
+        .eq('setting_key', 'invoice_template')
+        .single();
+
+      const settings = (settingsData?.setting_value as any) || {
+        patient_identifier: 'patient_id',
+        show_patient_name: false,
+        show_field_of_view: true,
+        show_case_ref: false,
+        show_report_date: true
+      };
+
       const invoiceNumber = `INV-${Date.now()}`;
       const issueDate = new Date().toISOString().split('T')[0];
       const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      const lineItems = clinic.cases.map(c => ({
-        description: `Patient ID: ${c.patient_id || 'N/A'}`,
-        quantity: 1,
-        unitPrice: c.amount,
-        amount: c.amount,
-        field_of_view: c.field_of_view,
-        report_date: c.report_date
-      }));
+      const lineItems = clinic.cases.map(c => {
+        let description = '';
+        
+        // Build description based on settings
+        if (settings.patient_identifier === 'patient_id') {
+          description = `Patient ID: ${c.patient_id || 'N/A'}`;
+        } else if (settings.patient_identifier === 'patient_internal_id') {
+          description = `Internal ID: ${c.patient_internal_id || 'N/A'}`;
+        } else {
+          description = `Patient: ${c.patient_name || 'N/A'}`;
+        }
+
+        if (settings.show_patient_name && settings.patient_identifier !== 'patient_name') {
+          description += ` - ${c.patient_name}`;
+        }
+
+        return {
+          description,
+          quantity: 1,
+          unitPrice: c.amount,
+          amount: c.amount,
+          field_of_view: c.field_of_view,
+          report_date: c.report_date,
+          case_ref: c.case_id
+        };
+      });
 
       const invoiceData = {
         invoice_number: invoiceNumber,
@@ -85,9 +119,10 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         clinic_address: '',
         period_start: startDate || issueDate,
         period_end: endDate || issueDate,
+        settings: settings,
         line_items: lineItems.map(item => ({
           description: item.description,
-          case_ref: '',
+          case_ref: item.case_ref || '',
           date: item.report_date,
           field_of_view: item.field_of_view,
           quantity: 1,
