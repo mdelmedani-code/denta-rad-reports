@@ -95,6 +95,7 @@ export function AppSidebar() {
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
     { title: "Invoicing", url: "/admin/invoicing", icon: Receipt },
+    { title: "Invoice History", url: "/admin/invoice-history", icon: ScrollText },
     { title: "Invoice Settings", url: "/admin/invoice-settings", icon: Settings },
     { title: "User Management", url: "/admin/users", icon: Users },
     { title: "Data Retention", url: "/admin/data-retention", icon: Database },
