@@ -5,9 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, FileText, Download } from 'lucide-react';
+import { Loader2, FileText, Eye } from 'lucide-react';
 import { InvoicePDF } from '@/components/InvoicePDF';
 import { pdf } from '@react-pdf/renderer';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface UnbilledReport {
   clinic_name: string;
@@ -32,6 +39,9 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadUnbilledReports();
@@ -59,80 +69,104 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
     }
   }
 
+  async function prepareInvoiceData(clinic: UnbilledReport) {
+    // Load invoice template settings
+    const { data: settingsData } = await supabase
+      .from('pdf_template_settings')
+      .select('setting_value')
+      .eq('setting_key', 'invoice_template')
+      .single();
+
+    const settings = (settingsData?.setting_value as any) || {
+      patient_identifier: 'patient_id',
+      show_patient_name: false,
+      show_field_of_view: true,
+      show_case_ref: false,
+      show_report_date: true
+    };
+
+    const invoiceNumber = `INV-${Date.now()}`;
+    const issueDate = new Date().toISOString().split('T')[0];
+    const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const lineItems = clinic.cases.map(c => {
+      let description = '';
+      
+      // Build description based on settings
+      if (settings.patient_identifier === 'patient_id') {
+        description = `Patient ID: ${c.patient_id || 'N/A'}`;
+      } else if (settings.patient_identifier === 'patient_internal_id') {
+        description = `Internal ID: ${c.patient_internal_id || 'N/A'}`;
+      } else {
+        description = `Patient: ${c.patient_name || 'N/A'}`;
+      }
+
+      if (settings.show_patient_name && settings.patient_identifier !== 'patient_name') {
+        description += ` - ${c.patient_name}`;
+      }
+
+      return {
+        description,
+        quantity: 1,
+        unitPrice: c.amount,
+        amount: c.amount,
+        field_of_view: c.field_of_view,
+        report_date: c.report_date,
+        case_ref: c.case_id
+      };
+    });
+
+    return {
+      invoice_number: invoiceNumber,
+      invoice_date: issueDate,
+      due_date: dueDate,
+      clinic_name: clinic.clinic_name,
+      clinic_email: clinic.clinic_email,
+      clinic_address: '',
+      period_start: startDate || issueDate,
+      period_end: endDate || issueDate,
+      settings: settings,
+      line_items: lineItems.map(item => ({
+        description: item.description,
+        case_ref: item.case_ref || '',
+        date: item.report_date,
+        field_of_view: item.field_of_view,
+        quantity: 1,
+        unit_price: item.amount,
+        total: item.amount
+      })),
+      subtotal: clinic.total_amount,
+      vat: 0,
+      total: clinic.total_amount
+    };
+  }
+
+  async function previewInvoice(clinic: UnbilledReport) {
+    try {
+      const invoiceData = await prepareInvoiceData(clinic);
+      setPreviewData(invoiceData);
+
+      // Generate PDF blob for preview
+      const pdfBlob = await pdf(<InvoicePDF invoice={invoiceData} />).toBlob();
+      const url = URL.createObjectURL(pdfBlob);
+      setPreviewUrl(url);
+      setPreviewOpen(true);
+    } catch (error: any) {
+      console.error('Error generating preview:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate invoice preview',
+        variant: 'destructive'
+      });
+    }
+  }
+
   async function generateInvoice(clinic: UnbilledReport, index: number) {
     try {
       setGeneratingIndex(index);
       console.log('Starting invoice generation for:', clinic.clinic_name);
 
-      // Load invoice template settings
-      const { data: settingsData } = await supabase
-        .from('pdf_template_settings')
-        .select('setting_value')
-        .eq('setting_key', 'invoice_template')
-        .single();
-
-      const settings = (settingsData?.setting_value as any) || {
-        patient_identifier: 'patient_id',
-        show_patient_name: false,
-        show_field_of_view: true,
-        show_case_ref: false,
-        show_report_date: true
-      };
-
-      const invoiceNumber = `INV-${Date.now()}`;
-      const issueDate = new Date().toISOString().split('T')[0];
-      const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      const lineItems = clinic.cases.map(c => {
-        let description = '';
-        
-        // Build description based on settings
-        if (settings.patient_identifier === 'patient_id') {
-          description = `Patient ID: ${c.patient_id || 'N/A'}`;
-        } else if (settings.patient_identifier === 'patient_internal_id') {
-          description = `Internal ID: ${c.patient_internal_id || 'N/A'}`;
-        } else {
-          description = `Patient: ${c.patient_name || 'N/A'}`;
-        }
-
-        if (settings.show_patient_name && settings.patient_identifier !== 'patient_name') {
-          description += ` - ${c.patient_name}`;
-        }
-
-        return {
-          description,
-          quantity: 1,
-          unitPrice: c.amount,
-          amount: c.amount,
-          field_of_view: c.field_of_view,
-          report_date: c.report_date,
-          case_ref: c.case_id
-        };
-      });
-
-      const invoiceData = {
-        invoice_number: invoiceNumber,
-        invoice_date: issueDate,
-        due_date: dueDate,
-        clinic_name: clinic.clinic_name,
-        clinic_email: clinic.clinic_email,
-        clinic_address: '',
-        period_start: startDate || issueDate,
-        period_end: endDate || issueDate,
-        settings: settings,
-        line_items: lineItems.map(item => ({
-          description: item.description,
-          case_ref: item.case_ref || '',
-          date: item.report_date,
-          field_of_view: item.field_of_view,
-          quantity: 1,
-          unit_price: item.amount,
-          total: item.amount
-        })),
-        subtotal: clinic.total_amount,
-        vat: 0,
-        total: clinic.total_amount
-      };
+      const invoiceData = await prepareInvoiceData(clinic);
 
       console.log('Generating PDF with data:', invoiceData);
       const pdfBlob = await pdf(
@@ -140,7 +174,7 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       ).toBlob();
       console.log('PDF generated successfully');
 
-      const fileName = `invoice-${invoiceNumber}.pdf`;
+      const fileName = `invoice-${invoiceData.invoice_number}.pdf`;
       console.log('Uploading PDF to storage:', fileName);
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('invoices')
@@ -178,7 +212,7 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
-          invoice_number: invoiceNumber,
+          invoice_number: invoiceData.invoice_number,
           clinic_id: clinicData.id,
           case_id: clinic.cases[0].case_id,
           case_ids: clinic.cases.map(c => c.case_id),
@@ -186,8 +220,8 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
           status: 'draft',
           pdf_url: publicUrl,
           pdf_storage_path: fileName,
-          line_items: lineItems,
-          due_date: dueDate,
+          line_items: invoiceData.line_items,
+          due_date: invoiceData.due_date,
           period_start: startDate || null,
           period_end: endDate || null
         });
@@ -196,11 +230,11 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         console.error('Invoice insert error:', invoiceError);
         throw invoiceError;
       }
-      console.log('Invoice created successfully:', invoiceNumber);
+      console.log('Invoice created successfully:', invoiceData.invoice_number);
 
       toast({
         title: 'Invoice Generated',
-        description: `Invoice ${invoiceNumber} created successfully`
+        description: `Invoice ${invoiceData.invoice_number} created successfully`
       });
 
       await loadUnbilledReports();
@@ -281,34 +315,44 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         <CardContent>
           <div className="space-y-4">
             {unbilledReports.map((clinic, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex-1">
-                  <h3 className="font-semibold">{clinic.clinic_name}</h3>
-                  <p className="text-sm text-muted-foreground">{clinic.clinic_email}</p>
-                  <p className="text-sm mt-1">
-                    {clinic.report_count} reports • £{clinic.total_amount.toFixed(2)}
-                  </p>
-                </div>
-                <Button
-                  onClick={() => generateInvoice(clinic, index)}
-                  disabled={generatingIndex !== null}
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 border rounded-lg"
                 >
-                  {generatingIndex === index ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Generate Invoice
-                    </>
-                  )}
-                </Button>
-              </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{clinic.clinic_name}</h3>
+                    <p className="text-sm text-muted-foreground">{clinic.clinic_email}</p>
+                    <p className="text-sm mt-1">
+                      {clinic.report_count} reports • £{clinic.total_amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => previewInvoice(clinic)}
+                      disabled={generatingIndex !== null}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview
+                    </Button>
+                    <Button
+                      onClick={() => generateInvoice(clinic, index)}
+                      disabled={generatingIndex !== null}
+                    >
+                      {generatingIndex === index ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate Invoice
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
             ))}
             {unbilledReports.length === 0 && !loading && (
               <p className="text-center text-muted-foreground py-8">
@@ -318,6 +362,26 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogDescription>
+              Review the invoice before generating it
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="w-full h-[70vh] border rounded"
+                title="Invoice Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
