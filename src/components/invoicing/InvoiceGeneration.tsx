@@ -111,7 +111,11 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
         unitPrice: c.amount,
         amount: c.amount,
         field_of_view: c.field_of_view,
-        report_date: c.report_date,
+        report_date: c.report_date ? new Date(c.report_date).toLocaleDateString('en-GB', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }) : '',
         case_ref: c.case_id
       };
     });
