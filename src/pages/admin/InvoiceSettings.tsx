@@ -15,6 +15,7 @@ interface InvoiceSettings {
   show_case_ref: boolean;
   show_report_date: boolean;
   show_urgency: boolean;
+  logo_alignment: 'left' | 'center' | 'right';
   table_columns: string[];
 }
 
@@ -29,6 +30,7 @@ export default function InvoiceSettings() {
     show_case_ref: false,
     show_report_date: true,
     show_urgency: true,
+    logo_alignment: 'left',
     table_columns: ['description', 'date', 'field_of_view', 'amount']
   });
 
@@ -131,6 +133,36 @@ export default function InvoiceSettings() {
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="patient_name" id="patient_name" />
               <Label htmlFor="patient_name">Patient Name</Label>
+            </div>
+          </RadioGroup>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo Alignment</CardTitle>
+          <CardDescription>
+            Choose how the logo should be aligned in the invoice header
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={settings.logo_alignment}
+            onValueChange={(value: any) =>
+              setSettings({ ...settings, logo_alignment: value })
+            }
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="left" id="align_left" />
+              <Label htmlFor="align_left">Left</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="center" id="align_center" />
+              <Label htmlFor="align_center">Center</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="right" id="align_right" />
+              <Label htmlFor="align_right">Right</Label>
             </div>
           </RadioGroup>
         </CardContent>
