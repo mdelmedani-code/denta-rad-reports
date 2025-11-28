@@ -14,6 +14,7 @@ interface InvoiceSettings {
   show_field_of_view: boolean;
   show_case_ref: boolean;
   show_report_date: boolean;
+  show_urgency: boolean;
   table_columns: string[];
 }
 
@@ -27,6 +28,7 @@ export default function InvoiceSettings() {
     show_field_of_view: true,
     show_case_ref: false,
     show_report_date: true,
+    show_urgency: true,
     table_columns: ['description', 'date', 'field_of_view', 'amount']
   });
 
@@ -191,6 +193,19 @@ export default function InvoiceSettings() {
             />
             <Label htmlFor="show_report_date">
               Show report completion date
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show_urgency"
+              checked={settings.show_urgency}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, show_urgency: checked as boolean })
+              }
+            />
+            <Label htmlFor="show_urgency">
+              Show urgency level (Standard/Urgent)
             </Label>
           </div>
         </CardContent>

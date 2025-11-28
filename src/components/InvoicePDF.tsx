@@ -126,12 +126,14 @@ interface InvoiceData {
     show_field_of_view: boolean;
     show_case_ref: boolean;
     show_report_date: boolean;
+    show_urgency: boolean;
   };
   line_items: Array<{
     description: string;
     case_ref: string;
     date: string;
     field_of_view: string;
+    urgency: string;
     quantity: number;
     unit_price: number;
     total: number;
@@ -145,7 +147,8 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
   const settings = invoice.settings || {
     show_field_of_view: true,
     show_case_ref: false,
-    show_report_date: true
+    show_report_date: true,
+    show_urgency: true
   };
 
   return (
@@ -198,6 +201,7 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
             {settings.show_case_ref && <Text style={styles.col2}>Case Reference</Text>}
             {settings.show_report_date && <Text style={styles.col3}>Date</Text>}
             {settings.show_field_of_view && <Text style={styles.col4}>FOV</Text>}
+            {settings.show_urgency && <Text style={styles.col3}>Urgency</Text>}
             <Text style={styles.col5}>Amount</Text>
           </View>
 
@@ -207,6 +211,7 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
               {settings.show_case_ref && <Text style={styles.col2}>{item.case_ref}</Text>}
               {settings.show_report_date && <Text style={styles.col3}>{item.date}</Text>}
               {settings.show_field_of_view && <Text style={styles.col4}>{item.field_of_view}</Text>}
+              {settings.show_urgency && <Text style={styles.col3}>{item.urgency === 'urgent' ? 'Urgent' : 'Standard'}</Text>}
               <Text style={styles.col5}>£{item.total.toFixed(2)}</Text>
             </View>
           ))}
