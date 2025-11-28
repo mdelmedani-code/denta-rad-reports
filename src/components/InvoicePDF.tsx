@@ -13,7 +13,6 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 150,
-    height: 75,
   },
   invoiceTitle: {
     fontSize: 24,
