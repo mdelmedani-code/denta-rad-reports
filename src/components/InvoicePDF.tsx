@@ -127,6 +127,7 @@ interface InvoiceData {
     show_case_ref: boolean;
     show_report_date: boolean;
     show_urgency: boolean;
+    logo_alignment?: 'left' | 'center' | 'right';
   };
   line_items: Array<{
     description: string;
@@ -148,19 +149,29 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
     show_field_of_view: true,
     show_case_ref: false,
     show_report_date: true,
-    show_urgency: true
+    show_urgency: true,
+    logo_alignment: 'left'
+  };
+
+  const logoAlignment = settings.logo_alignment || 'left';
+  const justifyContent = logoAlignment === 'center' ? 'center' : logoAlignment === 'right' ? 'flex-end' : 'space-between';
+  
+  const headerStyle = {
+    ...styles.header,
+    justifyContent: justifyContent as 'space-between' | 'center' | 'flex-end'
   };
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header with Logo and Invoice Title */}
-        <View style={styles.header}>
-          <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />
+        <View style={headerStyle}>
+          {logoAlignment !== 'right' && <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />}
           <View>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
+          {logoAlignment === 'right' && <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />}
         </View>
 
         {/* From/To Section */}
