@@ -83,8 +83,6 @@ const createStyles = (settings: any) => StyleSheet.create({
     borderBottom: `2pt solid ${settings.header_colors.border_color}`,
   },
   logo: {
-    width: settings.header_logo?.width || settings.logo_dimensions.width,
-    height: settings.header_logo?.height || settings.logo_dimensions.height,
     objectFit: 'contain',
   },
   contactInfo: {
@@ -359,10 +357,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
           {(headerConfig.logo_url || (!settings.header_logo || settings.header_logo.show_logo)) && (
             <Image 
               src={headerConfig.logo_url || settings.logo_urls?.header_logo_url || dentaradLogo} 
-              style={{ 
-                ...styles.logo,
-                height: headerConfig.logo_height || styles.logo.height
-              }} 
+              style={styles.logo} 
             />
           )}
           <View>

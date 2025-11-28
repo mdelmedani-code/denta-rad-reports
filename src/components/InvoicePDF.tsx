@@ -12,7 +12,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    width: 180,
     objectFit: 'contain',
   },
   logoContainer: {
