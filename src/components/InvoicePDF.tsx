@@ -12,7 +12,13 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    height: 60,
+    width: 180,
+    objectFit: 'contain',
+  },
+  logoContainer: {
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   invoiceTitle: {
     fontSize: 24,
@@ -165,12 +171,20 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
       <Page size="A4" style={styles.page}>
         {/* Header with Logo and Invoice Title */}
         <View style={headerStyle}>
-          {logoAlignment !== 'right' && <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />}
+          {logoAlignment !== 'right' && (
+            <View style={styles.logoContainer}>
+              <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />
+            </View>
+          )}
           <View>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
             <Text style={styles.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
-          {logoAlignment === 'right' && <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />}
+          {logoAlignment === 'right' && (
+            <View style={styles.logoContainer}>
+              <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />
+            </View>
+          )}
         </View>
 
         {/* From/To Section */}
