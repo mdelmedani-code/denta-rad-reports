@@ -133,6 +133,7 @@ interface InvoiceData {
     show_report_date: boolean;
     show_urgency: boolean;
     logo_alignment?: 'left' | 'center' | 'right';
+    logo_container_height?: number;
   };
   line_items: Array<{
     description: string;
@@ -155,15 +156,22 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
     show_case_ref: false,
     show_report_date: true,
     show_urgency: true,
-    logo_alignment: 'left'
+    logo_alignment: 'left',
+    logo_container_height: 80
   };
 
   const logoAlignment = settings.logo_alignment || 'left';
+  const logoContainerHeight = settings.logo_container_height || 80;
   const justifyContent = logoAlignment === 'center' ? 'center' : logoAlignment === 'right' ? 'flex-end' : 'space-between';
   
   const headerStyle = {
     ...styles.header,
     justifyContent: justifyContent as 'space-between' | 'center' | 'flex-end'
+  };
+
+  const dynamicLogoContainer = {
+    ...styles.logoContainer,
+    height: logoContainerHeight
   };
 
   return (
@@ -172,7 +180,7 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
         {/* Header with Logo and Invoice Title */}
         <View style={headerStyle}>
           {logoAlignment !== 'right' && (
-            <View style={styles.logoContainer}>
+            <View style={dynamicLogoContainer}>
               <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />
             </View>
           )}
@@ -181,7 +189,7 @@ export function InvoicePDF({ invoice }: { invoice: InvoiceData }) {
             <Text style={styles.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
           {logoAlignment === 'right' && (
-            <View style={styles.logoContainer}>
+            <View style={dynamicLogoContainer}>
               <Image src="/dentarad-logo-pdf.jpg" style={styles.logo} />
             </View>
           )}

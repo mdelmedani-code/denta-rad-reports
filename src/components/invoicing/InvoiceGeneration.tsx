@@ -85,7 +85,8 @@ export function InvoiceGeneration({ onGenerate }: { onGenerate: () => void }) {
       show_case_ref: false,
       show_report_date: true,
       show_urgency: true,
-      logo_alignment: 'left'
+      logo_alignment: 'left',
+      logo_container_height: 80
     };
 
     const invoiceNumber = `INV-${Date.now()}`;

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +17,7 @@ interface InvoiceSettings {
   show_report_date: boolean;
   show_urgency: boolean;
   logo_alignment: 'left' | 'center' | 'right';
+  logo_container_height: number;
   table_columns: string[];
 }
 
@@ -31,6 +33,7 @@ export default function InvoiceSettings() {
     show_report_date: true,
     show_urgency: true,
     logo_alignment: 'left',
+    logo_container_height: 80,
     table_columns: ['description', 'date', 'field_of_view', 'amount']
   });
 
@@ -140,31 +143,51 @@ export default function InvoiceSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Logo Alignment</CardTitle>
+          <CardTitle>Logo Settings</CardTitle>
           <CardDescription>
-            Choose how the logo should be aligned in the invoice header
+            Configure logo appearance and positioning in the invoice header
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={settings.logo_alignment}
-            onValueChange={(value: any) =>
-              setSettings({ ...settings, logo_alignment: value })
-            }
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="left" id="align_left" />
-              <Label htmlFor="align_left">Left</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="center" id="align_center" />
-              <Label htmlFor="align_center">Center</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="right" id="align_right" />
-              <Label htmlFor="align_right">Right</Label>
-            </div>
-          </RadioGroup>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="logo_alignment">Logo Alignment</Label>
+            <RadioGroup
+              value={settings.logo_alignment}
+              onValueChange={(value: any) =>
+                setSettings({ ...settings, logo_alignment: value })
+              }
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="left" id="align_left" />
+                <Label htmlFor="align_left">Left</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="center" id="align_center" />
+                <Label htmlFor="align_center">Center</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="right" id="align_right" />
+                <Label htmlFor="align_right">Right</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="logo_container_height">Logo Container Height (px)</Label>
+            <Input
+              id="logo_container_height"
+              type="number"
+              min="40"
+              max="150"
+              value={settings.logo_container_height}
+              onChange={(e) =>
+                setSettings({ ...settings, logo_container_height: parseInt(e.target.value) || 80 })
+              }
+            />
+            <p className="text-sm text-muted-foreground">
+              Adjust the height of the logo container (40-150px). Default is 80px.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
