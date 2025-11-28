@@ -12,8 +12,8 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    width: 180,
-    height: 60,
+    width: 150,
+    height: 75,
   },
   invoiceTitle: {
     fontSize: 24,
