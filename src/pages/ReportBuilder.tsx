@@ -143,14 +143,18 @@ export default function ReportBuilder() {
       setReport(finalReport as ReportData);
       setClinicalHistory(caseData.clinical_question || '');
       
-      // Use new report_content field or fall back to empty/placeholder
+      // Use new report_content field or apply template for new reports
       let content = (finalReport.report_content as string) || '';
       
       if (!content) {
-        // For new reports, apply template placeholder
-        const placeholder = await fetchTemplateSettings();
-        setContentPlaceholder(placeholder);
-        content = placeholder;
+        // For new reports, apply template content (not just placeholder)
+        const templateText = await fetchTemplateSettings();
+        content = templateText;
+        // Save it immediately so it persists
+        await reportService.saveReport(finalReport.id, {
+          clinicalHistory: caseData.clinical_question || '',
+          reportContent: content,
+        });
       }
       
       setReportContent(content);
@@ -213,9 +217,8 @@ export default function ReportBuilder() {
   };
 
   const handleResetTemplate = async () => {
-    const placeholder = await fetchTemplateSettings();
-    setContentPlaceholder(placeholder);
-    setReportContent(placeholder);
+    const templateText = await fetchTemplateSettings();
+    setReportContent(templateText);
     triggerAutoSave();
     toast.success('Report content has been reset to template.');
   };
@@ -404,7 +407,7 @@ export default function ReportBuilder() {
                   }
                 }}
                 onEditorReady={setEditorInstance}
-                placeholder={contentPlaceholder}
+                placeholder="Enter your report content here..."
               />
               
               <ImageAttachment
