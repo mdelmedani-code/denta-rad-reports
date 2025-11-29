@@ -43,6 +43,7 @@ interface ReportData {
   signatory_name: string | null;
   signatory_credentials: string | null;
   signature_hash: string | null;
+  signature_statement: string | null;
   last_saved_at: string | null;
   version: number;
   is_superseded: boolean;
@@ -304,6 +305,7 @@ export default function ReportBuilder() {
         signatory_name: report.signatory_name || '',
         signatory_credentials: report.signatory_credentials || '',
         signature_hash: report.signature_hash,
+        signature_statement: report.signature_statement || '',
         verification_token: '',
         version: report.version,
         is_superseded: report.is_superseded,
