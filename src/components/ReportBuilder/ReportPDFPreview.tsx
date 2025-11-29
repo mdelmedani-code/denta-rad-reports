@@ -3,11 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2, Download } from 'lucide-react';
 import { generateReportPDF } from '@/lib/reportPdfGenerator';
-import { Document, Page, pdfjs } from 'react-pdf';
-
-// @ts-ignore
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc as string;
 
 interface ReportPDFPreviewProps {
   caseData: {
@@ -35,8 +30,6 @@ interface ReportPDFPreviewProps {
 export function ReportPDFPreview({ caseData, reportData, images = [] }: ReportPDFPreviewProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState(1);
 
   const generatePreview = async () => {
     setLoading(true);
@@ -54,7 +47,6 @@ export function ReportPDFPreview({ caseData, reportData, images = [] }: ReportPD
 
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
-      setPageNumber(1);
     } catch (error) {
       console.error('Error generating PDF preview:', error);
     } finally {
@@ -70,6 +62,7 @@ export function ReportPDFPreview({ caseData, reportData, images = [] }: ReportPD
         URL.revokeObjectURL(pdfUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDownload = () => {
@@ -105,11 +98,6 @@ export function ReportPDFPreview({ caseData, reportData, images = [] }: ReportPD
             )}
           </div>
         </div>
-        {pdfUrl && (
-          <div className="text-sm text-muted-foreground mt-2">
-            Page {pageNumber} of {numPages || '?'}
-          </div>
-        )}
       </CardHeader>
       <CardContent className="p-3">
         {loading && !pdfUrl ? (
@@ -117,23 +105,13 @@ export function ReportPDFPreview({ caseData, reportData, images = [] }: ReportPD
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : pdfUrl ? (
-          <div className="border rounded bg-muted/20 p-2 overflow-auto max-h-[calc(100vh-250px)]">
-            <Document
-              file={pdfUrl}
-              loading={<div className="flex items-center justify-center h-[400px]"><Loader2 className="h-6 w-6 animate-spin" /></div>}
-              onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-            >
-              {Array.from({ length: numPages }, (_, i) => (
-                <Page
-                  key={i + 1}
-                  pageNumber={i + 1}
-                  width={380}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="mb-4 shadow-md"
-                />
-              ))}
-            </Document>
+          <div className="border rounded bg-muted/20 overflow-hidden max-h-[calc(100vh-250px)]">
+            <iframe
+              src={pdfUrl}
+              title="Report PDF preview"
+              className="w-full h-[600px] bg-background"
+              loading="lazy"
+            />
           </div>
         ) : (
           <div className="flex items-center justify-center h-[600px] text-muted-foreground">
