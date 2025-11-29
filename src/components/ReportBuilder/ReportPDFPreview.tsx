@@ -20,8 +20,11 @@ interface ReportPDFPreviewProps {
     clinical_history?: string;
     report_content?: string;
     signatory_name?: string;
+    signatory_title?: string;
     signatory_credentials?: string;
+    signature_statement?: string;
     signed_at?: string;
+    is_signed?: boolean;
     version?: number;
   };
   images?: any[];

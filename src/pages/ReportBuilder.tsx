@@ -71,6 +71,31 @@ export default function ReportBuilder() {
 
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
   const [editorInstance, setEditorInstance] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Load current user's profile for signature preview
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email, professional_title, credentials, signature_statement')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            setUserProfile(profile);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
 
   const fetchTemplateSettings = async () => {
     try {
@@ -458,9 +483,13 @@ export default function ReportBuilder() {
             reportData={{
               clinical_history: clinicalHistory,
               report_content: reportContent,
-              signatory_name: report.signatory_name || undefined,
-              signatory_credentials: report.signatory_credentials || undefined,
+              // If signed, use actual signature data; otherwise use profile for preview
+              signatory_name: report.signatory_name || userProfile?.email || undefined,
+              signatory_title: report.is_signed ? undefined : userProfile?.professional_title,
+              signatory_credentials: report.signatory_credentials || userProfile?.credentials || undefined,
+              signature_statement: report.is_signed ? undefined : userProfile?.signature_statement,
               signed_at: report.signed_at || undefined,
+              is_signed: report.is_signed,
               version: report.version,
             }}
             images={reportImages}

@@ -472,9 +472,16 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
             
             {/* Signature Block */}
             <View style={{ marginTop: 20, padding: 15, backgroundColor: '#f8f9fa', borderRadius: 4 }}>
-              <Text style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 10, color: '#1a1a1a' }}>
-                Electronic Signature
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#1a1a1a' }}>
+                  Electronic Signature
+                </Text>
+                {!reportData.signed_at && (
+                  <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#f59e0b', backgroundColor: '#fef3c7', padding: '4pt 8pt', borderRadius: 2 }}>
+                    DRAFT PREVIEW
+                  </Text>
+                )}
+              </View>
               
               <Text style={[styles.doctorInfo, styles.doctorName, { marginBottom: 3 }]}>
                 {reportData.signatory_name || 'Not yet signed'}
@@ -492,6 +499,16 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
                 </Text>
               )}
               
+              {/* Show signature statement in preview mode */}
+              {!reportData.signed_at && reportData.signature_statement && (
+                <View style={{ marginTop: 8, paddingTop: 8, borderTop: '1pt solid #dee2e6' }}>
+                  <Text style={{ fontSize: 8, color: '#6c757d', fontStyle: 'italic' }}>
+                    {reportData.signature_statement}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Show actual signature details when signed */}
               {reportData.signed_at && (
                 <View style={{ borderTop: '1pt solid #dee2e6', paddingTop: 8, marginTop: 8 }}>
                   <Text style={[styles.reportDate, { marginBottom: 3 }]}>
