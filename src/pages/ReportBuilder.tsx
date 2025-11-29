@@ -74,6 +74,7 @@ export default function ReportBuilder() {
   const [combinedContent, setCombinedContent] = useState('');
 
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
+  const [editorInstance, setEditorInstance] = useState<any>(null);
 
   const formatCombinedContent = (tech: string, find: string, impr: string) => {
     return `TECHNIQUE:\n${tech || ''}\n\nFINDINGS:\n${find || ''}\n\nIMPRESSION:\n${impr || ''}`;
@@ -250,9 +251,15 @@ export default function ReportBuilder() {
 
 
   const handleSnippetInsert = (content: string) => {
-    // Insert snippet at the end of combined content
-    setCombinedContent(prev => prev + '\n\n' + content);
-    triggerAutoSave();
+    if (editorInstance) {
+      // Insert snippet at cursor position
+      editorInstance.chain().focus().insertContent(content).run();
+      // The onChange handler will be called automatically by the editor
+    } else {
+      // Fallback: append at the end if editor not ready
+      setCombinedContent(prev => prev + '\n\n' + content);
+      triggerAutoSave();
+    }
   };
 
   const handleResetTemplate = async () => {
@@ -464,6 +471,7 @@ export default function ReportBuilder() {
                     triggerAutoSave();
                   }
                 }}
+                onEditorReady={setEditorInstance}
                 placeholder="TECHNIQUE:&#10;Describe imaging technique and parameters...&#10;&#10;FINDINGS:&#10;Document detailed findings...&#10;&#10;IMPRESSION:&#10;Summarize key findings..."
               />
               
