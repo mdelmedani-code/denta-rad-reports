@@ -133,9 +133,18 @@ export default function ReportBuilder() {
       setReport(finalReport);
       // Clinical history always comes from the case's clinical_question, not the report
       setClinicalHistory(caseData.clinical_question || '');
-      const tech = finalReport.technique || '';
-      const find = finalReport.findings || '';
-      const impr = finalReport.impression || '';
+      
+      // Auto-apply standard template for new reports
+      let tech = finalReport.technique || '';
+      let find = finalReport.findings || '';
+      let impr = finalReport.impression || '';
+      
+      if (!tech && !find && !impr) {
+        tech = 'TECHNIQUE:\nEnter technique details here...';
+        find = 'FINDINGS:\nEnter findings here...';
+        impr = 'IMPRESSION:\nEnter impression here...';
+      }
+      
       setTechnique(tech);
       setFindings(find);
       setImpression(impr);
@@ -198,19 +207,6 @@ export default function ReportBuilder() {
     }
   };
 
-  const handleTemplateSelect = (template: any) => {
-    // Templates only apply to technique, findings, and impression
-    // Clinical history is never modified - it always matches the case's clinical question
-    const tech = template.technique || technique;
-    const find = template.findings || findings;
-    const impr = template.impression || impression;
-    
-    setTechnique(tech);
-    setFindings(find);
-    setImpression(impr);
-    setCombinedContent(formatCombinedContent(tech, find, impr));
-    triggerAutoSave();
-  };
 
   const handleSnippetInsert = (content: string) => {
     // Insert snippet at the end of combined content
@@ -366,7 +362,6 @@ export default function ReportBuilder() {
       <ReportPatientInfo caseData={caseData} />
 
       <ReportToolbar
-        onSelectTemplate={handleTemplateSelect}
         onInsertSnippet={handleSnippetInsert}
         disabled={report.is_signed}
       />
