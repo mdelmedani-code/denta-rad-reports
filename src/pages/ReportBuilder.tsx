@@ -179,11 +179,11 @@ export default function ReportBuilder() {
       let impr = finalReport.impression || '';
       
       if (!tech && !find && !impr) {
-        // Fetch custom template settings
+        // Fetch custom template settings - only use placeholder text, formatCombinedContent adds headings
         const templateSettings = await fetchTemplateSettings();
-        tech = `${templateSettings.technique_heading}\n${templateSettings.technique_placeholder}`;
-        find = `${templateSettings.findings_heading}\n${templateSettings.findings_placeholder}`;
-        impr = `${templateSettings.impression_heading}\n${templateSettings.impression_placeholder}`;
+        tech = templateSettings.technique_placeholder;
+        find = templateSettings.findings_placeholder;
+        impr = templateSettings.impression_placeholder;
       }
       
       setTechnique(tech);
@@ -257,9 +257,9 @@ export default function ReportBuilder() {
 
   const handleResetTemplate = async () => {
     const templateSettings = await fetchTemplateSettings();
-    const tech = `${templateSettings.technique_heading}\n${templateSettings.technique_placeholder}`;
-    const find = `${templateSettings.findings_heading}\n${templateSettings.findings_placeholder}`;
-    const impr = `${templateSettings.impression_heading}\n${templateSettings.impression_placeholder}`;
+    const tech = templateSettings.technique_placeholder;
+    const find = templateSettings.findings_placeholder;
+    const impr = templateSettings.impression_placeholder;
     
     setTechnique(tech);
     setFindings(find);
