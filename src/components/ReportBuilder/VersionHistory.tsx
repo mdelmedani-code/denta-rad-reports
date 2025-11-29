@@ -20,9 +20,7 @@ interface Version {
   id: string;
   version_number: number;
   clinical_history: string;
-  technique: string;
-  findings: string;
-  impression: string;
+  report_content?: string;
   saved_at: string;
   saved_by: string;
 }
@@ -31,9 +29,7 @@ interface VersionHistoryProps {
   reportId: string;
   currentVersion: {
     clinical_history: string;
-    technique: string;
-    findings: string;
-    impression: string;
+    report_content: string;
   };
   onRestore: (version: Version) => void;
   disabled?: boolean;
@@ -106,9 +102,7 @@ export const VersionHistory = ({
           report_id: reportId,
           version_number: nextVersionNumber,
           clinical_history: currentVersion.clinical_history,
-          technique: currentVersion.technique,
-          findings: currentVersion.findings,
-          impression: currentVersion.impression,
+          report_content: currentVersion.report_content,
           saved_by: (await supabase.auth.getUser()).data.user?.id,
         });
 
@@ -201,16 +195,18 @@ export const VersionHistory = ({
                             <div>
                               <div className="font-medium mb-1">Clinical History:</div>
                               <div
-                                className="text-muted-foreground prose prose-sm"
-                                dangerouslySetInnerHTML={{ __html: version.clinical_history || 'Empty' }}
-                              />
+                                className="text-muted-foreground prose prose-sm whitespace-pre-wrap"
+                              >
+                                {version.clinical_history || 'Empty'}
+                              </div>
                             </div>
                             <div>
-                              <div className="font-medium mb-1">Findings:</div>
+                              <div className="font-medium mb-1">Report Content:</div>
                               <div
-                                className="text-muted-foreground prose prose-sm"
-                                dangerouslySetInnerHTML={{ __html: version.findings || 'Empty' }}
-                              />
+                                className="text-muted-foreground prose prose-sm whitespace-pre-wrap"
+                              >
+                                {version.report_content || 'Empty'}
+                              </div>
                             </div>
                           </div>
                         </ScrollArea>

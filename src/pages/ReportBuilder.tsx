@@ -36,9 +36,7 @@ interface CaseData {
 interface ReportData {
   id: string;
   clinical_history: string;
-  technique: string;
-  findings: string;
-  impression: string;
+  report_content: string;
   is_signed: boolean;
   signed_by: string | null;
   signed_at: string | null;
@@ -68,74 +66,12 @@ export default function ReportBuilder() {
   const [versionBanner, setVersionBanner] = useState<string | null>(null);
 
   const [clinicalHistory, setClinicalHistory] = useState('');
-  const [technique, setTechnique] = useState('');
-  const [findings, setFindings] = useState('');
-  const [impression, setImpression] = useState('');
-  const [combinedContent, setCombinedContent] = useState('');
-
-  type TemplateSettings = {
-    technique_heading: string;
-    technique_placeholder: string;
-    findings_heading: string;
-    findings_placeholder: string;
-    impression_heading: string;
-    impression_placeholder: string;
-  };
-
-  const [templateSettings, setTemplateSettings] = useState<TemplateSettings | null>(null);
+  const [reportContent, setReportContent] = useState('');
+  const [contentPlaceholder, setContentPlaceholder] = useState('Enter your radiology report content here...');
 
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
   const [editorInstance, setEditorInstance] = useState<any>(null);
 
-  const formatCombinedContent = (
-    tech: string,
-    find: string,
-    impr: string,
-    headings?: Pick<TemplateSettings, 'technique_heading' | 'findings_heading' | 'impression_heading'>
-  ) => {
-    const techniqueHeading = headings?.technique_heading || 'TECHNIQUE:';
-    const findingsHeading = headings?.findings_heading || 'FINDINGS:';
-    const impressionHeading = headings?.impression_heading || 'IMPRESSION:';
-
-    return `${techniqueHeading}\n${tech || ''}\n\n${findingsHeading}\n${find || ''}\n\n${impressionHeading}\n${impr || ''}`;
-  };
-
-  const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  const parseCombinedContent = (
-    content: string,
-    headings?: Pick<TemplateSettings, 'technique_heading' | 'findings_heading' | 'impression_heading'>
-  ) => {
-    const techniqueHeading = headings?.technique_heading || 'TECHNIQUE:';
-    const findingsHeading = headings?.findings_heading || 'FINDINGS:';
-    const impressionHeading = headings?.impression_heading || 'IMPRESSION:';
-
-    const sections = {
-      technique: '',
-      findings: '',
-      impression: '',
-    };
-
-    const techniqueRegex = new RegExp(
-      `${escapeRegExp(techniqueHeading)}\\s*([\\s\\S]*?)(?=\\n\\n${escapeRegExp(findingsHeading)}|$)`,
-      'i'
-    );
-    const findingsRegex = new RegExp(
-      `${escapeRegExp(findingsHeading)}\\s*([\\s\\S]*?)(?=\\n\\n${escapeRegExp(impressionHeading)}|$)`,
-      'i'
-    );
-    const impressionRegex = new RegExp(`${escapeRegExp(impressionHeading)}\\s*([\\s\\S]*?)$`, 'i');
-
-    const techniqueMatch = content.match(techniqueRegex);
-    const findingsMatch = content.match(findingsRegex);
-    const impressionMatch = content.match(impressionRegex);
-
-    if (techniqueMatch) sections.technique = techniqueMatch[1].trim();
-    if (findingsMatch) sections.findings = findingsMatch[1].trim();
-    if (impressionMatch) sections.impression = impressionMatch[1].trim();
-
-    return sections;
-  };
   const fetchTemplateSettings = async () => {
     try {
       const { data, error } = await supabase
@@ -146,38 +82,24 @@ export default function ReportBuilder() {
 
       if (error) throw error;
       
-      const defaultSettings = {
-        technique_heading: 'TECHNIQUE:',
-        technique_placeholder: 'Enter technique details here...',
-        findings_heading: 'FINDINGS:',
-        findings_placeholder: 'Enter findings here...',
-        impression_heading: 'IMPRESSION:',
-        impression_placeholder: 'Enter impression here...',
-      };
+      const defaultPlaceholder = 'Enter your radiology report content here...';
 
       if (data?.setting_value && typeof data.setting_value === 'object') {
-        return { ...defaultSettings, ...data.setting_value as any };
+        const value = data.setting_value as any;
+        return value.content_placeholder || defaultPlaceholder;
       }
       
-      return defaultSettings;
+      return defaultPlaceholder;
     } catch (error) {
       console.error('Error fetching template settings:', error);
-      return {
-        technique_heading: 'TECHNIQUE:',
-        technique_placeholder: 'Enter technique details here...',
-        findings_heading: 'FINDINGS:',
-        findings_placeholder: 'Enter findings here...',
-        impression_heading: 'IMPRESSION:',
-        impression_placeholder: 'Enter impression here...',
-      };
+      return 'Enter your radiology report content here...';
     }
   };
 
   useEffect(() => {
-    // Preload template settings so headings and placeholders are consistent
     const loadTemplateSettings = async () => {
-      const settings = await fetchTemplateSettings();
-      setTemplateSettings(settings);
+      const placeholder = await fetchTemplateSettings();
+      setContentPlaceholder(placeholder);
     };
 
     loadTemplateSettings();
@@ -218,37 +140,21 @@ export default function ReportBuilder() {
         finalReport = await reportService.createReport(caseId, caseData);
       }
 
-      setReport(finalReport);
-       // Clinical history always comes from the case's clinical_question, not the report
-       setClinicalHistory(caseData.clinical_question || '');
-       
-       // Auto-apply standard template for new reports
-       let tech = finalReport.technique || '';
-       let find = finalReport.findings || '';
-       let impr = finalReport.impression || '';
-       
-       if (!tech && !find && !impr) {
-         // Fetch custom template settings
-         const settings = await fetchTemplateSettings();
-         setTemplateSettings(settings);
-         tech = settings.technique_placeholder;
-         find = settings.findings_placeholder;
-         impr = settings.impression_placeholder;
-         setCombinedContent(
-           formatCombinedContent(tech, find, impr, {
-             technique_heading: settings.technique_heading,
-             findings_heading: settings.findings_heading,
-             impression_heading: settings.impression_heading,
-           })
-         );
-       } else {
-         setCombinedContent(formatCombinedContent(tech, find, impr, templateSettings || undefined));
-       }
-       
-       setTechnique(tech);
-       setFindings(find);
-       setImpression(impr);
-       setLastSaved(finalReport.last_saved_at ? new Date(finalReport.last_saved_at) : undefined);
+      setReport(finalReport as ReportData);
+      setClinicalHistory(caseData.clinical_question || '');
+      
+      // Use new report_content field or fall back to empty/placeholder
+      let content = (finalReport.report_content as string) || '';
+      
+      if (!content) {
+        // For new reports, apply template placeholder
+        const placeholder = await fetchTemplateSettings();
+        setContentPlaceholder(placeholder);
+        content = placeholder;
+      }
+      
+      setReportContent(content);
+      setLastSaved(finalReport.last_saved_at ? new Date(finalReport.last_saved_at) : undefined);
 
       if (finalReport.supersedes) {
         setVersionBanner(
@@ -279,66 +185,40 @@ export default function ReportBuilder() {
   const saveReport = async () => {
     if (!report) return;
  
-     setSaveStatus('saving');
+    setSaveStatus('saving');
  
-     // Parse combined content to get individual sections
-     const sections = parseCombinedContent(combinedContent, templateSettings || undefined);
+    try {
+      await reportService.saveReport(report.id, {
+        clinicalHistory,
+        reportContent,
+      });
  
-     try {
-       await reportService.saveReport(report.id, {
-         clinicalHistory,
-         technique: sections.technique,
-         findings: sections.findings,
-         impression: sections.impression,
-       });
- 
-       // Update state with parsed values
-       setTechnique(sections.technique);
-       setFindings(sections.findings);
-       setImpression(sections.impression);
- 
-       setSaveStatus('saved');
-       setLastSaved(new Date());
-       toast.success('Saved', 'Report saved successfully');
-     } catch (error) {
-       setSaveStatus('unsaved');
-       handleError(error, 'Failed to save report');
-     }
-   };
+      setSaveStatus('saved');
+      setLastSaved(new Date());
+      toast.success('Saved', 'Report saved successfully');
+    } catch (error) {
+      setSaveStatus('unsaved');
+      handleError(error, 'Failed to save report');
+    }
+  };
 
 
   const handleSnippetInsert = (content: string) => {
     if (editorInstance) {
-      // Insert snippet at cursor position
       editorInstance.chain().focus().insertContent(content).run();
-      // The onChange handler will be called automatically by the editor
     } else {
-      // Fallback: append at the end if editor not ready
-      setCombinedContent(prev => prev + '\n\n' + content);
+      setReportContent(prev => prev + '\n\n' + content);
       triggerAutoSave();
     }
   };
 
   const handleResetTemplate = async () => {
-    const settings = await fetchTemplateSettings();
-    setTemplateSettings(settings);
-    const tech = settings.technique_placeholder;
-    const find = settings.findings_placeholder;
-    const impr = settings.impression_placeholder;
-
-    setTechnique(tech);
-    setFindings(find);
-    setImpression(impr);
-    setCombinedContent(
-      formatCombinedContent(tech, find, impr, {
-        technique_heading: settings.technique_heading,
-        findings_heading: settings.findings_heading,
-        impression_heading: settings.impression_heading,
-      })
-    );
+    const placeholder = await fetchTemplateSettings();
+    setContentPlaceholder(placeholder);
+    setReportContent(placeholder);
     triggerAutoSave();
-    toast.success('Report content has been reset to the standard template structure.');
-   };
+    toast.success('Report content has been reset to template.');
+  };
 
   const handleFinalizeReport = async () => {
     if (!report?.is_signed) {
@@ -353,14 +233,11 @@ export default function ReportBuilder() {
 
       const { generateReportPDF } = await import('@/lib/reportPdfGenerator.tsx');
 
-      const sections = parseCombinedContent(combinedContent);
       const pdfBlob = await generateReportPDF({
         caseData,
         reportData: {
           clinical_history: clinicalHistory,
-          technique: sections.technique,
-          findings: sections.findings,
-          impression: sections.impression,
+          report_content: reportContent,
           signatory_name: report.signatory_name || undefined,
           signatory_credentials: report.signatory_credentials || undefined,
           signed_at: report.signed_at || undefined,
@@ -434,15 +311,7 @@ export default function ReportBuilder() {
       }
     : null;
 
-  const sections = parseCombinedContent(
-     combinedContent,
-     templateSettings || {
-       technique_heading: 'TECHNIQUE:',
-       findings_heading: 'FINDINGS:',
-       impression_heading: 'IMPRESSION:',
-     }
-   );
-   const reportContent = `${clinicalHistory}\n${sections.technique}\n${sections.findings}\n${sections.impression}`;
+  const fullReportContent = `${clinicalHistory}\n\n${reportContent}`;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-[1800px]">
@@ -463,16 +332,11 @@ export default function ReportBuilder() {
             reportId={report.id}
             currentVersion={{
               clinical_history: clinicalHistory,
-              technique,
-              findings,
-              impression,
+              report_content: reportContent,
             }}
             onRestore={(version) => {
               setClinicalHistory(version.clinical_history);
-              setTechnique(version.technique);
-              setFindings(version.findings);
-              setImpression(version.impression);
-              setCombinedContent(formatCombinedContent(version.technique, version.findings, version.impression));
+              setReportContent(version.report_content || '');
               triggerAutoSave();
             }}
             disabled={report.is_signed}
@@ -531,19 +395,16 @@ export default function ReportBuilder() {
               <CardTitle>Report Content</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-sm text-muted-foreground mb-2">
-                Use section headers (TECHNIQUE:, FINDINGS:, IMPRESSION:) to organize your report
-              </div>
               <ReportEditor
-                content={combinedContent}
+                content={reportContent}
                 onChange={(content) => {
                   if (!report.is_signed) {
-                    setCombinedContent(content);
+                    setReportContent(content);
                     triggerAutoSave();
                   }
                 }}
                 onEditorReady={setEditorInstance}
-                placeholder="TECHNIQUE:&#10;Describe imaging technique and parameters...&#10;&#10;FINDINGS:&#10;Document detailed findings...&#10;&#10;IMPRESSION:&#10;Summarize key findings..."
+                placeholder={contentPlaceholder}
               />
               
               <ImageAttachment
@@ -566,7 +427,7 @@ export default function ReportBuilder() {
               <ElectronicSignature
                 reportId={report.id}
                 caseId={caseId!}
-                reportContent={reportContent}
+                reportContent={fullReportContent}
                 reportVersion={report.version}
                 signatureData={signatureData}
                 canReopen={report.can_reopen && !report.is_superseded}
@@ -593,9 +454,7 @@ export default function ReportBuilder() {
             caseData={caseData}
             reportData={{
               clinical_history: clinicalHistory,
-              technique: sections.technique,
-              findings: sections.findings,
-              impression: sections.impression,
+              report_content: reportContent,
               signatory_name: report.signatory_name || undefined,
               signatory_credentials: report.signatory_credentials || undefined,
               signed_at: report.signed_at || undefined,

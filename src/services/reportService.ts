@@ -37,9 +37,7 @@ export const reportService = {
       .insert({
         case_id: caseId,
         clinical_history: initialData.clinical_question || '',
-        technique: '',
-        findings: '',
-        impression: '',
+        report_content: '',
         version: 1,
         is_superseded: false,
         can_reopen: true,
@@ -56,9 +54,7 @@ export const reportService = {
       .from('reports')
       .update({
         clinical_history: content.clinicalHistory,
-        technique: content.technique,
-        findings: content.findings,
-        impression: content.impression,
+        report_content: content.reportContent,
         last_saved_at: new Date().toISOString(),
       })
       .eq('id', reportId);

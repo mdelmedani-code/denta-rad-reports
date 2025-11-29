@@ -255,9 +255,10 @@ interface ReportData {
   reportData: {
     id?: string;
     clinical_history?: string;
-    technique?: string;
-    findings?: string;
-    impression?: string;
+    report_content?: string; // New single content field
+    technique?: string; // Legacy field for backward compatibility
+    findings?: string; // Legacy field for backward compatibility
+    impression?: string; // Legacy field for backward compatibility
     signatory_name?: string;
     signatory_title?: string;
     signatory_credentials?: string;
