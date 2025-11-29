@@ -7,6 +7,7 @@ interface CaseActionsProps {
   folderName: string;
   status: CaseStatus;
   role: 'clinic' | 'admin' | 'reporter';
+  hasReport?: boolean;
   isDownloading?: boolean;
   isUploading?: boolean;
   onAccessReport?: () => void;
@@ -22,6 +23,7 @@ interface CaseActionsProps {
 export function CaseActions({
   status,
   role,
+  hasReport = false,
   isDownloading = false,
   isUploading = false,
   onAccessReport,
@@ -91,7 +93,7 @@ export function CaseActions({
             className={buttonClass}
           >
             <FileEdit className="h-4 w-4 mr-2" />
-            Create Report
+            {hasReport ? 'Continue Report' : 'Create Report'}
           </Button>
           <Button 
             onClick={onDownloadScan}

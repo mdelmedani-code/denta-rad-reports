@@ -10,6 +10,9 @@ export const caseService = {
         clinics (
           name,
           contact_email
+        ),
+        reports!reports_case_id_fkey (
+          id
         )
       `)
       .order('upload_date', { ascending: false });
