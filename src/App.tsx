@@ -18,6 +18,7 @@ import ViewerPage from "./pages/ViewerPage";
 import ReportBuilder from "./pages/ReportBuilder";
 import CaseReportPage from "./pages/CaseReportPage";
 import SignatureVerification from "./pages/SignatureVerification";
+import SnippetManager from "./pages/SnippetManager";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
@@ -184,6 +185,15 @@ const App = () => (
               <ProtectedRoute requiredRole="reporter">
                 <AppLayout>
                   <BillingExport />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Snippet Manager - accessible to reporters and admins */}
+            <Route path="/snippets" element={
+              <ProtectedRoute requiredRole="reporter">
+                <AppLayout>
+                  <SnippetManager />
                 </AppLayout>
               </ProtectedRoute>
             } />
