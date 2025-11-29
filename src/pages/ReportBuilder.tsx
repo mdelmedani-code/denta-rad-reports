@@ -249,8 +249,22 @@ export default function ReportBuilder() {
 
 
   const handleSnippetInsert = (content: string) => {
-    // Insert snippet at the end of combined content
-    setCombinedContent(prev => prev + '\n\n' + content);
+    // Parse current content to get sections
+    const sections = parseCombinedContent(combinedContent);
+    
+    // Append snippet to findings section
+    const updatedFindings = sections.findings 
+      ? `${sections.findings}\n\n${content}`
+      : content;
+    
+    // Reconstruct combined content with updated findings
+    const updatedContent = formatCombinedContent(
+      sections.technique,
+      updatedFindings,
+      sections.impression
+    );
+    
+    setCombinedContent(updatedContent);
     triggerAutoSave();
   };
 
