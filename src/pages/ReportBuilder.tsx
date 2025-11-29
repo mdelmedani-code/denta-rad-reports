@@ -68,8 +68,31 @@ export default function ReportBuilder() {
   const [technique, setTechnique] = useState('');
   const [findings, setFindings] = useState('');
   const [impression, setImpression] = useState('');
+  const [combinedContent, setCombinedContent] = useState('');
 
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
+
+  const formatCombinedContent = (tech: string, find: string, impr: string) => {
+    return `TECHNIQUE:\n${tech || ''}\n\nFINDINGS:\n${find || ''}\n\nIMPRESSION:\n${impr || ''}`;
+  };
+
+  const parseCombinedContent = (content: string) => {
+    const sections = {
+      technique: '',
+      findings: '',
+      impression: ''
+    };
+
+    const techniqueMatch = content.match(/TECHNIQUE:\s*([\s\S]*?)(?=\n\nFINDINGS:|$)/i);
+    const findingsMatch = content.match(/FINDINGS:\s*([\s\S]*?)(?=\n\nIMPRESSION:|$)/i);
+    const impressionMatch = content.match(/IMPRESSION:\s*([\s\S]*?)$/i);
+
+    if (techniqueMatch) sections.technique = techniqueMatch[1].trim();
+    if (findingsMatch) sections.findings = findingsMatch[1].trim();
+    if (impressionMatch) sections.impression = impressionMatch[1].trim();
+
+    return sections;
+  };
 
   useEffect(() => {
     if (caseId) {
@@ -109,9 +132,13 @@ export default function ReportBuilder() {
       setReport(finalReport);
       // Clinical history always comes from the case's clinical_question, not the report
       setClinicalHistory(caseData.clinical_question || '');
-      setTechnique(finalReport.technique || '');
-      setFindings(finalReport.findings || '');
-      setImpression(finalReport.impression || '');
+      const tech = finalReport.technique || '';
+      const find = finalReport.findings || '';
+      const impr = finalReport.impression || '';
+      setTechnique(tech);
+      setFindings(find);
+      setImpression(impr);
+      setCombinedContent(formatCombinedContent(tech, find, impr));
       setLastSaved(finalReport.last_saved_at ? new Date(finalReport.last_saved_at) : undefined);
 
       if (finalReport.supersedes) {
@@ -145,13 +172,21 @@ export default function ReportBuilder() {
 
     setSaveStatus('saving');
 
+    // Parse combined content to get individual sections
+    const sections = parseCombinedContent(combinedContent);
+
     try {
       await reportService.saveReport(report.id, {
         clinicalHistory,
-        technique,
-        findings,
-        impression,
+        technique: sections.technique,
+        findings: sections.findings,
+        impression: sections.impression,
       });
+
+      // Update state with parsed values
+      setTechnique(sections.technique);
+      setFindings(sections.findings);
+      setImpression(sections.impression);
 
       setSaveStatus('saved');
       setLastSaved(new Date());
@@ -165,27 +200,20 @@ export default function ReportBuilder() {
   const handleTemplateSelect = (template: any) => {
     // Templates only apply to technique, findings, and impression
     // Clinical history is never modified - it always matches the case's clinical question
-    setTechnique(template.technique || technique);
-    setFindings(template.findings || findings);
-    setImpression(template.impression || impression);
+    const tech = template.technique || technique;
+    const find = template.findings || findings;
+    const impr = template.impression || impression;
+    
+    setTechnique(tech);
+    setFindings(find);
+    setImpression(impr);
+    setCombinedContent(formatCombinedContent(tech, find, impr));
     triggerAutoSave();
   };
 
-  const handleSnippetInsert = (content: string, section: string) => {
-    switch (section) {
-      case 'clinical_history':
-        setClinicalHistory(prev => prev + '\n\n' + content);
-        break;
-      case 'technique':
-        setTechnique(prev => prev + '\n\n' + content);
-        break;
-      case 'findings':
-        setFindings(prev => prev + '\n\n' + content);
-        break;
-      case 'impression':
-        setImpression(prev => prev + '\n\n' + content);
-        break;
-    }
+  const handleSnippetInsert = (content: string) => {
+    // Insert snippet at the end of combined content
+    setCombinedContent(prev => prev + '\n\n' + content);
     triggerAutoSave();
   };
 
@@ -202,13 +230,14 @@ export default function ReportBuilder() {
 
       const { generateReportPDF } = await import('@/lib/reportPdfGenerator.tsx');
 
+      const sections = parseCombinedContent(combinedContent);
       const pdfBlob = await generateReportPDF({
         caseData,
         reportData: {
           clinical_history: clinicalHistory,
-          technique,
-          findings,
-          impression,
+          technique: sections.technique,
+          findings: sections.findings,
+          impression: sections.impression,
           signatory_name: report.signatory_name || undefined,
           signatory_credentials: report.signatory_credentials || undefined,
           signed_at: report.signed_at || undefined,
@@ -281,7 +310,8 @@ export default function ReportBuilder() {
       }
     : null;
 
-  const reportContent = `${clinicalHistory}\n${technique}\n${findings}\n${impression}`;
+  const sections = parseCombinedContent(combinedContent);
+  const reportContent = `${clinicalHistory}\n${sections.technique}\n${sections.findings}\n${sections.impression}`;
 
   return (
     <div className="container mx-auto py-8 max-w-5xl">
@@ -311,6 +341,7 @@ export default function ReportBuilder() {
               setTechnique(version.technique);
               setFindings(version.findings);
               setImpression(version.impression);
+              setCombinedContent(formatCombinedContent(version.technique, version.findings, version.impression));
               triggerAutoSave();
             }}
             disabled={report.is_signed}
@@ -334,7 +365,7 @@ export default function ReportBuilder() {
 
       <ReportToolbar
         onSelectTemplate={handleTemplateSelect}
-        onInsertSnippet={(content) => handleSnippetInsert(content, 'findings')}
+        onInsertSnippet={handleSnippetInsert}
         disabled={report.is_signed}
       />
 
@@ -364,36 +395,21 @@ export default function ReportBuilder() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Technique</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReportEditor
-              content={technique}
-              onChange={(content) => {
-                if (!report.is_signed) {
-                  setTechnique(content);
-                  triggerAutoSave();
-                }
-              }}
-              placeholder="Describe imaging technique and parameters..."
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Findings</CardTitle>
+            <CardTitle>Report Content</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground mb-2">
+              Use section headers (TECHNIQUE:, FINDINGS:, IMPRESSION:) to organize your report
+            </div>
             <ReportEditor
-              content={findings}
+              content={combinedContent}
               onChange={(content) => {
                 if (!report.is_signed) {
-                  setFindings(content);
+                  setCombinedContent(content);
                   triggerAutoSave();
                 }
               }}
-              placeholder="Document detailed findings..."
+              placeholder="TECHNIQUE:&#10;Describe imaging technique and parameters...&#10;&#10;FINDINGS:&#10;Document detailed findings...&#10;&#10;IMPRESSION:&#10;Summarize key findings..."
             />
             
             <ImageAttachment
@@ -403,24 +419,6 @@ export default function ReportBuilder() {
               images={reportImages}
               onImagesChange={setReportImages}
               disabled={report.is_signed}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Impression</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReportEditor
-              content={impression}
-              onChange={(content) => {
-                if (!report.is_signed) {
-                  setImpression(content);
-                  triggerAutoSave();
-                }
-              }}
-              placeholder="Summarize key findings..."
             />
           </CardContent>
         </Card>
