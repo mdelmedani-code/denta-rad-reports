@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw } from "lucide-react";
+import { Loader2, Save, RotateCcw, Eye } from "lucide-react";
 
 interface TemplateSettings {
   technique_heading: string;
@@ -102,14 +102,15 @@ export default function ReportTemplateSettings() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Default Template Configuration</CardTitle>
-          <CardDescription>
-            These settings control the default headings and placeholder text when creating new reports
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Default Template Configuration</CardTitle>
+            <CardDescription>
+              These settings control the default headings and placeholder text when creating new reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
           {/* Technique Section */}
           <div className="space-y-4 p-4 border rounded-lg">
             <h3 className="font-semibold text-lg">Technique Section</h3>
@@ -203,6 +204,37 @@ export default function ReportTemplateSettings() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="w-5 h-5" />
+            Template Preview
+          </CardTitle>
+          <CardDescription>
+            Preview of how the report structure will appear with current settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6 p-4 border rounded-lg bg-muted/30">
+            <div className="space-y-2">
+              <p className="font-semibold text-foreground">{settings.technique_heading}</p>
+              <p className="text-sm text-muted-foreground italic">{settings.technique_placeholder}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="font-semibold text-foreground">{settings.findings_heading}</p>
+              <p className="text-sm text-muted-foreground italic">{settings.findings_placeholder}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="font-semibold text-foreground">{settings.impression_heading}</p>
+              <p className="text-sm text-muted-foreground italic">{settings.impression_placeholder}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      </div>
     </div>
   );
 }
