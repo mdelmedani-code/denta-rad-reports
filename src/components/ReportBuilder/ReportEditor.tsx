@@ -1,5 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -20,7 +20,9 @@ import {
   AlignCenter, 
   AlignRight,
   Link as LinkIcon,
-  Table as TableIcon
+  Table as TableIcon,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +34,8 @@ interface ReportEditorProps {
 }
 
 export const ReportEditor = ({ content, onChange, placeholder, className }: ReportEditorProps) => {
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -73,6 +77,18 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
     }
   }, [content, editor]);
 
+  // Handle ESC key to exit fullscreen
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isFullScreen]);
+
   if (!editor) {
     return null;
   }
@@ -89,8 +105,13 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
   };
 
   return (
-    <div className={cn("border rounded-lg overflow-hidden resize-y", className)}>
-      <div className="bg-muted/50 border-b p-2 flex flex-wrap gap-1">
+    <div className={cn(
+      "border rounded-lg overflow-hidden",
+      isFullScreen ? "fixed inset-0 z-50 bg-background resize-none" : "resize-y",
+      className
+    )}>
+      <div className="bg-muted/50 border-b p-2 flex flex-wrap gap-1 justify-between">
+        <div className="flex flex-wrap gap-1">
         <Button
           type="button"
           variant="ghost"
@@ -182,10 +203,23 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
         >
           <TableIcon className="h-4 w-4" />
         </Button>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsFullScreen(!isFullScreen)}
+          title={isFullScreen ? "Exit fullscreen (ESC)" : "Enter fullscreen"}
+        >
+          {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
       </div>
       <EditorContent 
         editor={editor} 
-        className="prose max-w-none p-4 min-h-[200px] max-h-[800px] overflow-y-auto focus:outline-none"
+        className={cn(
+          "prose max-w-none p-4 focus:outline-none",
+          isFullScreen ? "h-[calc(100vh-60px)] overflow-y-auto" : "min-h-[200px] max-h-[800px] overflow-y-auto"
+        )}
       />
     </div>
   );
