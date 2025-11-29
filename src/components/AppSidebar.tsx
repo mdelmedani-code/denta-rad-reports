@@ -16,7 +16,8 @@ import {
   Database,
   FileCog,
   Palette,
-  Mail
+  Mail,
+  MessageSquareText
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,11 +91,13 @@ export function AppSidebar() {
   const reporterItems = [
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
+    { title: "Snippet Manager", url: "/snippets", icon: MessageSquareText },
   ];
 
   const adminItems = [
     { title: "Dashboard", url: "/reporter", icon: BarChart3 },
     { title: "Cases", url: "/reporter", icon: FileText },
+    { title: "Snippet Manager", url: "/snippets", icon: MessageSquareText },
     { title: "Invoicing", url: "/admin/invoicing", icon: Receipt },
     { title: "Invoice History", url: "/admin/invoice-history", icon: ScrollText },
     { title: "Invoice Settings", url: "/admin/invoice-settings", icon: Settings },
