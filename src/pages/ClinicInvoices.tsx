@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { handleError } from '@/utils/errorHandler';
 import { useToast } from '@/hooks/use-toast';
 import { TableSkeleton } from '@/components/shared/TableSkeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Invoice {
   id: string;
@@ -26,6 +27,7 @@ export default function ClinicInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'all' | 'outstanding' | 'paid'>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,6 +102,20 @@ export default function ClinicInvoices() {
   const paidInvoices = invoices.filter(inv => inv.status === 'paid');
   const totalDue = dueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
+  const getFilteredInvoices = () => {
+    switch (activeTab) {
+      case 'outstanding':
+        return invoices.filter(inv => inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'draft');
+      case 'paid':
+        return invoices.filter(inv => inv.status === 'paid');
+      case 'all':
+      default:
+        return invoices;
+    }
+  };
+
+  const filteredInvoices = getFilteredInvoices();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -149,9 +165,9 @@ export default function ClinicInvoices() {
         {/* Invoices Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Invoices</CardTitle>
+            <CardTitle>Invoices</CardTitle>
             <CardDescription>
-              View all invoices issued to your clinic
+              View and filter invoices issued to your clinic
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,70 +179,87 @@ export default function ClinicInvoices() {
                 <p className="text-muted-foreground">No invoices found</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2">Invoice Number</th>
-                      <th className="text-left py-3 px-2">Date</th>
-                      <th className="text-left py-3 px-2">Period</th>
-                      <th className="text-left py-3 px-2">Amount</th>
-                      <th className="text-left py-3 px-2">Due Date</th>
-                      <th className="text-left py-3 px-2">Status</th>
-                      <th className="text-left py-3 px-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoices.map((invoice) => (
-                      <tr key={invoice.id} className="border-b hover:bg-muted/50">
-                        <td className="py-4 px-2 font-medium">{invoice.invoice_number}</td>
-                        <td className="py-4 px-2">
-                          {new Date(invoice.created_at).toLocaleDateString('en-GB')}
-                        </td>
-                        <td className="py-4 px-2">
-                          {invoice.period_start && invoice.period_end ? (
-                            <span className="text-sm">
-                              {new Date(invoice.period_start).toLocaleDateString('en-GB')} - {new Date(invoice.period_end).toLocaleDateString('en-GB')}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-2 font-semibold">
-                          £{invoice.amount.toFixed(2)}
-                        </td>
-                        <td className="py-4 px-2">
-                          {invoice.due_date ? (
-                            <span className={`text-sm ${
-                              invoice.status === 'overdue' ? 'text-destructive font-semibold' : ''
-                            }`}>
-                              {new Date(invoice.due_date).toLocaleDateString('en-GB')}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-2">
-                          {getStatusBadge(invoice.status)}
-                        </td>
-                        <td className="py-4 px-2">
-                          {invoice.pdf_storage_path && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => downloadInvoice(invoice)}
-                              disabled={downloadingId === invoice.id}
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              {downloadingId === invoice.id ? 'Downloading...' : 'Download'}
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'all' | 'outstanding' | 'paid')}>
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="all">All ({invoices.length})</TabsTrigger>
+                  <TabsTrigger value="outstanding">Outstanding ({dueInvoices.length})</TabsTrigger>
+                  <TabsTrigger value="paid">Paid ({paidInvoices.length})</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value={activeTab}>
+                  {filteredInvoices.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground">No invoices in this category</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2">Invoice Number</th>
+                            <th className="text-left py-3 px-2">Date</th>
+                            <th className="text-left py-3 px-2">Period</th>
+                            <th className="text-left py-3 px-2">Amount</th>
+                            <th className="text-left py-3 px-2">Due Date</th>
+                            <th className="text-left py-3 px-2">Status</th>
+                            <th className="text-left py-3 px-2">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredInvoices.map((invoice) => (
+                            <tr key={invoice.id} className="border-b hover:bg-muted/50">
+                              <td className="py-4 px-2 font-medium">{invoice.invoice_number}</td>
+                              <td className="py-4 px-2">
+                                {new Date(invoice.created_at).toLocaleDateString('en-GB')}
+                              </td>
+                              <td className="py-4 px-2">
+                                {invoice.period_start && invoice.period_end ? (
+                                  <span className="text-sm">
+                                    {new Date(invoice.period_start).toLocaleDateString('en-GB')} - {new Date(invoice.period_end).toLocaleDateString('en-GB')}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">-</span>
+                                )}
+                              </td>
+                              <td className="py-4 px-2 font-semibold">
+                                £{invoice.amount.toFixed(2)}
+                              </td>
+                              <td className="py-4 px-2">
+                                {invoice.due_date ? (
+                                  <span className={`text-sm ${
+                                    invoice.status === 'overdue' ? 'text-destructive font-semibold' : ''
+                                  }`}>
+                                    {new Date(invoice.due_date).toLocaleDateString('en-GB')}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">-</span>
+                                )}
+                              </td>
+                              <td className="py-4 px-2">
+                                {getStatusBadge(invoice.status)}
+                              </td>
+                              <td className="py-4 px-2">
+                                {invoice.pdf_storage_path && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => downloadInvoice(invoice)}
+                                    disabled={downloadingId === invoice.id}
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    {downloadingId === invoice.id ? 'Downloading...' : 'Download'}
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
           </CardContent>
         </Card>
