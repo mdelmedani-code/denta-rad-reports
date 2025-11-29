@@ -23,6 +23,7 @@ interface ReportPDFPreviewProps {
   };
   reportData: {
     clinical_history?: string;
+    report_content?: string;
     technique?: string;
     findings?: string;
     impression?: string;
