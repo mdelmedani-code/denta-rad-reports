@@ -43,26 +43,191 @@ const loadPDFSettings = async () => {
   }
 };
 
-// Helper function to strip HTML tags and convert to plain text
-const stripHtmlTags = (html: string | null | undefined): string => {
-  if (!html) return '';
+// Helper function to parse HTML and convert to PDF components
+const parseHtmlToPdfComponents = (html: string | null | undefined): any => {
+  if (!html) return null;
+
+  // Decode HTML entities
+  const decodeHtml = (text: string) => {
+    return text
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  };
+
+  // Parse HTML into structured elements
+  const elements: any[] = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
   
-  // Remove HTML tags
-  let text = html.replace(/<[^>]*>/g, '');
-  
-  // Decode common HTML entities
-  text = text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-  
-  // Clean up extra whitespace
-  text = text.replace(/\s+/g, ' ').trim();
-  
-  return text;
+  const processNode = (node: Node): any => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = decodeHtml(node.textContent || '');
+      return text ? text : null;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      const children: any[] = [];
+      
+      node.childNodes.forEach(child => {
+        const processed = processNode(child);
+        if (processed) {
+          if (Array.isArray(processed)) {
+            children.push(...processed);
+          } else {
+            children.push(processed);
+          }
+        }
+      });
+
+      const tagName = element.tagName.toLowerCase();
+      
+      // Handle different HTML elements
+      switch (tagName) {
+        case 'strong':
+        case 'b':
+          return { type: 'bold', children };
+        case 'em':
+        case 'i':
+          return { type: 'italic', children };
+        case 'u':
+          return { type: 'underline', children };
+        case 'p':
+          return { type: 'paragraph', children };
+        case 'br':
+          return { type: 'break' };
+        case 'ul':
+          return { type: 'ul', children };
+        case 'ol':
+          return { type: 'ol', children };
+        case 'li':
+          return { type: 'li', children };
+        case 'h1':
+        case 'h2':
+        case 'h3':
+          return { type: 'heading', level: tagName, children };
+        default:
+          return children;
+      }
+    }
+    return null;
+  };
+
+  doc.body.childNodes.forEach(node => {
+    const processed = processNode(node);
+    if (processed) {
+      if (Array.isArray(processed)) {
+        elements.push(...processed);
+      } else {
+        elements.push(processed);
+      }
+    }
+  });
+
+  return elements;
+};
+
+// Render parsed HTML elements as PDF components
+const renderPdfContent = (elements: any, styles: any): any => {
+  if (!elements || elements.length === 0) return null;
+
+  const renderElement = (element: any, index: number): any => {
+    if (typeof element === 'string') {
+      return element;
+    }
+
+    if (!element || !element.type) return null;
+
+    const key = `element-${index}`;
+
+    switch (element.type) {
+      case 'paragraph':
+        return (
+          <Text key={key} style={[styles.sectionContent, { marginBottom: 8 }]}>
+            {element.children?.map((child: any, i: number) => renderElement(child, i))}
+          </Text>
+        );
+      
+      case 'bold':
+        return (
+          <Text key={key} style={{ fontWeight: 'bold' }}>
+            {element.children?.map((child: any, i: number) => renderElement(child, i))}
+          </Text>
+        );
+      
+      case 'italic':
+        return (
+          <Text key={key} style={{ fontStyle: 'italic' }}>
+            {element.children?.map((child: any, i: number) => renderElement(child, i))}
+          </Text>
+        );
+      
+      case 'underline':
+        return (
+          <Text key={key} style={{ textDecoration: 'underline' }}>
+            {element.children?.map((child: any, i: number) => renderElement(child, i))}
+          </Text>
+        );
+      
+      case 'break':
+        return <Text key={key}>{'\n'}</Text>;
+      
+      case 'ul':
+        return (
+          <View key={key} style={{ marginLeft: 15, marginBottom: 8 }}>
+            {element.children?.map((child: any, i: number) => renderElement(child, i))}
+          </View>
+        );
+      
+      case 'ol':
+        return (
+          <View key={key} style={{ marginLeft: 15, marginBottom: 8 }}>
+            {element.children?.map((child: any, i: number) => (
+              <View key={i} style={{ flexDirection: 'row', marginBottom: 4 }}>
+                <Text style={{ marginRight: 8, fontSize: 10 }}>{i + 1}.</Text>
+                <Text style={{ flex: 1, fontSize: 10 }}>
+                  {renderElement(child, i)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        );
+      
+      case 'li':
+        return (
+          <View key={key} style={{ flexDirection: 'row', marginBottom: 4 }}>
+            <Text style={{ marginRight: 8, fontSize: 10 }}>•</Text>
+            <Text style={{ flex: 1, fontSize: 10 }}>
+              {element.children?.map((child: any, i: number) => renderElement(child, i))}
+            </Text>
+          </View>
+        );
+      
+      case 'heading':
+        const headingSize = element.level === 'h1' ? 14 : element.level === 'h2' ? 12 : 11;
+        return (
+          <Text key={key} style={{ fontSize: headingSize, fontWeight: 'bold', marginBottom: 8, marginTop: 8 }}>
+            {element.children?.map((child: any, i: number) => renderElement(child, i))}
+          </Text>
+        );
+      
+      default:
+        if (Array.isArray(element)) {
+          return element.map((child, i) => renderElement(child, i));
+        }
+        return element.children?.map((child: any, i: number) => renderElement(child, i));
+    }
+  };
+
+  return (
+    <View>
+      {elements.map((element: any, index: number) => renderElement(element, index))}
+    </View>
+  );
 };
 
 // PDF Styles - now created dynamically with settings
@@ -405,9 +570,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
         {reportData.clinical_history && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Clinical History</Text>
-            <Text style={styles.sectionContent}>
-              {stripHtmlTags(reportData.clinical_history)}
-            </Text>
+            {renderPdfContent(parseHtmlToPdfComponents(reportData.clinical_history), styles)}
           </View>
         )}
 
@@ -415,9 +578,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
         {reportData.report_content && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Report</Text>
-            <Text style={styles.sectionContent}>
-              {stripHtmlTags(reportData.report_content)}
-            </Text>
+            {renderPdfContent(parseHtmlToPdfComponents(reportData.report_content), styles)}
           </View>
         )}
 
@@ -425,9 +586,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
         {reportData.technique && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Technique</Text>
-            <Text style={styles.sectionContent}>
-              {stripHtmlTags(reportData.technique)}
-            </Text>
+            {renderPdfContent(parseHtmlToPdfComponents(reportData.technique), styles)}
           </View>
         )}
 
@@ -435,9 +594,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
         {reportData.findings && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Findings</Text>
-            <Text style={styles.sectionContent}>
-              {stripHtmlTags(reportData.findings)}
-            </Text>
+            {renderPdfContent(parseHtmlToPdfComponents(reportData.findings), styles)}
             
             {/* Include images attached to findings */}
             {images.filter(img => img.section === 'findings').length > 0 && (
@@ -459,9 +616,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
         {reportData.impression && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Impression</Text>
-            <Text style={styles.sectionContent}>
-              {stripHtmlTags(reportData.impression)}
-            </Text>
+            {renderPdfContent(parseHtmlToPdfComponents(reportData.impression), styles)}
           </View>
         )}
 
