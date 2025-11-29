@@ -396,35 +396,6 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
           </View>
         </View>
 
-        {/* Case Information */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoSectionTitle}>Case Information</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Clinical Question</Text>
-              <Text style={styles.infoValue}>{caseData.clinical_question || 'N/A'}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Field of View</Text>
-              <Text style={styles.infoValue}>{formatFieldOfView(caseData.field_of_view)}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Urgency Level</Text>
-              <Text style={styles.infoValue}>
-                {caseData.urgency ? caseData.urgency.charAt(0).toUpperCase() + caseData.urgency.slice(1) : 'N/A'}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Upload Date</Text>
-              <Text style={styles.infoValue}>
-                {caseData.created_at || caseData.upload_date 
-                  ? new Date(caseData.created_at || caseData.upload_date).toLocaleDateString('en-GB')
-                  : 'N/A'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.divider} />
 
         {/* Report Title */}
