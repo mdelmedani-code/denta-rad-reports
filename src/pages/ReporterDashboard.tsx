@@ -217,6 +217,7 @@ export default function ReporterDashboard() {
                   folderName={caseData.folder_name || `${caseData.patient_id}_${caseData.id}`}
                   status={caseData.status}
                   role="reporter"
+                  hasReport={caseData.reports && caseData.reports.length > 0}
                   isDownloading={downloadingId === caseData.id}
                   isUploading={uploadingReport === caseData.id}
                   onCreateReport={() => navigate(`/reporter/report/${caseData.id}`)}

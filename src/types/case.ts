@@ -28,4 +28,5 @@ export interface Case {
   reporter_notes?: string | null;
   special_instructions?: string | null;
   estimated_cost?: number;
+  reports?: Array<{ id: string }>;
 }
