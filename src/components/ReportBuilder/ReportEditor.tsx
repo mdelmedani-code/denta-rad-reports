@@ -31,9 +31,10 @@ interface ReportEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   className?: string;
+  onEditorReady?: (editor: any) => void;
 }
 
-export const ReportEditor = ({ content, onChange, placeholder, className }: ReportEditorProps) => {
+export const ReportEditor = ({ content, onChange, placeholder, className, onEditorReady }: ReportEditorProps) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   
   const editor = useEditor({
@@ -61,6 +62,13 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
       onChange(editor.getHTML());
     },
   });
+
+  // Notify parent when editor is ready
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   // Sync editor content when content prop changes (e.g., from templates/snippets)
   useEffect(() => {
