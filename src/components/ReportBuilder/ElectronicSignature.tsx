@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ interface SignatureData {
   signatory_name: string;
   signatory_credentials: string;
   signature_hash: string;
+  signature_statement?: string;
   verification_token: string;
   version?: number;
   is_superseded?: boolean;
@@ -53,11 +54,51 @@ export const ElectronicSignature = ({
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [signerName, setSignerName] = useState('');
   const [credentials, setCredentials] = useState('');
+  const [signatureStatement, setSignatureStatement] = useState('');
   const [password, setPassword] = useState('');
   const [reopenPassword, setReopenPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Fetch user profile credentials on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('professional_title, credentials, signature_statement, email')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          // Auto-populate signer name with email or professional title
+          const name = data.professional_title ? 
+            `${data.professional_title}` : 
+            data.email.split('@')[0];
+          setSignerName(name);
+          
+          // Auto-populate credentials
+          if (data.credentials) {
+            setCredentials(data.credentials);
+          }
+
+          // Store signature statement
+          if (data.signature_statement) {
+            setSignatureStatement(data.signature_statement);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   const handleSign = async () => {
     if (!signerName || !password) {
@@ -130,6 +171,9 @@ export const ElectronicSignature = ({
           signed_by: signerName,
           signed_at: new Date().toISOString(),
           signature_hash: contentHash,
+          signatory_name: signerName,
+          signatory_credentials: credentials,
+          signature_statement: signatureStatement,
           version: reportVersion,
         })
         .eq('id', reportId);
@@ -228,7 +272,7 @@ export const ElectronicSignature = ({
                   </Button>
                 )}
               </div>
-              <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
+               <div className="text-sm space-y-1 text-green-800 dark:text-green-200">
                 <div><strong>Signed by:</strong> {signatureData.signatory_name}</div>
                 {signatureData.signatory_credentials && (
                   <div><strong>Credentials:</strong> {signatureData.signatory_credentials}</div>
@@ -245,6 +289,9 @@ export const ElectronicSignature = ({
                 )}
                 <div className="font-mono text-xs">
                   <strong>Verification:</strong> #{signatureData.verification_token.substring(0, 16)}...
+                </div>
+                <div className="mt-3 pt-3 border-t border-green-300/50 italic text-xs">
+                  {signatureData.signature_statement || "This report has been reviewed and approved."}
                 </div>
               </div>
               {signatureData.is_superseded && (
@@ -291,6 +338,12 @@ export const ElectronicSignature = ({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <Alert className="bg-muted/50">
+              <AlertDescription className="text-xs">
+                Your signature details have been auto-populated from your profile. You can edit them if needed.
+              </AlertDescription>
+            </Alert>
+
             <div className="space-y-2">
               <Label htmlFor="signerName">Your Full Name *</Label>
               <Input
