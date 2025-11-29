@@ -101,6 +101,7 @@ export function AppSidebar() {
     { title: "Invoicing", url: "/admin/invoicing", icon: Receipt },
     { title: "Invoice History", url: "/admin/invoice-history", icon: ScrollText },
     { title: "Invoice Settings", url: "/admin/invoice-settings", icon: Settings },
+    { title: "Report Template", url: "/admin/report-template-settings", icon: FileText },
     { title: "User Management", url: "/admin/users", icon: Users },
     { title: "Data Retention", url: "/admin/data-retention", icon: Database },
     { title: "PDF Template", url: "/admin/pdf-template", icon: FileCog },
