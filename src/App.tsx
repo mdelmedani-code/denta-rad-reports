@@ -34,6 +34,7 @@ import UnifiedInvoicing from "./pages/admin/UnifiedInvoicing";
 import InvoiceSettings from "./pages/admin/InvoiceSettings";
 import InvoiceHistory from "./pages/admin/InvoiceHistory";
 import EmailTemplateSettings from "./pages/admin/EmailTemplateSettings";
+import ReportTemplateSettings from "./pages/admin/ReportTemplateSettings";
 import ClinicInvoices from "./pages/ClinicInvoices";
 import { AppLayout } from "./components/AppLayout";
 
@@ -112,6 +113,14 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <EmailTemplateSettings />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/report-template-settings" element={
+              <ProtectedRoute requiredRole="admin">
+                <AppLayout>
+                  <ReportTemplateSettings />
                 </AppLayout>
               </ProtectedRoute>
             } />

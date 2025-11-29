@@ -16,6 +16,7 @@ import { ReportVersionBanner } from '@/components/report/ReportVersionBanner';
 import { reportService } from '@/services/reportService';
 import { handleError } from '@/utils/errorHandler';
 import { toast } from '@/lib/toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CaseData {
   id: string;
@@ -95,6 +96,43 @@ export default function ReportBuilder() {
     return sections;
   };
 
+  const fetchTemplateSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('template_settings')
+        .select('setting_value')
+        .eq('setting_key', 'default_template')
+        .single();
+
+      if (error) throw error;
+      
+      const defaultSettings = {
+        technique_heading: 'TECHNIQUE:',
+        technique_placeholder: 'Enter technique details here...',
+        findings_heading: 'FINDINGS:',
+        findings_placeholder: 'Enter findings here...',
+        impression_heading: 'IMPRESSION:',
+        impression_placeholder: 'Enter impression here...',
+      };
+
+      if (data?.setting_value && typeof data.setting_value === 'object') {
+        return { ...defaultSettings, ...data.setting_value as any };
+      }
+      
+      return defaultSettings;
+    } catch (error) {
+      console.error('Error fetching template settings:', error);
+      return {
+        technique_heading: 'TECHNIQUE:',
+        technique_placeholder: 'Enter technique details here...',
+        findings_heading: 'FINDINGS:',
+        findings_placeholder: 'Enter findings here...',
+        impression_heading: 'IMPRESSION:',
+        impression_placeholder: 'Enter impression here...',
+      };
+    }
+  };
+
   useEffect(() => {
     if (caseId) {
       loadCaseAndReport();
@@ -140,9 +178,11 @@ export default function ReportBuilder() {
       let impr = finalReport.impression || '';
       
       if (!tech && !find && !impr) {
-        tech = 'TECHNIQUE:\nEnter technique details here...';
-        find = 'FINDINGS:\nEnter findings here...';
-        impr = 'IMPRESSION:\nEnter impression here...';
+        // Fetch custom template settings
+        const templateSettings = await fetchTemplateSettings();
+        tech = `${templateSettings.technique_heading}\n${templateSettings.technique_placeholder}`;
+        find = `${templateSettings.findings_heading}\n${templateSettings.findings_placeholder}`;
+        impr = `${templateSettings.impression_heading}\n${templateSettings.impression_placeholder}`;
       }
       
       setTechnique(tech);
@@ -212,6 +252,20 @@ export default function ReportBuilder() {
     // Insert snippet at the end of combined content
     setCombinedContent(prev => prev + '\n\n' + content);
     triggerAutoSave();
+  };
+
+  const handleResetTemplate = async () => {
+    const templateSettings = await fetchTemplateSettings();
+    const tech = `${templateSettings.technique_heading}\n${templateSettings.technique_placeholder}`;
+    const find = `${templateSettings.findings_heading}\n${templateSettings.findings_placeholder}`;
+    const impr = `${templateSettings.impression_heading}\n${templateSettings.impression_placeholder}`;
+    
+    setTechnique(tech);
+    setFindings(find);
+    setImpression(impr);
+    setCombinedContent(formatCombinedContent(tech, find, impr));
+    triggerAutoSave();
+    toast.success('Report content has been reset to the standard template structure.');
   };
 
   const handleFinalizeReport = async () => {
@@ -363,6 +417,7 @@ export default function ReportBuilder() {
 
       <ReportToolbar
         onInsertSnippet={handleSnippetInsert}
+        onResetTemplate={handleResetTemplate}
         disabled={report.is_signed}
       />
 
