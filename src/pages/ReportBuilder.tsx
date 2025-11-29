@@ -161,6 +161,14 @@ export default function ReportBuilder() {
     }
   };
 
+  const handleTemplateSelect = (template: any) => {
+    // Do not update clinical history - preserve original clinical indication from case upload
+    setTechnique(template.technique || technique);
+    setFindings(template.findings || findings);
+    setImpression(template.impression || impression);
+    triggerAutoSave();
+  };
+
   const handleSnippetInsert = (content: string, section: string) => {
     switch (section) {
       case 'clinical_history':
@@ -323,6 +331,7 @@ export default function ReportBuilder() {
       <ReportPatientInfo caseData={caseData} />
 
       <ReportToolbar
+        onSelectTemplate={handleTemplateSelect}
         onInsertSnippet={(content) => handleSnippetInsert(content, 'findings')}
         disabled={report.is_signed}
       />
