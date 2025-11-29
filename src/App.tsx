@@ -33,6 +33,7 @@ import UnifiedInvoicing from "./pages/admin/UnifiedInvoicing";
 import InvoiceSettings from "./pages/admin/InvoiceSettings";
 import InvoiceHistory from "./pages/admin/InvoiceHistory";
 import EmailTemplateSettings from "./pages/admin/EmailTemplateSettings";
+import ClinicInvoices from "./pages/ClinicInvoices";
 import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,13 @@ const App = () => (
               <ProtectedRoute requiredRole="clinic">
                 <AppLayout>
                   <UploadCase />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/invoices" element={
+              <ProtectedRoute requiredRole="clinic">
+                <AppLayout>
+                  <ClinicInvoices />
                 </AppLayout>
               </ProtectedRoute>
             } />

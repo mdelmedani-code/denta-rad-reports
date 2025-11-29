@@ -84,6 +84,7 @@ export function AppSidebar() {
   const clinicItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "Upload Case", url: "/upload-case", icon: Upload },
+    { title: "Invoices", url: "/invoices", icon: Receipt },
   ];
 
   const reporterItems = [
