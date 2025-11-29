@@ -28,7 +28,6 @@ import SecurityDashboard from "./pages/SecurityDashboard";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import DataRetentionPage from "./pages/admin/DataRetentionPage";
 import PDFTemplateSettings from "./pages/admin/PDFTemplateSettings";
-import TemplateEditor from "./pages/TemplateEditor";
 import UnifiedInvoicing from "./pages/admin/UnifiedInvoicing";
 import InvoiceSettings from "./pages/admin/InvoiceSettings";
 import InvoiceHistory from "./pages/admin/InvoiceHistory";
@@ -127,14 +126,6 @@ const App = () => (
               <ProtectedRoute requiredRole="admin">
                 <AppLayout>
                   <PDFTemplateSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/template-editor" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <TemplateEditor />
                 </AppLayout>
               </ProtectedRoute>
             } />

@@ -15,7 +15,6 @@ import {
   Receipt,
   Database,
   FileCog,
-  Palette,
   Mail
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -101,7 +100,6 @@ export function AppSidebar() {
     { title: "User Management", url: "/admin/users", icon: Users },
     { title: "Data Retention", url: "/admin/data-retention", icon: Database },
     { title: "PDF Template", url: "/admin/pdf-template", icon: FileCog },
-    { title: "Template Editor", url: "/admin/template-editor", icon: Palette },
     { title: "Email Templates", url: "/admin/email-templates", icon: Mail },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
