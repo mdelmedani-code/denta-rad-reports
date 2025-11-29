@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, FileText, ArrowLeft, Loader2, Keyboard } from 'lucide-react';
-import { ReportEditor, ReportEditorHandle } from '@/components/ReportBuilder/ReportEditor';
+import { ReportEditor } from '@/components/ReportBuilder/ReportEditor';
 import { AutoSaveIndicator } from '@/components/ReportBuilder/AutoSaveIndicator';
 import { ElectronicSignature } from '@/components/ReportBuilder/ElectronicSignature';
 import { ImageAttachment } from '@/components/ReportBuilder/ImageAttachment';
@@ -56,7 +56,6 @@ interface ReportData {
 export default function ReportBuilder() {
   const { caseId } = useParams();
   const navigate = useNavigate();
-  const editorRef = useRef<ReportEditorHandle>(null);
 
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -179,11 +178,11 @@ export default function ReportBuilder() {
       let impr = finalReport.impression || '';
       
       if (!tech && !find && !impr) {
-        // Fetch custom template settings - only use placeholder text, formatCombinedContent adds headings
+        // Fetch custom template settings
         const templateSettings = await fetchTemplateSettings();
-        tech = templateSettings.technique_placeholder;
-        find = templateSettings.findings_placeholder;
-        impr = templateSettings.impression_placeholder;
+        tech = `${templateSettings.technique_heading}\n${templateSettings.technique_placeholder}`;
+        find = `${templateSettings.findings_heading}\n${templateSettings.findings_placeholder}`;
+        impr = `${templateSettings.impression_heading}\n${templateSettings.impression_placeholder}`;
       }
       
       setTechnique(tech);
@@ -250,16 +249,16 @@ export default function ReportBuilder() {
 
 
   const handleSnippetInsert = (content: string) => {
-    if (editorRef.current) {
-      editorRef.current.insertAtCursor(content);
-    }
+    // Insert snippet at the end of combined content
+    setCombinedContent(prev => prev + '\n\n' + content);
+    triggerAutoSave();
   };
 
   const handleResetTemplate = async () => {
     const templateSettings = await fetchTemplateSettings();
-    const tech = templateSettings.technique_placeholder;
-    const find = templateSettings.findings_placeholder;
-    const impr = templateSettings.impression_placeholder;
+    const tech = `${templateSettings.technique_heading}\n${templateSettings.technique_placeholder}`;
+    const find = `${templateSettings.findings_heading}\n${templateSettings.findings_placeholder}`;
+    const impr = `${templateSettings.impression_heading}\n${templateSettings.impression_placeholder}`;
     
     setTechnique(tech);
     setFindings(find);
@@ -455,7 +454,6 @@ export default function ReportBuilder() {
               Use section headers (TECHNIQUE:, FINDINGS:, IMPRESSION:) to organize your report
             </div>
             <ReportEditor
-              ref={editorRef}
               content={combinedContent}
               onChange={(content) => {
                 if (!report.is_signed) {

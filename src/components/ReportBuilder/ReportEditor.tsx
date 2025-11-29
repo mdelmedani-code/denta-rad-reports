@@ -1,5 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
-import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useState } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -33,11 +33,7 @@ interface ReportEditorProps {
   className?: string;
 }
 
-export interface ReportEditorHandle {
-  insertAtCursor: (text: string) => void;
-}
-
-export const ReportEditor = forwardRef<ReportEditorHandle, ReportEditorProps>(({ content, onChange, placeholder, className }, ref) => {
+export const ReportEditor = ({ content, onChange, placeholder, className }: ReportEditorProps) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   
   const editor = useEditor({
@@ -80,15 +76,6 @@ export const ReportEditor = forwardRef<ReportEditorHandle, ReportEditorProps>(({
       }
     }
   }, [content, editor]);
-
-  // Expose insertAtCursor method to parent
-  useImperativeHandle(ref, () => ({
-    insertAtCursor: (text: string) => {
-      if (editor) {
-        editor.chain().focus().insertContent(text).run();
-      }
-    },
-  }));
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -236,4 +223,4 @@ export const ReportEditor = forwardRef<ReportEditorHandle, ReportEditorProps>(({
       />
     </div>
   );
-});
+};
