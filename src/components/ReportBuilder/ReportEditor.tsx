@@ -89,7 +89,7 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
   };
 
   return (
-    <div className={cn("border rounded-lg overflow-hidden", className)}>
+    <div className={cn("border rounded-lg overflow-hidden resize-y", className)}>
       <div className="bg-muted/50 border-b p-2 flex flex-wrap gap-1">
         <Button
           type="button"
@@ -185,7 +185,7 @@ export const ReportEditor = ({ content, onChange, placeholder, className }: Repo
       </div>
       <EditorContent 
         editor={editor} 
-        className="prose max-w-none p-4 min-h-[200px] focus:outline-none"
+        className="prose max-w-none p-4 min-h-[200px] max-h-[800px] overflow-y-auto focus:outline-none"
       />
     </div>
   );
