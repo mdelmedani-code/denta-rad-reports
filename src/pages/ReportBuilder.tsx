@@ -107,7 +107,8 @@ export default function ReportBuilder() {
       }
 
       setReport(finalReport);
-      setClinicalHistory(finalReport.clinical_history || '');
+      // Clinical history always comes from the case's clinical_question, not the report
+      setClinicalHistory(caseData.clinical_question || '');
       setTechnique(finalReport.technique || '');
       setFindings(finalReport.findings || '');
       setImpression(finalReport.impression || '');
@@ -162,7 +163,8 @@ export default function ReportBuilder() {
   };
 
   const handleTemplateSelect = (template: any) => {
-    // Do not update clinical history - preserve original clinical indication from case upload
+    // Templates only apply to technique, findings, and impression
+    // Clinical history is never modified - it always matches the case's clinical question
     setTechnique(template.technique || technique);
     setFindings(template.findings || findings);
     setImpression(template.impression || impression);
@@ -351,16 +353,12 @@ export default function ReportBuilder() {
             <CardTitle>Clinical History</CardTitle>
           </CardHeader>
           <CardContent>
-            <ReportEditor
-              content={clinicalHistory}
-              onChange={(content) => {
-                if (!report.is_signed) {
-                  setClinicalHistory(content);
-                  triggerAutoSave();
-                }
-              }}
-              placeholder="Enter clinical history and reason for referral..."
-            />
+            <div className="prose max-w-none p-4 bg-muted/30 rounded-md border">
+              <p className="text-sm text-muted-foreground italic mb-2">
+                This section displays the clinical question from the case upload form and cannot be edited.
+              </p>
+              <div className="whitespace-pre-wrap">{clinicalHistory || 'No clinical question provided'}</div>
+            </div>
           </CardContent>
         </Card>
 
