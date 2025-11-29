@@ -13,6 +13,7 @@ import { KeyboardShortcuts } from '@/components/ReportBuilder/KeyboardShortcuts'
 import { ReportPatientInfo } from '@/components/report/ReportPatientInfo';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportVersionBanner } from '@/components/report/ReportVersionBanner';
+import { ReportPDFPreview } from '@/components/ReportBuilder/ReportPDFPreview';
 import { reportService } from '@/services/reportService';
 import { handleError } from '@/utils/errorHandler';
 import { toast } from '@/lib/toast';
@@ -366,7 +367,7 @@ export default function ReportBuilder() {
   const reportContent = `${clinicalHistory}\n${sections.technique}\n${sections.findings}\n${sections.impression}`;
 
   return (
-    <div className="container mx-auto py-8 max-w-5xl">
+    <div className="container mx-auto py-8 px-4 max-w-[1800px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -429,80 +430,101 @@ export default function ReportBuilder() {
 
       {versionBanner && <ReportVersionBanner message={`ℹ️ ${versionBanner}`} />}
 
-      {/* Report Sections */}
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Clinical History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose max-w-none p-4 bg-muted/30 rounded-md border">
-              <p className="text-sm text-muted-foreground italic mb-2">
-                This section displays the clinical question from the case upload form and cannot be edited.
-              </p>
-              <div className="whitespace-pre-wrap">{clinicalHistory || 'No clinical question provided'}</div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Two-column layout: Editor on left, Preview on right */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
+        {/* Left Column: Report Editor */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Clinical History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose max-w-none p-4 bg-muted/30 rounded-md border">
+                <p className="text-sm text-muted-foreground italic mb-2">
+                  This section displays the clinical question from the case upload form and cannot be edited.
+                </p>
+                <div className="whitespace-pre-wrap">{clinicalHistory || 'No clinical question provided'}</div>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Content</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground mb-2">
-              Use section headers (TECHNIQUE:, FINDINGS:, IMPRESSION:) to organize your report
-            </div>
-            <ReportEditor
-              content={combinedContent}
-              onChange={(content) => {
-                if (!report.is_signed) {
-                  setCombinedContent(content);
-                  triggerAutoSave();
-                }
-              }}
-              placeholder="TECHNIQUE:&#10;Describe imaging technique and parameters...&#10;&#10;FINDINGS:&#10;Document detailed findings...&#10;&#10;IMPRESSION:&#10;Summarize key findings..."
-            />
-            
-            <ImageAttachment
-              reportId={report.id}
-              caseId={caseId!}
-              section="findings"
-              images={reportImages}
-              onImagesChange={setReportImages}
-              disabled={report.is_signed}
-            />
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Report Content</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-muted-foreground mb-2">
+                Use section headers (TECHNIQUE:, FINDINGS:, IMPRESSION:) to organize your report
+              </div>
+              <ReportEditor
+                content={combinedContent}
+                onChange={(content) => {
+                  if (!report.is_signed) {
+                    setCombinedContent(content);
+                    triggerAutoSave();
+                  }
+                }}
+                placeholder="TECHNIQUE:&#10;Describe imaging technique and parameters...&#10;&#10;FINDINGS:&#10;Document detailed findings...&#10;&#10;IMPRESSION:&#10;Summarize key findings..."
+              />
+              
+              <ImageAttachment
+                reportId={report.id}
+                caseId={caseId!}
+                section="findings"
+                images={reportImages}
+                onImagesChange={setReportImages}
+                disabled={report.is_signed}
+              />
+            </CardContent>
+          </Card>
 
-        {/* Signature Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Signature</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ElectronicSignature
-              reportId={report.id}
-              caseId={caseId!}
-              reportContent={reportContent}
-              reportVersion={report.version}
-              signatureData={signatureData}
-              canReopen={report.can_reopen && !report.is_superseded}
-              onSign={(data) => {
-                setReport({
-                  ...report,
-                  is_signed: true,
-                  signed_by: data.signed_by,
-                  signed_at: data.signed_at,
-                  signatory_name: data.signatory_name,
-                  signatory_credentials: data.signatory_credentials,
-                  signature_hash: data.signature_hash,
-                });
-              }}
-              onReopen={handleReopenReport}
-            />
-          </CardContent>
-        </Card>
+          {/* Signature Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Signature</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ElectronicSignature
+                reportId={report.id}
+                caseId={caseId!}
+                reportContent={reportContent}
+                reportVersion={report.version}
+                signatureData={signatureData}
+                canReopen={report.can_reopen && !report.is_superseded}
+                onSign={(data) => {
+                  setReport({
+                    ...report,
+                    is_signed: true,
+                    signed_by: data.signed_by,
+                    signed_at: data.signed_at,
+                    signatory_name: data.signatory_name,
+                    signatory_credentials: data.signatory_credentials,
+                    signature_hash: data.signature_hash,
+                  });
+                }}
+                onReopen={handleReopenReport}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: PDF Preview */}
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <ReportPDFPreview
+            caseData={caseData}
+            reportData={{
+              clinical_history: clinicalHistory,
+              technique: sections.technique,
+              findings: sections.findings,
+              impression: sections.impression,
+              signatory_name: report.signatory_name || undefined,
+              signatory_credentials: report.signatory_credentials || undefined,
+              signed_at: report.signed_at || undefined,
+              version: report.version,
+            }}
+            images={reportImages}
+          />
+        </div>
       </div>
 
       {/* Footer Actions */}
