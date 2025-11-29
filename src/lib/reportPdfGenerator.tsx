@@ -411,7 +411,17 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
           </View>
         )}
 
-        {/* Technique */}
+        {/* Report Content (New single field) */}
+        {reportData.report_content && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Report</Text>
+            <Text style={styles.sectionContent}>
+              {stripHtmlTags(reportData.report_content)}
+            </Text>
+          </View>
+        )}
+
+        {/* Technique (Legacy) */}
         {reportData.technique && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Technique</Text>
@@ -421,7 +431,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
           </View>
         )}
 
-        {/* Findings */}
+        {/* Findings (Legacy) */}
         {reportData.findings && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Findings</Text>
@@ -445,7 +455,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
           </View>
         )}
 
-        {/* Impression */}
+        {/* Impression (Legacy) */}
         {reportData.impression && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Impression</Text>
@@ -456,7 +466,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
         )}
 
         {/* Signature and Audit Trail Section */}
-        {reportData.is_signed && reportData.signatory_name && reportData.signed_at && (
+        {(reportData.signatory_name || reportData.is_signed) && (
           <View style={styles.signatureSection}>
             <Text style={styles.endOfReport}>***End of Report***</Text>
             
@@ -467,7 +477,7 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
               </Text>
               
               <Text style={[styles.doctorInfo, styles.doctorName, { marginBottom: 3 }]}>
-                {reportData.signatory_name}
+                {reportData.signatory_name || 'Not yet signed'}
               </Text>
               
               {reportData.signatory_title && (
@@ -482,24 +492,26 @@ export const generateReportPDF = async (data: ReportData, templateId?: string) =
                 </Text>
               )}
               
-              <View style={{ borderTop: '1pt solid #dee2e6', paddingTop: 8, marginTop: 8 }}>
-                <Text style={[styles.reportDate, { marginBottom: 3 }]}>
-                  Signed: {new Date(reportData.signed_at).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })} at {new Date(reportData.signed_at).toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-                
-                {reportData.signature_statement && (
-                  <Text style={{ fontSize: 8, color: '#6c757d', marginTop: 5, fontStyle: 'italic' }}>
-                    {reportData.signature_statement}
+              {reportData.signed_at && (
+                <View style={{ borderTop: '1pt solid #dee2e6', paddingTop: 8, marginTop: 8 }}>
+                  <Text style={[styles.reportDate, { marginBottom: 3 }]}>
+                    Signed: {new Date(reportData.signed_at).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })} at {new Date(reportData.signed_at).toLocaleTimeString('en-GB', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </Text>
-                )}
-              </View>
+                  
+                  {reportData.signature_statement && (
+                    <Text style={{ fontSize: 8, color: '#6c757d', marginTop: 5, fontStyle: 'italic' }}>
+                      {reportData.signature_statement}
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
             
             {/* Audit Trail */}
