@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, FileText, ArrowLeft, Loader2, Keyboard } from 'lucide-react';
-import { ReportEditor } from '@/components/ReportBuilder/ReportEditor';
+import { ReportEditor, ReportEditorHandle } from '@/components/ReportBuilder/ReportEditor';
 import { AutoSaveIndicator } from '@/components/ReportBuilder/AutoSaveIndicator';
 import { ElectronicSignature } from '@/components/ReportBuilder/ElectronicSignature';
 import { ImageAttachment } from '@/components/ReportBuilder/ImageAttachment';
@@ -56,6 +56,7 @@ interface ReportData {
 export default function ReportBuilder() {
   const { caseId } = useParams();
   const navigate = useNavigate();
+  const editorRef = useRef<ReportEditorHandle>(null);
 
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -249,23 +250,9 @@ export default function ReportBuilder() {
 
 
   const handleSnippetInsert = (content: string) => {
-    // Parse current content to get sections
-    const sections = parseCombinedContent(combinedContent);
-    
-    // Append snippet to findings section
-    const updatedFindings = sections.findings 
-      ? `${sections.findings}\n\n${content}`
-      : content;
-    
-    // Reconstruct combined content with updated findings
-    const updatedContent = formatCombinedContent(
-      sections.technique,
-      updatedFindings,
-      sections.impression
-    );
-    
-    setCombinedContent(updatedContent);
-    triggerAutoSave();
+    if (editorRef.current) {
+      editorRef.current.insertAtCursor(content);
+    }
   };
 
   const handleResetTemplate = async () => {
@@ -468,6 +455,7 @@ export default function ReportBuilder() {
               Use section headers (TECHNIQUE:, FINDINGS:, IMPRESSION:) to organize your report
             </div>
             <ReportEditor
+              ref={editorRef}
               content={combinedContent}
               onChange={(content) => {
                 if (!report.is_signed) {
