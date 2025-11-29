@@ -24,9 +24,6 @@ interface ReportPDFPreviewProps {
   reportData: {
     clinical_history?: string;
     report_content?: string;
-    technique?: string;
-    findings?: string;
-    impression?: string;
     signatory_name?: string;
     signatory_credentials?: string;
     signed_at?: string;
