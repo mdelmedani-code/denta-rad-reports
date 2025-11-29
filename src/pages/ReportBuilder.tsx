@@ -73,23 +73,62 @@ export default function ReportBuilder() {
   const [impression, setImpression] = useState('');
   const [combinedContent, setCombinedContent] = useState('');
 
+  type TemplateSettings = {
+    technique_heading: string;
+    technique_placeholder: string;
+    findings_heading: string;
+    findings_placeholder: string;
+    impression_heading: string;
+    impression_placeholder: string;
+  };
+
+  const [templateSettings, setTemplateSettings] = useState<TemplateSettings | null>(null);
+
   const [saveTimer, setSaveTimer] = useState<NodeJS.Timeout | null>(null);
   const [editorInstance, setEditorInstance] = useState<any>(null);
 
-  const formatCombinedContent = (tech: string, find: string, impr: string) => {
-    return `TECHNIQUE:\n${tech || ''}\n\nFINDINGS:\n${find || ''}\n\nIMPRESSION:\n${impr || ''}`;
+  const formatCombinedContent = (
+    tech: string,
+    find: string,
+    impr: string,
+    headings?: Pick<TemplateSettings, 'technique_heading' | 'findings_heading' | 'impression_heading'>
+  ) => {
+    const techniqueHeading = headings?.technique_heading || 'TECHNIQUE:';
+    const findingsHeading = headings?.findings_heading || 'FINDINGS:';
+    const impressionHeading = headings?.impression_heading || 'IMPRESSION:';
+
+    return `${techniqueHeading}\n${tech || ''}\n\n${findingsHeading}\n${find || ''}\n\n${impressionHeading}\n${impr || ''}`;
   };
 
-  const parseCombinedContent = (content: string) => {
+  const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const parseCombinedContent = (
+    content: string,
+    headings?: Pick<TemplateSettings, 'technique_heading' | 'findings_heading' | 'impression_heading'>
+  ) => {
+    const techniqueHeading = headings?.technique_heading || 'TECHNIQUE:';
+    const findingsHeading = headings?.findings_heading || 'FINDINGS:';
+    const impressionHeading = headings?.impression_heading || 'IMPRESSION:';
+
     const sections = {
       technique: '',
       findings: '',
-      impression: ''
+      impression: '',
     };
 
-    const techniqueMatch = content.match(/TECHNIQUE:\s*([\s\S]*?)(?=\n\nFINDINGS:|$)/i);
-    const findingsMatch = content.match(/FINDINGS:\s*([\s\S]*?)(?=\n\nIMPRESSION:|$)/i);
-    const impressionMatch = content.match(/IMPRESSION:\s*([\s\S]*?)$/i);
+    const techniqueRegex = new RegExp(
+      `${escapeRegExp(techniqueHeading)}\\s*([\\s\\S]*?)(?=\\n\\n${escapeRegExp(findingsHeading)}|$)`,
+      'i'
+    );
+    const findingsRegex = new RegExp(
+      `${escapeRegExp(findingsHeading)}\\s*([\\s\\S]*?)(?=\\n\\n${escapeRegExp(impressionHeading)}|$)`,
+      'i'
+    );
+    const impressionRegex = new RegExp(`${escapeRegExp(impressionHeading)}\\s*([\\s\\S]*?)$`, 'i');
+
+    const techniqueMatch = content.match(techniqueRegex);
+    const findingsMatch = content.match(findingsRegex);
+    const impressionMatch = content.match(impressionRegex);
 
     if (techniqueMatch) sections.technique = techniqueMatch[1].trim();
     if (findingsMatch) sections.findings = findingsMatch[1].trim();
@@ -97,7 +136,6 @@ export default function ReportBuilder() {
 
     return sections;
   };
-
   const fetchTemplateSettings = async () => {
     try {
       const { data, error } = await supabase
@@ -136,16 +174,26 @@ export default function ReportBuilder() {
   };
 
   useEffect(() => {
+    // Preload template settings so headings and placeholders are consistent
+    const loadTemplateSettings = async () => {
+      const settings = await fetchTemplateSettings();
+      setTemplateSettings(settings);
+    };
+
+    loadTemplateSettings();
+  }, []);
+
+  useEffect(() => {
     if (caseId) {
       loadCaseAndReport();
     }
   }, [caseId]);
-
-  useEffect(() => {
-    if (report?.id) {
-      loadReportImages();
-    }
-  }, [report?.id]);
+ 
+   useEffect(() => {
+     if (report?.id) {
+       loadReportImages();
+     }
+   }, [report?.id]);
 
   const loadReportImages = async () => {
     if (!report?.id) return;
@@ -171,27 +219,36 @@ export default function ReportBuilder() {
       }
 
       setReport(finalReport);
-      // Clinical history always comes from the case's clinical_question, not the report
-      setClinicalHistory(caseData.clinical_question || '');
-      
-      // Auto-apply standard template for new reports
-      let tech = finalReport.technique || '';
-      let find = finalReport.findings || '';
-      let impr = finalReport.impression || '';
-      
-      if (!tech && !find && !impr) {
-        // Fetch custom template settings
-        const templateSettings = await fetchTemplateSettings();
-        tech = templateSettings.technique_placeholder;
-        find = templateSettings.findings_placeholder;
-        impr = templateSettings.impression_placeholder;
-      }
-      
-      setTechnique(tech);
-      setFindings(find);
-      setImpression(impr);
-      setCombinedContent(formatCombinedContent(tech, find, impr));
-      setLastSaved(finalReport.last_saved_at ? new Date(finalReport.last_saved_at) : undefined);
+       // Clinical history always comes from the case's clinical_question, not the report
+       setClinicalHistory(caseData.clinical_question || '');
+       
+       // Auto-apply standard template for new reports
+       let tech = finalReport.technique || '';
+       let find = finalReport.findings || '';
+       let impr = finalReport.impression || '';
+       
+       if (!tech && !find && !impr) {
+         // Fetch custom template settings
+         const settings = await fetchTemplateSettings();
+         setTemplateSettings(settings);
+         tech = settings.technique_placeholder;
+         find = settings.findings_placeholder;
+         impr = settings.impression_placeholder;
+         setCombinedContent(
+           formatCombinedContent(tech, find, impr, {
+             technique_heading: settings.technique_heading,
+             findings_heading: settings.findings_heading,
+             impression_heading: settings.impression_heading,
+           })
+         );
+       } else {
+         setCombinedContent(formatCombinedContent(tech, find, impr, templateSettings || undefined));
+       }
+       
+       setTechnique(tech);
+       setFindings(find);
+       setImpression(impr);
+       setLastSaved(finalReport.last_saved_at ? new Date(finalReport.last_saved_at) : undefined);
 
       if (finalReport.supersedes) {
         setVersionBanner(
@@ -221,33 +278,33 @@ export default function ReportBuilder() {
 
   const saveReport = async () => {
     if (!report) return;
-
-    setSaveStatus('saving');
-
-    // Parse combined content to get individual sections
-    const sections = parseCombinedContent(combinedContent);
-
-    try {
-      await reportService.saveReport(report.id, {
-        clinicalHistory,
-        technique: sections.technique,
-        findings: sections.findings,
-        impression: sections.impression,
-      });
-
-      // Update state with parsed values
-      setTechnique(sections.technique);
-      setFindings(sections.findings);
-      setImpression(sections.impression);
-
-      setSaveStatus('saved');
-      setLastSaved(new Date());
-      toast.success('Saved', 'Report saved successfully');
-    } catch (error) {
-      setSaveStatus('unsaved');
-      handleError(error, 'Failed to save report');
-    }
-  };
+ 
+     setSaveStatus('saving');
+ 
+     // Parse combined content to get individual sections
+     const sections = parseCombinedContent(combinedContent, templateSettings || undefined);
+ 
+     try {
+       await reportService.saveReport(report.id, {
+         clinicalHistory,
+         technique: sections.technique,
+         findings: sections.findings,
+         impression: sections.impression,
+       });
+ 
+       // Update state with parsed values
+       setTechnique(sections.technique);
+       setFindings(sections.findings);
+       setImpression(sections.impression);
+ 
+       setSaveStatus('saved');
+       setLastSaved(new Date());
+       toast.success('Saved', 'Report saved successfully');
+     } catch (error) {
+       setSaveStatus('unsaved');
+       handleError(error, 'Failed to save report');
+     }
+   };
 
 
   const handleSnippetInsert = (content: string) => {
@@ -263,18 +320,25 @@ export default function ReportBuilder() {
   };
 
   const handleResetTemplate = async () => {
-    const templateSettings = await fetchTemplateSettings();
-    const tech = templateSettings.technique_placeholder;
-    const find = templateSettings.findings_placeholder;
-    const impr = templateSettings.impression_placeholder;
-    
+    const settings = await fetchTemplateSettings();
+    setTemplateSettings(settings);
+    const tech = settings.technique_placeholder;
+    const find = settings.findings_placeholder;
+    const impr = settings.impression_placeholder;
+
     setTechnique(tech);
     setFindings(find);
     setImpression(impr);
-    setCombinedContent(formatCombinedContent(tech, find, impr));
+    setCombinedContent(
+      formatCombinedContent(tech, find, impr, {
+        technique_heading: settings.technique_heading,
+        findings_heading: settings.findings_heading,
+        impression_heading: settings.impression_heading,
+      })
+    );
     triggerAutoSave();
     toast.success('Report content has been reset to the standard template structure.');
-  };
+   };
 
   const handleFinalizeReport = async () => {
     if (!report?.is_signed) {
@@ -370,8 +434,15 @@ export default function ReportBuilder() {
       }
     : null;
 
-  const sections = parseCombinedContent(combinedContent);
-  const reportContent = `${clinicalHistory}\n${sections.technique}\n${sections.findings}\n${sections.impression}`;
+  const sections = parseCombinedContent(
+     combinedContent,
+     templateSettings || {
+       technique_heading: 'TECHNIQUE:',
+       findings_heading: 'FINDINGS:',
+       impression_heading: 'IMPRESSION:',
+     }
+   );
+   const reportContent = `${clinicalHistory}\n${sections.technique}\n${sections.findings}\n${sections.impression}`;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-[1800px]">
