@@ -59,16 +59,20 @@ export const ImageAttachment = ({
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        // Create a signed URL since the bucket is private
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('report-images')
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+
+        if (signedUrlError) throw signedUrlError;
+        const imageUrl = signedUrlData.signedUrl;
 
         const { data: imageData, error: dbError } = await supabase
           .from('report_images')
           .insert({
             report_id: reportId,
             case_id: caseId,
-            image_url: publicUrl,
+            image_url: imageUrl,
             caption: '',
             position: images.length + uploadedImages.length,
             section,
