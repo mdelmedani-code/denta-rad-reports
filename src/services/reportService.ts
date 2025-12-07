@@ -70,7 +70,30 @@ export const reportService = {
       .order('position');
 
     if (error) throw error;
-    return data || [];
+    
+    // Generate fresh signed URLs for each image since stored URLs may have expired
+    const imagesWithFreshUrls = await Promise.all(
+      (data || []).map(async (img) => {
+        // Extract the file path from the stored URL
+        const url = new URL(img.image_url);
+        const pathMatch = url.pathname.match(/\/storage\/v1\/object\/sign\/report-images\/(.+)/);
+        
+        if (pathMatch) {
+          const filePath = decodeURIComponent(pathMatch[1].split('?')[0]);
+          const { data: signedUrlData } = await supabase.storage
+            .from('report-images')
+            .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
+          
+          if (signedUrlData?.signedUrl) {
+            return { ...img, image_url: signedUrlData.signedUrl };
+          }
+        }
+        
+        return img;
+      })
+    );
+    
+    return imagesWithFreshUrls;
   },
 
   async createReportVersion(originalReportId: string, newVersionNumber: number) {
