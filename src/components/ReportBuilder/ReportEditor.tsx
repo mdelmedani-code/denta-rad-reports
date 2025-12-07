@@ -58,11 +58,10 @@ export const ReportEditor = ({ content, onChange, placeholder, className, onEdit
       }),
     ],
     content: content || '',
-    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
-  });
+  }, []);
 
   // Notify parent when editor is ready
   useEffect(() => {
@@ -76,24 +75,29 @@ export const ReportEditor = ({ content, onChange, placeholder, className, onEdit
     if (!editor) return;
     
     const currentContent = editor.getHTML();
-    const isEmpty = currentContent === '<p></p>' || currentContent === '';
-    const hasNewContent = content && content !== '' && content !== '<p></p>';
+    const normalizedCurrent = currentContent === '<p></p>' ? '' : currentContent;
+    const normalizedNew = content === '<p></p>' ? '' : (content || '');
     
-    // Update if content is different OR if editor is empty but we have content to show
-    if (content !== currentContent || (isEmpty && hasNewContent)) {
+    // Only update if content actually differs (avoiding cursor reset on every render)
+    if (normalizedNew !== normalizedCurrent) {
+      // Save selection before update
       const { from, to } = editor.state.selection;
+      
       editor.commands.setContent(content || '', { emitUpdate: false });
+      
       // Restore cursor position if possible
-      try {
-        const maxPos = editor.state.doc.content.size;
-        editor.commands.setTextSelection({ 
-          from: Math.min(from, maxPos), 
-          to: Math.min(to, maxPos) 
-        });
-      } catch (e) {
-        // Cursor position out of range, just focus at end
-        editor.commands.focus('end');
-      }
+      requestAnimationFrame(() => {
+        if (editor.isDestroyed) return;
+        try {
+          const maxPos = editor.state.doc.content.size;
+          editor.commands.setTextSelection({ 
+            from: Math.min(from, maxPos), 
+            to: Math.min(to, maxPos) 
+          });
+        } catch (e) {
+          // Cursor position out of range
+        }
+      });
     }
   }, [content, editor]);
 
