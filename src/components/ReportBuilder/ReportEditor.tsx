@@ -57,7 +57,8 @@ export const ReportEditor = ({ content, onChange, placeholder, className, onEdit
         placeholder: placeholder || 'Start typing...',
       }),
     ],
-    content,
+    content: content || '',
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -70,14 +71,25 @@ export const ReportEditor = ({ content, onChange, placeholder, className, onEdit
     }
   }, [editor, onEditorReady]);
 
-  // Sync editor content when content prop changes (e.g., from templates/snippets)
+  // Sync editor content when content prop changes (e.g., from templates/snippets or initial load)
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (!editor) return;
+    
+    const currentContent = editor.getHTML();
+    const isEmpty = currentContent === '<p></p>' || currentContent === '';
+    const hasNewContent = content && content !== '' && content !== '<p></p>';
+    
+    // Update if content is different OR if editor is empty but we have content to show
+    if (content !== currentContent || (isEmpty && hasNewContent)) {
       const { from, to } = editor.state.selection;
-      editor.commands.setContent(content, { emitUpdate: false });
+      editor.commands.setContent(content || '', { emitUpdate: false });
       // Restore cursor position if possible
       try {
-        editor.commands.setTextSelection({ from: Math.min(from, editor.state.doc.content.size), to: Math.min(to, editor.state.doc.content.size) });
+        const maxPos = editor.state.doc.content.size;
+        editor.commands.setTextSelection({ 
+          from: Math.min(from, maxPos), 
+          to: Math.min(to, maxPos) 
+        });
       } catch (e) {
         // Cursor position out of range, just focus at end
         editor.commands.focus('end');
