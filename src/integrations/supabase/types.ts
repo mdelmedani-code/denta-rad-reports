@@ -249,6 +249,84 @@ export type Database = {
         }
         Relationships: []
       }
+      data_incidents: {
+        Row: {
+          containment_actions: string | null
+          created_at: string
+          data_categories: string[] | null
+          description: string
+          discovered_at: string
+          ico_notification_required: boolean | null
+          ico_notified_at: string | null
+          ico_reference: string | null
+          id: string
+          incident_date: string
+          incident_type: string
+          individuals_affected: number | null
+          individuals_notified: boolean | null
+          individuals_notified_at: string | null
+          remediation_actions: string | null
+          reported_by: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          risk_assessment: string | null
+          risk_level: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          containment_actions?: string | null
+          created_at?: string
+          data_categories?: string[] | null
+          description: string
+          discovered_at?: string
+          ico_notification_required?: boolean | null
+          ico_notified_at?: string | null
+          ico_reference?: string | null
+          id?: string
+          incident_date: string
+          incident_type?: string
+          individuals_affected?: number | null
+          individuals_notified?: boolean | null
+          individuals_notified_at?: string | null
+          remediation_actions?: string | null
+          reported_by?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          risk_assessment?: string | null
+          risk_level?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          containment_actions?: string | null
+          created_at?: string
+          data_categories?: string[] | null
+          description?: string
+          discovered_at?: string
+          ico_notification_required?: boolean | null
+          ico_notified_at?: string | null
+          ico_reference?: string | null
+          id?: string
+          incident_date?: string
+          incident_type?: string
+          individuals_affected?: number | null
+          individuals_notified?: boolean | null
+          individuals_notified_at?: string | null
+          remediation_actions?: string | null
+          reported_by?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          risk_assessment?: string | null
+          risk_level?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           available_variables: Json

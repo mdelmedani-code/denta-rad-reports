@@ -36,6 +36,7 @@ import InvoiceHistory from "./pages/admin/InvoiceHistory";
 import EmailTemplateSettings from "./pages/admin/EmailTemplateSettings";
 import ReportTemplateSettings from "./pages/admin/ReportTemplateSettings";
 import ClinicInvoices from "./pages/ClinicInvoices";
+import IncidentRegister from "./pages/admin/IncidentRegister";
 import { AppLayout } from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -171,6 +172,12 @@ const App = () => (
                 <AppLayout>
                   <InvoiceHistory />
                 </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/incidents" element={
+              <ProtectedRoute requiredRole="admin">
+                <IncidentRegister />
               </ProtectedRoute>
             } />
             
