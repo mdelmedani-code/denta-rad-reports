@@ -17,7 +17,8 @@ import {
   FileCog,
   Palette,
   Mail,
-  MessageSquareText
+  MessageSquareText,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,6 +110,7 @@ export function AppSidebar() {
     { title: "Email Templates", url: "/admin/email-templates", icon: Mail },
     { title: "Security", url: "/admin/security-dashboard", icon: Shield },
     { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
+    { title: "Incident Register", url: "/admin/incidents", icon: AlertTriangle },
   ];
 
   const items = userRole === 'admin' ? adminItems : (userRole === 'reporter' ? reporterItems : clinicItems);
