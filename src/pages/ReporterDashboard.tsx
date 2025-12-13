@@ -7,6 +7,7 @@ import { Eye } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import CaseSearchFilters from '@/components/CaseSearchFilters';
 import { useCaseDownload } from '@/hooks/useCaseDownload';
+import { DataHandlingDialog } from '@/components/shared/DataHandlingDialog';
 import { Case } from '@/types/case';
 import { CaseCard } from '@/components/shared/CaseCard';
 import { CaseActions } from '@/components/shared/CaseActions';
@@ -24,7 +25,15 @@ export default function ReporterDashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingReport, setUploadingReport] = useState<string | null>(null);
-  const { downloadScan, downloadReport, downloadingId } = useCaseDownload();
+  const { 
+    requestDownload, 
+    confirmDownload, 
+    cancelDownload,
+    downloadingId, 
+    showDataHandlingDialog, 
+    setShowDataHandlingDialog,
+    pendingDownload 
+  } = useCaseDownload();
   const [searchFilters, setSearchFilters] = useState({
     patientName: '',
     patientId: '',
@@ -181,6 +190,15 @@ export default function ReporterDashboard() {
 
   return (
     <div className="container mx-auto p-6">
+      {/* Data Handling Dialog */}
+      <DataHandlingDialog
+        open={showDataHandlingDialog}
+        onOpenChange={setShowDataHandlingDialog}
+        onConfirm={confirmDownload}
+        downloadType={pendingDownload?.type || 'scan'}
+        patientName={pendingDownload?.patientName}
+      />
+
       <h1 className="text-3xl font-bold mb-6">Reporter Dashboard</h1>
 
       <CaseSearchFilters 
@@ -221,7 +239,7 @@ export default function ReporterDashboard() {
                   isDownloading={downloadingId === caseData.id}
                   isUploading={uploadingReport === caseData.id}
                   onCreateReport={() => navigate(`/reporter/report/${caseData.id}`)}
-                  onDownloadScan={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  onDownloadScan={() => requestDownload(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`, 'scan', caseData.patient_name)}
                   onUploadReport={() => uploadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
                   layout="vertical"
                 />
@@ -260,8 +278,8 @@ export default function ReporterDashboard() {
                   role="reporter"
                   isDownloading={downloadingId === caseData.id}
                   onAccessReport={() => accessReport(caseData.id)}
-                  onDownloadReport={() => downloadReport(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
-                  onDownloadScan={() => downloadScan(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`)}
+                  onDownloadReport={() => requestDownload(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`, 'report', caseData.patient_name)}
+                  onDownloadScan={() => requestDownload(caseData.id, caseData.folder_name || `${caseData.patient_id}_${caseData.id}`, 'scan', caseData.patient_name)}
                   layout="vertical"
                   additionalActions={
                     <Button 

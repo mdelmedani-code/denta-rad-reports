@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { logDicomDownload, logPdfDownload } from '@/lib/auditLog';
 
 interface DownloadOptions {
   caseId: string;
@@ -8,10 +9,43 @@ interface DownloadOptions {
   type: 'scan' | 'report';
 }
 
+interface PendingDownload {
+  caseId: string;
+  folderName: string;
+  type: 'scan' | 'report';
+  patientName?: string;
+}
+
 export function useCaseDownload() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [pendingDownload, setPendingDownload] = useState<PendingDownload | null>(null);
+  const [showDataHandlingDialog, setShowDataHandlingDialog] = useState(false);
 
-  const downloadScan = async (caseId: string, folderName: string) => {
+  const requestDownload = (
+    caseId: string, 
+    folderName: string, 
+    type: 'scan' | 'report',
+    patientName?: string
+  ) => {
+    setPendingDownload({ caseId, folderName, type, patientName });
+    setShowDataHandlingDialog(true);
+  };
+
+  const confirmDownload = async () => {
+    if (!pendingDownload) return;
+    
+    const { caseId, folderName, type } = pendingDownload;
+    
+    if (type === 'scan') {
+      await executeDownloadScan(caseId, folderName);
+    } else {
+      await executeDownloadReport(caseId, folderName);
+    }
+    
+    setPendingDownload(null);
+  };
+
+  const executeDownloadScan = async (caseId: string, folderName: string) => {
     setDownloadingId(caseId);
     try {
       toast.info('Downloading scan...');
@@ -45,16 +79,20 @@ export function useCaseDownload() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success('Scan downloaded successfully');
+      // Log successful download with data handling acknowledgment
+      await logDicomDownload(caseId, `${folderName}_dicom.zip`);
+
+      toast.success('Scan downloaded. Remember to delete local files after viewing.');
     } catch (error: any) {
       toast.error(error.message || 'Failed to download scan');
       console.error('Download error:', error);
+      
     } finally {
       setDownloadingId(null);
     }
   };
 
-  const downloadReport = async (caseId: string, folderName: string) => {
+  const executeDownloadReport = async (caseId: string, folderName: string) => {
     setDownloadingId(caseId);
     try {
       toast.info('Downloading report...');
@@ -90,6 +128,9 @@ export function useCaseDownload() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      // Log successful download with data handling acknowledgment
+      await logPdfDownload(caseId);
+
       toast.success('Report downloaded successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to download report');
@@ -99,10 +140,19 @@ export function useCaseDownload() {
     }
   };
 
+  const cancelDownload = () => {
+    setPendingDownload(null);
+    setShowDataHandlingDialog(false);
+  };
+
   return {
-    downloadScan,
-    downloadReport,
+    requestDownload,
+    confirmDownload,
+    cancelDownload,
     downloadingId,
     isDownloading: downloadingId !== null,
+    showDataHandlingDialog,
+    setShowDataHandlingDialog,
+    pendingDownload,
   };
 }

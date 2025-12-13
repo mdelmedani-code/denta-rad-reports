@@ -13,6 +13,7 @@ import dentaradLogo from "@/assets/dentarad-dashboard-logo.png";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { UrgencyBadge } from "@/components/shared/UrgencyBadge";
 import { useCaseDownload } from "@/hooks/useCaseDownload";
+import { DataHandlingDialog } from "@/components/shared/DataHandlingDialog";
 import { Case } from "@/types/case";
 import { CaseCard } from "@/components/shared/CaseCard";
 import { CaseActions } from "@/components/shared/CaseActions";
@@ -31,7 +32,15 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'reported'>('all');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const navigate = useNavigate();
-  const { downloadReport, downloadingId } = useCaseDownload();
+  const { 
+    requestDownload, 
+    confirmDownload, 
+    cancelDownload,
+    downloadingId, 
+    showDataHandlingDialog, 
+    setShowDataHandlingDialog,
+    pendingDownload 
+  } = useCaseDownload();
 
   useEffect(() => {
     fetchCases();
@@ -124,6 +133,14 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Data Handling Dialog */}
+      <DataHandlingDialog
+        open={showDataHandlingDialog}
+        onOpenChange={setShowDataHandlingDialog}
+        onConfirm={confirmDownload}
+        downloadType={pendingDownload?.type || 'report'}
+        patientName={pendingDownload?.patientName}
+      />
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -315,7 +332,7 @@ const Dashboard = () => {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => downloadReport(case_.id, case_.folder_name || '')}
+                                    onClick={() => requestDownload(case_.id, case_.folder_name || '', 'report', case_.patient_name)}
                                     disabled={downloadingId === case_.id}
                                   >
                                     {downloadingId === case_.id ? (
@@ -368,7 +385,7 @@ const Dashboard = () => {
                                 role="clinic"
                                 isDownloading={downloadingId === case_.id}
                                 onAccessReport={() => accessReport(case_)}
-                                onDownloadReport={() => downloadReport(case_.id, case_.folder_name || '')}
+                                onDownloadReport={() => requestDownload(case_.id, case_.folder_name || '', 'report', case_.patient_name)}
                                 layout="vertical"
                                 additionalActions={
                                   <DeleteCaseDialog
