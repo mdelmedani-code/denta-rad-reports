@@ -14,7 +14,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, PenLine } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CheckCircle2, AlertCircle, PenLine, Trash2 } from 'lucide-react';
 import CryptoJS from 'crypto-js';
 
 interface SignatureData {
@@ -57,6 +58,7 @@ export const ElectronicSignature = ({
   const [signatureStatement, setSignatureStatement] = useState('');
   const [password, setPassword] = useState('');
   const [reopenPassword, setReopenPassword] = useState('');
+  const [localFilesDeleted, setLocalFilesDeleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -105,6 +107,15 @@ export const ElectronicSignature = ({
       toast({
         title: 'Missing Information',
         description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!localFilesDeleted) {
+      toast({
+        title: 'Confirmation Required',
+        description: 'Please confirm you have deleted local copies of downloaded files',
         variant: 'destructive',
       });
       return;
@@ -189,6 +200,7 @@ export const ElectronicSignature = ({
 
       setShowDialog(false);
       setPassword('');
+      setLocalFilesDeleted(false);
     } catch (error) {
       console.error('Error signing report:', error);
       toast({
@@ -377,13 +389,36 @@ export const ElectronicSignature = ({
                 Re-authentication required for security
               </p>
             </div>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="localFilesDeleted"
+                  checked={localFilesDeleted}
+                  onCheckedChange={(checked) => setLocalFilesDeleted(checked === true)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-1">
+                  <Label 
+                    htmlFor="localFilesDeleted" 
+                    className="text-sm font-medium leading-tight cursor-pointer flex items-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4 text-amber-600" />
+                    Local Files Deletion Confirmation *
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    I confirm that I have permanently deleted all locally downloaded DICOM files and any other patient data from my device after completing this review.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSign} disabled={loading}>
+            <Button onClick={handleSign} disabled={loading || !localFilesDeleted}>
               {loading ? 'Signing...' : 'Sign Report'}
             </Button>
           </DialogFooter>
