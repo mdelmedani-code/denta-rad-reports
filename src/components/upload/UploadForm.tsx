@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileArchive, Loader2 } from 'lucide-react';
-
+import { UploadTimeEstimator } from './UploadTimeEstimator';
 interface UploadFormProps {
   formData: {
     patientName: string;
@@ -155,10 +155,13 @@ export const UploadForm = ({
             </div>
           )}
           {zipFile && !validating && (
-            <p className="text-sm text-green-600 mt-2 flex items-center gap-2">
-              <FileArchive className="w-4 h-4" />
-              {zipFile.name} selected
-            </p>
+            <div className="space-y-3 mt-2">
+              <p className="text-sm text-green-600 flex items-center gap-2">
+                <FileArchive className="w-4 h-4" />
+                {zipFile.name} selected
+              </p>
+              <UploadTimeEstimator fileSize={zipFile.size} />
+            </div>
           )}
         </div>
       </div>
