@@ -58,17 +58,9 @@ const Hero = () => {
             </div>
           </div>
           
-          {/* Clinic Login */}
+          {/* Coming Soon */}
           <div className="mt-8 pt-8 border-t border-white/20">
-            <p className="text-white/70 mb-4">Existing clinic? Access your secure portal</p>
-            <Button 
-              variant="secondary" 
-              size="lg" 
-              className="bg-white/90 text-navy hover:bg-white"
-              onClick={() => window.location.href = '/login'}
-            >
-              Clinic Login
-            </Button>
+            <p className="text-white/70 mb-4">Clinic portal coming soon</p>
           </div>
         </div>
       </div>
