@@ -54,201 +54,38 @@ const App = () => (
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
             <Route path="/verify/:token?" element={<SignatureVerification />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
             
-            {/* Terms of Service - requires auth but not terms acceptance */}
-            <Route path="/terms-of-service" element={
-              <RequireAuth>
-                <TermsOfService />
-              </RequireAuth>
-            } />
+            {/* All routes - auth removed for exploration */}
+            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+            <Route path="/upload-case" element={<AppLayout><UploadCase /></AppLayout>} />
+            <Route path="/invoices" element={<AppLayout><ClinicInvoices /></AppLayout>} />
+            <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
+            <Route path="/admin/security-dashboard" element={<AppLayout><SecurityDashboard /></AppLayout>} />
+            <Route path="/admin/users" element={<AppLayout><UserManagementPage /></AppLayout>} />
+            <Route path="/admin/email-templates" element={<AppLayout><EmailTemplateSettings /></AppLayout>} />
+            <Route path="/admin/report-template-settings" element={<AppLayout><ReportTemplateSettings /></AppLayout>} />
+            <Route path="/admin/data-retention" element={<AppLayout><DataRetentionPage /></AppLayout>} />
+            <Route path="/admin/pdf-template" element={<AppLayout><PDFTemplateSettings /></AppLayout>} />
+            <Route path="/admin/template-editor" element={<AppLayout><TemplateEditor /></AppLayout>} />
+            <Route path="/admin/invoicing" element={<AppLayout><UnifiedInvoicing /></AppLayout>} />
+            <Route path="/admin/invoice-settings" element={<AppLayout><InvoiceSettings /></AppLayout>} />
+            <Route path="/admin/invoice-history" element={<AppLayout><InvoiceHistory /></AppLayout>} />
+            <Route path="/admin/incidents" element={<IncidentRegister />} />
             
-            {/* Clinic routes - protected with layout */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute requiredRole="clinic">
-                <AppLayout>
-                  <Dashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/upload-case" element={
-              <ProtectedRoute requiredRole="clinic">
-                <AppLayout>
-                  <UploadCase />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/invoices" element={
-              <ProtectedRoute requiredRole="clinic">
-                <AppLayout>
-                  <ClinicInvoices />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Admin routes - protected with layout */}
-            <Route path="/admin/audit-logs" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <AuditLogs />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/security-dashboard" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <SecurityDashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/users" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <UserManagementPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/email-templates" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <EmailTemplateSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/report-template-settings" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <ReportTemplateSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/data-retention" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <DataRetentionPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/pdf-template" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <PDFTemplateSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/template-editor" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <TemplateEditor />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Unified Invoicing */}
-            <Route path="/admin/invoicing" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <UnifiedInvoicing />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/invoice-settings" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <InvoiceSettings />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/invoice-history" element={
-              <ProtectedRoute requiredRole="admin">
-                <AppLayout>
-                  <InvoiceHistory />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/incidents" element={
-              <ProtectedRoute requiredRole="admin">
-                <IncidentRegister />
-              </ProtectedRoute>
-            } />
-            
-            {/* Redirect old invoice routes to unified page */}
             <Route path="/admin/monthly-invoicing" element={<Navigate to="/admin/invoicing" replace />} />
             <Route path="/admin/invoicing-page" element={<Navigate to="/admin/invoicing" replace />} />
             <Route path="/admin/invoice-viewer" element={<Navigate to="/admin/invoicing" replace />} />
             <Route path="/admin/billing-export" element={<Navigate to="/admin/invoicing" replace />} />
             
-            {/* Unified dashboard for reporter/admin */}
-            <Route path="/reporter" element={
-              <ProtectedRoute requiredRole="reporter">
-                <AppLayout>
-                  <UnifiedDashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+            <Route path="/reporter" element={<AppLayout><UnifiedDashboard /></AppLayout>} />
+            <Route path="/billing-export" element={<AppLayout><BillingExport /></AppLayout>} />
+            <Route path="/snippets" element={<AppLayout><SnippetManager /></AppLayout>} />
+            <Route path="/viewer/:caseId" element={<AppLayout><ViewerPage /></AppLayout>} />
+            <Route path="/reporter/case/:id" element={<AppLayout><AdminCaseReview /></AppLayout>} />
+            <Route path="/reporter/report/:caseId" element={<ReportBuilder />} />
+            <Route path="/admin/reports/:reportId" element={<AppLayout><CaseReportPage /></AppLayout>} />
             
-            {/* Billing export */}
-            <Route path="/billing-export" element={
-              <ProtectedRoute requiredRole="reporter">
-                <AppLayout>
-                  <BillingExport />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Snippet Manager - accessible to reporters and admins */}
-            <Route path="/snippets" element={
-              <ProtectedRoute requiredRole="reporter">
-                <AppLayout>
-                  <SnippetManager />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Viewer page */}
-            <Route path="/viewer/:caseId" element={
-              <ProtectedRoute requiredRole="reporter">
-                <AppLayout>
-                  <ViewerPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Reporter case review */}
-            <Route path="/reporter/case/:id" element={
-              <ProtectedRoute requiredRole="reporter">
-                <AppLayout>
-                  <AdminCaseReview />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Report builder */}
-            <Route path="/reporter/report/:caseId" element={
-              <ProtectedRoute requiredRole="reporter">
-                <ReportBuilder />
-              </ProtectedRoute>
-            } />
-            
-            {/* Case Report Page - accessible by both clinic and admin */}
-            <Route path="/admin/reports/:reportId" element={
-              <RequireAuth>
-                <AppLayout>
-                  <CaseReportPage />
-                </AppLayout>
-              </RequireAuth>
-            } />
-            
-            {/* Legacy admin routes redirect to unified dashboard */}
             <Route path="/admin" element={<Navigate to="/reporter" replace />} />
             <Route path="/admin/reporter" element={<Navigate to="/reporter" replace />} />
             
