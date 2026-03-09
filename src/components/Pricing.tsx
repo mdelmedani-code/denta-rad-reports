@@ -1,138 +1,91 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, Plus } from "lucide-react";
+import { Check } from "lucide-react";
 
 const Pricing = () => {
-  const pricingTiers = [
-    {
-      size: "Up to 5×5cm",
-      price: "£125",
-      description: "Small field of view scans"
-    },
-    {
-      size: "Up to 8×5cm",
-      price: "£145", 
-      description: "Medium field of view scans"
-    },
-    {
-      size: "Up to 8×8cm",
-      price: "£165",
-      description: "Large field of view scans"
-    },
-    {
-      size: "Over 8×8cm",
-      price: "£185",
-      description: "Extended field of view scans"
-    }
+  const tiers = [
+    { size: "Up to 5×5cm", price: "£125", label: "Small FOV" },
+    { size: "Up to 8×5cm", price: "£145", label: "Medium FOV" },
+    { size: "Up to 8×8cm", price: "£165", label: "Large FOV" },
+    { size: "Over 8×8cm", price: "£185", label: "Extended FOV" },
   ];
 
   return (
-    <section className="py-20 bg-muted/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-6">
+    <section className="py-16 bg-background">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
             Transparent Pricing
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Clear, volume-based pricing with no hidden fees. Professional reporting at competitive rates.
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Clear pricing based on field of view. No subscription fees.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {pricingTiers.map((tier, index) => (
-            <Card 
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          {tiers.map((tier, index) => (
+            <Card
               key={index}
-              className="relative bg-gradient-card border-silver/20 shadow-soft hover:shadow-medium transition-all duration-300 animate-scale-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className="text-center border-border hover:border-accent/50 transition-colors"
             >
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-lg font-semibold text-foreground mb-2">
+              <CardHeader className="pb-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                  {tier.label}
+                </p>
+                <CardTitle className="text-sm font-medium text-foreground">
                   {tier.size}
                 </CardTitle>
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {tier.price}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {tier.description}
-                </p>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                    <span>Comprehensive report</span>
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                    <span>3-5 working days</span>
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                    <span>Incidental findings</span>
-                  </div>
+                <p className="text-2xl font-bold text-primary mb-3">
+                  {tier.price}
+                </p>
+                <div className="space-y-1.5 text-left">
+                  {["Comprehensive report", "2-3 working days", "Incidental findings"].map(
+                    (item) => (
+                      <div
+                        key={item}
+                        className="flex items-center text-xs text-muted-foreground"
+                      >
+                        <Check className="w-3 h-3 text-accent mr-1.5 flex-shrink-0" />
+                        <span>{item}</span>
+                      </div>
+                    )
+                  )}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Additional Services */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          <Card className="bg-gradient-card border-gold/20 shadow-gold">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-primary flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Priority 24h Service
-                </CardTitle>
-                <Badge variant="secondary" className="bg-gold/10 text-gold border-gold/20">
-                  Optional
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline justify-between mb-4">
-                <span className="text-lg font-semibold text-foreground">Additional £50</span>
-                <span className="text-sm text-muted-foreground">per scan</span>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Urgent reporting within 24 hours for time-sensitive clinical decisions
+        {/* Add-ons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <p className="font-semibold text-foreground text-sm">
+                Priority 24h Service
               </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-gold/20 shadow-gold">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-primary flex items-center">
-                  <Plus className="w-5 h-5 mr-2" />
-                  IAN Nerve Tracing
-                </CardTitle>
-                <Badge variant="secondary" className="bg-gold/10 text-gold border-gold/20">
-                  Add-on
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline justify-between mb-4">
-                <span className="text-lg font-semibold text-foreground">£50 per side</span>
-                <span className="text-sm text-muted-foreground">detailed tracing</span>
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Detailed inferior alveolar nerve pathway analysis for surgical planning
+              <p className="text-xs text-muted-foreground">
+                Urgent reporting within 24 hours
               </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center">
-          <Button variant="hero" size="lg" className="text-lg px-8 py-6 h-auto">
-            Get Started Today
-          </Button>
-          <p className="text-sm text-muted-foreground mt-4">
-            No subscription fees • Pay per scan • Professional indemnity included
-          </p>
+            </div>
+            <Badge className="bg-accent/10 text-accent-foreground border-accent/20">
+              +£50
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div>
+              <p className="font-semibold text-foreground text-sm">
+                IAN Nerve Tracing
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Detailed nerve pathway analysis
+              </p>
+            </div>
+            <Badge className="bg-accent/10 text-accent-foreground border-accent/20">
+              £50/side
+            </Badge>
+          </div>
         </div>
       </div>
     </section>

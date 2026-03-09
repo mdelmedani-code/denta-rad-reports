@@ -1,67 +1,55 @@
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { FileText, Clock, Award } from "lucide-react";
+import dentaradLogo from "@/assets/dentarad-logo-cropped.jpg";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen bg-gradient-hero flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute inset-0 bg-navy-deep/20"></div>
-      </div>
-      
-      <div className="relative max-w-7xl mx-auto text-center">
-        <div className="animate-fade-in">
-          {/* Badge */}
-          <Badge variant="secondary" className="mb-6 px-4 py-2 bg-white/10 text-white border-white/20 backdrop-blur-sm">
-            <Award className="w-4 h-4 mr-2" />
-            UK Consultant Radiologist • GMC Registered
-          </Badge>
-          
-          {/* Main Heading */}
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-            Expert CBCT
-            <br />
-            <span className="bg-gradient-gold bg-clip-text text-transparent">
-              Teleradiology
-            </span>
-          </h1>
-          
-          {/* Subheading */}
-          <p className="text-xl sm:text-2xl text-white/90 mb-4 max-w-3xl mx-auto leading-relaxed">
-            Professional remote reporting of dental CBCT scans by a specialist head and neck radiologist
-          </p>
-          
-          {/* Company Info */}
-          <p className="text-lg text-white/70 mb-12">
-            <strong className="text-white">DentaRad</strong> • A trading name of Radelm Ltd
-          </p>
+    <section className="relative bg-background py-16 sm:py-24 overflow-hidden">
+      {/* Subtle top accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Logo */}
+        <div className="mb-8">
+          <img
+            src={dentaradLogo}
+            alt="DentaRad Logo"
+            className="h-20 sm:h-24 mx-auto object-contain"
+          />
         </div>
-        
-        <div className="animate-slide-up">
-          {/* Key Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 max-w-3xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-              <Clock className="w-8 h-8 text-gold mx-auto mb-2" />
-              <p className="text-white font-semibold">3-5 Day Turnaround</p>
-              <p className="text-white/70 text-sm">24h priority available</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-              <FileText className="w-8 h-8 text-gold mx-auto mb-2" />
-              <p className="text-white font-semibold">Comprehensive Reports</p>
-              <p className="text-white/70 text-sm">Dental & incidental findings</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-              <Award className="w-8 h-8 text-gold mx-auto mb-2" />
-              <p className="text-white font-semibold">Specialist Expertise</p>
-              <p className="text-white/70 text-sm">Head & neck subspecialty</p>
-            </div>
+
+        {/* Title */}
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-wide text-accent uppercase mb-8">
+          Dental Radiology Reporting Service
+        </h1>
+
+        {/* Divider */}
+        <div className="w-24 h-0.5 bg-accent mx-auto mb-10" />
+
+        {/* Clinician Card */}
+        <div className="max-w-2xl mx-auto mb-12">
+          <div className="border-b border-border pb-8">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+              Clinician
+            </p>
+            <h2 className="text-2xl font-bold text-foreground mb-1">
+              Dr. Mohamed Elmedani
+            </h2>
+            <p className="text-muted-foreground">
+              Consultant Radiologist |{" "}
+              <span className="italic">MBBS, FRCR</span>
+            </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              Head and Neck and GI Imaging, and Non-vascular Intervention
+            </p>
           </div>
-          
-          {/* Coming Soon */}
-          <div className="mt-8 pt-8 border-t border-white/20">
-            <p className="text-white/70 mb-4">Clinic portal coming soon</p>
-          </div>
+        </div>
+
+        {/* Comprehensive Reports */}
+        <div className="max-w-3xl mx-auto mb-12">
+          <p className="text-foreground leading-relaxed">
+            <span className="font-semibold">Comprehensive reports:</span> CBCT
+            and OPG interpretation including dental structures, maxillofacial
+            anatomy and clinically significant incidental findings.
+          </p>
         </div>
       </div>
     </section>

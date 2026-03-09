@@ -1,62 +1,46 @@
-import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import dentaradLogo from "@/assets/dentarad-logo-cropped.jpg";
 
 const Footer = () => {
   return (
-    <footer className="bg-navy-deep text-white py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          {/* Company Info */}
+    <footer className="bg-primary text-primary-foreground">
+      {/* Main footer bar */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div>
-            <h3 className="text-2xl font-bold mb-4 bg-gradient-gold bg-clip-text text-transparent">
-              DentaRad
-            </h3>
-            <p className="text-white/80 mb-4">
-              A trading name of Radelm Ltd
+            <p className="font-bold">
+              DENTARAD{" "}
+              <span className="font-normal opacity-80">
+                | Dental Radiology Reporting Service
+              </span>
             </p>
-            <p className="text-white/70 text-sm leading-relaxed">
-              Expert CBCT teleradiology services by a specialist head and neck radiologist. 
-              Professional, secure, and reliable reporting for dental practitioners across the UK.
+            <p className="text-sm opacity-70">
+              www.dentarad.co.uk | info@dentarad.co.uk
+            </p>
+            <p className="text-xs opacity-50 mt-1">
+              Trading name of Radelm Ltd.
             </p>
           </div>
-
-          {/* Services */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Services</h4>
-            <ul className="space-y-2 text-white/70 text-sm">
-              <li>CBCT Scan Reporting</li>
-              <li>Priority 24h Service</li>
-              <li>IAN Nerve Tracing</li>
-              <li>Incidental Findings Analysis</li>
-              <li>Clinical Consultation</li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Contact</h4>
-            <div className="space-y-2 text-white/70 text-sm">
-              <p>referrals@dentarad.co.uk</p>
-              <p>Secure portal access nationwide</p>
-              <div className="pt-4">
-                <Badge variant="secondary" className="bg-white/10 text-white border-white/20">
-                  GMC Registered
-                </Badge>
-              </div>
-            </div>
-          </div>
+          <img
+            src={dentaradLogo}
+            alt="DentaRad"
+            className="h-10 object-contain opacity-80"
+          />
         </div>
+      </div>
 
-        <div className="border-t border-white/20 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-white/60 text-sm">
-              © 2024 DentaRad - Radelm Ltd. All rights reserved.
-            </div>
-            <div className="flex space-x-6 text-white/60 text-sm">
-              <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-              <Link to="/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
-              <a href="#" className="hover:text-white transition-colors">Clinical Governance</a>
-              <span className="opacity-30 text-xs cursor-default">Admin</span>
+      {/* Bottom links */}
+      <div className="border-t border-primary-foreground/10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs opacity-60">
+            <span>© {new Date().getFullYear()} DentaRad — Radelm Ltd.</span>
+            <div className="flex gap-4">
+              <Link to="/privacy" className="hover:opacity-100 transition-opacity">
+                Privacy Policy
+              </Link>
+              <Link to="/terms-of-service" className="hover:opacity-100 transition-opacity">
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>

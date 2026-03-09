@@ -1,139 +1,213 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Mail, Clock, MapPin, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
+  const { toast } = useToast();
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: wire to backend
+    setSubmitted(true);
+    toast({
+      title: "Interest registered",
+      description: "We'll be in touch within 24 hours.",
+    });
+  };
+
   return (
-    <section className="py-20 bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-6">
-            Get Started Today
+    <section id="register" className="py-16 bg-secondary/30">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+            Register Your Interest
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Ready to access expert CBCT reporting? Register your interest or contact us for more information.
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Get access to our secure referral portal. We'll contact you within
+            24 hours to get you set up.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Contact Info */}
-          <div className="space-y-6 animate-slide-up">
-            <Card className="bg-gradient-card border-silver/20 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center text-primary">
-                  <Mail className="w-5 h-5 mr-2" />
-                  Email Us
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-2">referrals@dentarad.co.uk</p>
-                <p className="text-sm text-muted-foreground">For case referrals and urgent queries</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-card border-silver/20 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center text-primary">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Response Times
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-2">Standard: 3-5 working days</p>
-                <p className="text-muted-foreground mb-2">Priority: 24 hours (+£50)</p>
-                <p className="text-sm text-muted-foreground">Reports delivered via secure portal</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-card border-silver/20 shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center text-primary">
-                  <MapPin className="w-5 h-5 mr-2" />
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-card">
+              <Mail className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground text-sm">Email</p>
+                <p className="text-muted-foreground text-sm">
+                  info@dentarad.co.uk
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-card">
+              <Clock className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground text-sm">
+                  Turnaround
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  Standard: 2-3 working days
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  Priority: 24 hours
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-card">
+              <MapPin className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground text-sm">
                   Coverage
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-2">UK-wide service</p>
-                <p className="text-sm text-muted-foreground">Secure portal access from anywhere</p>
-              </CardContent>
-            </Card>
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  UK-wide teleradiology service
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Registration Form */}
-          <div className="lg:col-span-2 animate-scale-in">
-            <Card className="bg-gradient-card border-silver/20 shadow-medium">
-              <CardHeader>
-                <CardTitle className="text-2xl text-foreground">
-                  Register Your Interest
-                </CardTitle>
-                <p className="text-muted-foreground">
-                  Get access to our secure referral portal and start receiving expert CBCT reports
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="Dr. John" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Smith" />
-                  </div>
-                </div>
+          {/* Form */}
+          <div className="lg:col-span-2">
+            {submitted ? (
+              <Card className="border-accent/30">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <CheckCircle2 className="w-16 h-16 text-accent mb-4" />
+                  <h3 className="text-xl font-bold text-foreground mb-2">
+                    Thank you!
+                  </h3>
+                  <p className="text-muted-foreground text-center max-w-sm">
+                    Your interest has been registered. We'll be in touch within
+                    24 hours to set up your portal access.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-foreground">
+                    Practice Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="firstName" className="text-sm">
+                          First Name
+                        </Label>
+                        <Input
+                          id="firstName"
+                          placeholder="Dr. John"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lastName" className="text-sm">
+                          Last Name
+                        </Label>
+                        <Input id="lastName" placeholder="Smith" required />
+                      </div>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email" className="text-sm">
+                        Email Address
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="john.smith@dentalclinic.co.uk"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" placeholder="+44 20 7XXX XXXX" />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone" className="text-sm">
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+44 20 7XXX XXXX"
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="practice">Practice Name</Label>
-                  <Input id="practice" placeholder="Your Dental Practice" />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="practice" className="text-sm">
+                        Practice Name
+                      </Label>
+                      <Input
+                        id="practice"
+                        placeholder="Your Dental Practice"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="volume">Expected Monthly Volume</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select expected volume" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-5">1-5 scans per month</SelectItem>
-                      <SelectItem value="6-15">6-15 scans per month</SelectItem>
-                      <SelectItem value="16-30">16-30 scans per month</SelectItem>
-                      <SelectItem value="30+">30+ scans per month</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="volume" className="text-sm">
+                        Expected Monthly Volume
+                      </Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select expected volume" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1-5">
+                            1-5 scans per month
+                          </SelectItem>
+                          <SelectItem value="6-15">
+                            6-15 scans per month
+                          </SelectItem>
+                          <SelectItem value="16-30">
+                            16-30 scans per month
+                          </SelectItem>
+                          <SelectItem value="30+">
+                            30+ scans per month
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Additional Information (Optional)</Label>
-                  <Textarea 
-                    id="message" 
-                    placeholder="Any specific requirements or questions..."
-                    rows={3}
-                  />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="message" className="text-sm">
+                        Additional Information{" "}
+                        <span className="text-muted-foreground">(optional)</span>
+                      </Label>
+                      <Textarea
+                        id="message"
+                        placeholder="Any specific requirements or questions..."
+                        rows={3}
+                      />
+                    </div>
 
-                <Button variant="premium" size="lg" className="w-full text-lg py-6 h-auto">
-                  Register for Access
-                </Button>
+                    <Button
+                      type="submit"
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
+                    >
+                      Register Interest
+                    </Button>
 
-                <p className="text-xs text-muted-foreground text-center">
-                  By registering, you agree to our terms and conditions. We'll contact you within 24 hours to set up your secure portal access.
-                </p>
-              </CardContent>
-            </Card>
+                    <p className="text-xs text-muted-foreground text-center">
+                      By registering, you agree to our terms and conditions.
+                    </p>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
