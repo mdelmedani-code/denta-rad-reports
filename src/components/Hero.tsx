@@ -8,11 +8,11 @@ const Hero = () => {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Logo */}
-        <div className="mb-8">
+        <div className="mb-8 flex justify-center">
           <img
             src={dentaradLogo}
             alt="DentaRad Logo"
-            className="h-20 sm:h-24 mx-auto object-contain"
+            className="h-32 sm:h-40 lg:h-48 mx-auto object-contain"
           />
         </div>
 
