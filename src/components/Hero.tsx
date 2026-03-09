@@ -24,24 +24,6 @@ const Hero = () => {
         {/* Divider */}
         <div className="w-24 h-0.5 bg-accent mx-auto mb-10" />
 
-        {/* Clinician Card */}
-        <div className="max-w-2xl mx-auto mb-12">
-          <div className="border-b border-border pb-8">
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-              Clinician
-            </p>
-            <h2 className="text-2xl font-bold text-foreground mb-1">
-              Dr. Mohamed Elmedani
-            </h2>
-            <p className="text-muted-foreground">
-              Consultant Radiologist |{" "}
-              <span className="italic">MBBS, FRCR</span>
-            </p>
-            <p className="text-muted-foreground text-sm mt-1">
-              Head and Neck and GI Imaging, and Non-vascular Intervention
-            </p>
-          </div>
-        </div>
 
         {/* Comprehensive Reports */}
         <div className="max-w-3xl mx-auto mb-12">
