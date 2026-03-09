@@ -1,4 +1,4 @@
-import dentaradLogo from "@/assets/dentarad-logo-cropped.jpg";
+import dentaradLogo from "@/assets/dentarad-logo-new.png";
 
 const Hero = () => {
   return (
