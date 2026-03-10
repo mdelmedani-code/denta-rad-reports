@@ -36,11 +36,11 @@ const Contact = () => {
     <section id="register" className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Get Started</p>
-          <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight mb-3">
+          <p className="text-sm uppercase tracking-[0.2em] text-accent font-medium mb-3">Get Started</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-primary tracking-tight mb-3">
             Register Your Interest
           </h2>
-          <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+          <p className="text-base text-muted-foreground max-w-lg mx-auto">
             Get access to our secure referral portal. We'll contact you within
             24 hours to get you set up.
           </p>

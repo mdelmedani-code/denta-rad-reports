@@ -53,8 +53,8 @@ const HowItWorks = () => {
       <section className="py-24 bg-secondary/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Reporting Services</p>
-            <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight">
+            <p className="text-sm uppercase tracking-[0.2em] text-accent font-medium mb-3">Reporting Services</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-primary tracking-tight">
               Comprehensive Reports
             </h2>
           </div>
@@ -68,8 +68,8 @@ const HowItWorks = () => {
                 <div className="w-10 h-10 rounded-full border border-accent/20 bg-accent/5 flex items-center justify-center mb-4 group-hover:bg-accent/10 transition-colors">
                   <service.icon className="w-5 h-5 text-accent" strokeWidth={1.5} />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2 text-sm">{service.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <h3 className="font-semibold text-foreground mb-2 text-base">{service.title}</h3>
+                <p className="text-base text-muted-foreground leading-relaxed">
                   {service.description}
                 </p>
               </div>
@@ -82,8 +82,8 @@ const HowItWorks = () => {
       <section className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Simple Process</p>
-            <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight">
+            <p className="text-sm uppercase tracking-[0.2em] text-accent font-medium mb-3">Simple Process</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-primary tracking-tight">
               How to Submit Cases
             </h2>
           </div>
@@ -97,7 +97,7 @@ const HowItWorks = () => {
                 <div className="w-10 h-10 rounded-full border border-accent bg-accent/5 text-accent font-semibold text-sm flex items-center justify-center mx-auto mb-5">
                   {step.num}
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   {step.text}
                 </p>
               </div>
