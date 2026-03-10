@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+
 import fovSmall from "@/assets/fov-small.png";
 import fovMedium from "@/assets/fov-medium.png";
 import fovLarge from "@/assets/fov-large.png";
@@ -12,7 +12,7 @@ const Pricing = () => {
     { size: "Up to 8×8cm", price: "£170", label: "Large FOV", image: fovLarge },
     { size: "Over 8×8cm", price: "£195", label: "Extended FOV", image: fovExtended },
   ];
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  
 
   return (
     <section className="py-24 bg-secondary/30">
@@ -29,33 +29,28 @@ const Pricing = () => {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           {tiers.map((tier, index) => (
-            <div
-              key={index}
-              className="relative text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300 overflow-hidden"
-              onMouseEnter={() => setHoveredIndex(index)}
-              onMouseLeave={() => setHoveredIndex(null)}
-            >
+            <div key={index} className="flex flex-col items-center gap-3">
+              <div className="w-full text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300">
+                <div className="h-px bg-accent" />
+                <div className="pb-2 pt-6 px-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medium">
+                    CBCT — {tier.label}
+                  </p>
+                  <p className="text-sm font-medium text-foreground">
+                    {tier.size}
+                  </p>
+                </div>
+                <div className="pt-0 pb-6 px-4">
+                  <p className="text-3xl font-bold text-primary">
+                    {tier.price}
+                  </p>
+                </div>
+              </div>
               <img
                 src={tier.image}
                 alt={tier.label}
-                className={`absolute bottom-2 left-1/2 -translate-x-1/2 h-[70%] w-auto object-contain transition-opacity duration-300 pointer-events-none ${
-                  hoveredIndex === index ? 'opacity-40' : 'opacity-0'
-                }`}
+                className="h-24 w-auto object-contain"
               />
-              <div className="h-px bg-accent" />
-              <div className="pb-2 pt-6 px-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medium">
-                  {tier.label}
-                </p>
-                <p className="text-sm font-medium text-foreground">
-                  {tier.size}
-                </p>
-              </div>
-              <div className="pt-0 pb-6 px-4">
-                <p className="text-3xl font-bold text-primary">
-                  {tier.price}
-                </p>
-              </div>
             </div>
           ))}
         </div>
