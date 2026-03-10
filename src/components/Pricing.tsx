@@ -8,11 +8,12 @@ import fovExtended from "@/assets/fov-extended.png";
 
 const Pricing = () => {
   const tiers = [
-    { size: "Up to 5×5cm", price: "£130", label: "Small FOV" },
-    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV" },
-    { size: "Up to 8×8cm", price: "£170", label: "Large FOV" },
-    { size: "Over 8×8cm", price: "£195", label: "Extended FOV" },
+    { size: "Up to 5×5cm", price: "£130", label: "Small FOV", image: fovSmall },
+    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV", image: fovMedium },
+    { size: "Up to 8×8cm", price: "£170", label: "Large FOV", image: fovLarge },
+    { size: "Over 8×8cm", price: "£195", label: "Extended FOV", image: fovExtended },
   ];
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
     <section className="py-24 bg-secondary/30">
