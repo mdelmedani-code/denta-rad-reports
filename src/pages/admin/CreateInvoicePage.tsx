@@ -137,10 +137,10 @@ export default function CreateInvoicePage() {
 
     if (error) {
       console.error('Error calculating price:', error);
-      return 125; // Default price
+      return 130; // Default price
     }
 
-    return Number(data) || 125;
+    return Number(data) || 130;
   };
 
   const handleLoadCases = async () => {
