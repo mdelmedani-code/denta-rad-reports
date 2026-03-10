@@ -52,7 +52,8 @@ const Hero = () => {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-4 justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm uppercase tracking-[0.2em] text-accent font-medium">Coming Soon</p>
             <a href="#register">
               <Button
                 size="lg"
