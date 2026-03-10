@@ -1,43 +1,10 @@
-import {
-  Scan,
-  Crosshair,
-  Brain,
-  Bone,
-  Siren,
-  Wind,
-} from "lucide-react";
-
 const services = [
-  {
-    icon: Scan,
-    title: "General Review",
-    description: "Comprehensive evaluation of the oral and maxillofacial region for incidental findings and pathology.",
-  },
-  {
-    icon: Crosshair,
-    title: "Implant Planning",
-    description: "Measurement of bone levels and analysis of bone quality in proposed implant sites.",
-  },
-  {
-    icon: Brain,
-    title: "Impacted Teeth",
-    description: "Identification of anatomical structures and potential complications involving impacted teeth.",
-  },
-  {
-    icon: Bone,
-    title: "Jaw Pathology",
-    description: "Radiographic interpretation of suspected oral and maxillofacial pathology.",
-  },
-  {
-    icon: Siren,
-    title: "Endodontic Evaluation",
-    description: "Evaluation for apical pathology, root fractures, and abnormal tooth morphology.",
-  },
-  {
-    icon: Wind,
-    title: "Sinus Assessment",
-    description: "Maxillary sinus and paranasal evaluation for sinus disease and related disorders.",
-  },
+  "General Review",
+  "Implant Planning",
+  "Impacted Teeth",
+  "Jaw Pathology",
+  "Endodontic Evaluation",
+  "Sinus Assessment",
 ];
 
 const steps = [
@@ -59,20 +26,14 @@ const HowItWorks = () => {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service, index) => (
-              <div
-                key={index}
-                className="group p-6 rounded-lg border border-border bg-card hover:border-accent/30 hover:shadow-soft transition-all duration-300"
+          <div className="flex flex-wrap justify-center gap-3">
+            {services.map((service) => (
+              <span
+                key={service}
+                className="px-5 py-2.5 rounded-lg border border-border bg-card text-sm font-medium text-foreground hover:border-accent/30 transition-colors"
               >
-                <div className="w-10 h-10 rounded-full border border-accent/20 bg-accent/5 flex items-center justify-center mb-4 group-hover:bg-accent/10 transition-colors">
-                  <service.icon className="w-5 h-5 text-accent" strokeWidth={1.5} />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2 text-base">{service.title}</h3>
-                <p className="text-base text-muted-foreground leading-relaxed">
-                  {service.description}
-                </p>
-              </div>
+                {service}
+              </span>
             ))}
           </div>
         </div>
