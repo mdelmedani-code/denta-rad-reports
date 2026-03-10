@@ -18,7 +18,7 @@ serve(async (req) => {
     }
 
     const resend = new Resend(resendApiKey);
-    const { title, firstName, lastName, occupation, email, practice, volume, message } = await req.json();
+    const { title, firstName, lastName, occupation, email, phone, practice, volume, message } = await req.json();
 
     const htmlContent = `
       <h2>New Interest Registration</h2>
@@ -26,6 +26,7 @@ serve(async (req) => {
         <tr><td style="padding: 8px; font-weight: bold;">Name:</td><td style="padding: 8px;">${title || ''} ${firstName} ${lastName}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Occupation:</td><td style="padding: 8px;">${occupation || 'Not specified'}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Practice:</td><td style="padding: 8px;">${practice}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold;">Phone:</td><td style="padding: 8px;">${phone}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;">${email}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Expected Volume:</td><td style="padding: 8px;">${volume || 'Not specified'}</td></tr>
         <tr><td style="padding: 8px; font-weight: bold;">Message:</td><td style="padding: 8px;">${message || 'None'}</td></tr>

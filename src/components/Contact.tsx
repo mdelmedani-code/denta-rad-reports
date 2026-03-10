@@ -43,6 +43,7 @@ const Contact = () => {
       lastName: (form.elements.namedItem("lastName") as HTMLInputElement).value,
       occupation,
       practice: (form.elements.namedItem("practice") as HTMLInputElement).value,
+      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
       volume,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
@@ -179,6 +180,10 @@ const Contact = () => {
                     <div className="space-y-1.5">
                       <Label htmlFor="practice" className="text-sm">Practice Name</Label>
                       <Input id="practice" placeholder="Your Dental Practice" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone" className="text-sm">Phone Number <span className="text-destructive">*</span></Label>
+                      <Input id="phone" type="tel" placeholder="+44 7700 900000" required />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-sm">Email Address <span className="text-destructive">*</span></Label>
