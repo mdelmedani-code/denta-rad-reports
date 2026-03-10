@@ -45,7 +45,7 @@ const MeetTheTeam = () => {
               className="w-28 h-28 rounded-2xl object-cover mx-auto mb-4"
             />
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-              Co-Director
+              Co-Founder
             </p>
             <h3 className="text-2xl font-bold text-foreground mb-1">
               Dr. Noone Osman
