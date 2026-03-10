@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import dentaradLogo from "@/assets/dentarad-logo-new.png";
+import dentaradLogo from "@/assets/dentarad-logo-new.svg";
 
 const Footer = () => {
   return (
