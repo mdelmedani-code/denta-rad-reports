@@ -156,7 +156,7 @@ const Contact = () => {
                         <Input id="firstName" placeholder="John" required />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                        <Label htmlFor="lastName" className="text-sm">Last Name <span className="text-destructive">*</span></Label>
                         <Input id="lastName" placeholder="Smith" required />
                       </div>
                     </div>
