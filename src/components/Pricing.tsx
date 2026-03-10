@@ -102,19 +102,6 @@ const Pricing = () => {
               +£50
             </Badge>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
-            <div>
-              <p className="font-semibold text-foreground text-sm">
-                IAN Nerve Tracing
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Detailed nerve pathway analysis
-              </p>
-            </div>
-            <Badge className="bg-accent/10 text-accent-foreground border-accent/20 font-bold">
-              £50/side
-            </Badge>
-          </div>
         </div>
       </div>
     </section>
