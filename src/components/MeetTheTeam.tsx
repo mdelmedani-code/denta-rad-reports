@@ -1,4 +1,5 @@
 import mohamedProfile from "@/assets/mohamed-profile.png";
+import nooneProfile from "@/assets/noone-profile.png";
 
 const MeetTheTeam = () => {
   return (
