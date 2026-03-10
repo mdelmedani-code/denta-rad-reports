@@ -29,7 +29,7 @@ const WhyChoose = () => {
 
   return (
     <section className="py-24 bg-background">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section divider */}
         <div className="flex items-center justify-center mb-16">
           <div className="h-px flex-1 bg-border" />

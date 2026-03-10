@@ -55,7 +55,7 @@ const CBCTShowcase = () => {
       ref={containerRef}
       className="relative py-24 bg-[hsl(220,30%,8%)]"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* First row: 3 images */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-6 lg:mb-8">
           {images.slice(0, 3).map((image, index) => (

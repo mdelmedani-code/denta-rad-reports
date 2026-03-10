@@ -34,7 +34,7 @@ const Contact = () => {
 
   return (
     <section id="register" className="py-24 bg-background">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Get Started</p>
           <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight mb-3">
