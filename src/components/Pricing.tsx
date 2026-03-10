@@ -8,9 +8,9 @@ import fovExtended from "@/assets/fov-extended.png";
 const Pricing = () => {
   const tiers = [
     { size: "Up to 5×5cm", price: "£130", label: "Small FOV", image: fovSmall },
-    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV", image: fovMedium },
-    { size: "Up to 8×8cm", price: "£170", label: "Large FOV", image: fovLarge },
-    { size: "Over 8×8cm", price: "£195", label: "Extended FOV", image: fovExtended },
+    { size: "Up to 8×5cm", price: "£145", label: "Medium FOV", image: fovMedium },
+    { size: "Up to 8×8cm", price: "£160", label: "Large FOV", image: fovLarge },
+    { size: "Over 8×8cm", price: "£175", label: "Extended FOV", image: fovExtended },
   ];
   
 
