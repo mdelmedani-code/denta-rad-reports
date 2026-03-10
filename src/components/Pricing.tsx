@@ -12,7 +12,7 @@ const Pricing = () => {
     { size: "Up to 8×8cm", price: "£170", label: "Large FOV", image: fovLarge },
     { size: "Over 8×8cm", price: "£195", label: "Extended FOV", image: fovExtended },
   ];
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  
 
   return (
     <section className="py-24 bg-secondary/30">
