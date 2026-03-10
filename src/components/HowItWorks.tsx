@@ -26,14 +26,14 @@ const HowItWorks = () => {
             </h2>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {services.map((service) => (
-              <span
+              <div
                 key={service}
-                className="px-5 py-2.5 rounded-lg border border-border bg-card text-sm font-medium text-foreground hover:border-accent/30 transition-colors"
+                className="flex items-center justify-center aspect-square rounded-lg border border-border bg-card text-base font-medium text-foreground hover:border-accent/30 transition-colors"
               >
                 {service}
-              </span>
+              </div>
             ))}
           </div>
         </div>
