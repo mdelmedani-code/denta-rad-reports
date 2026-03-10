@@ -18,6 +18,7 @@ const Contact = () => {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [title, setTitle] = useState("");
   const [occupation, setOccupation] = useState("");
   const [volume, setVolume] = useState("");
 
@@ -27,12 +28,12 @@ const Contact = () => {
 
     const form = e.target as HTMLFormElement;
     const formData = {
+      title,
       firstName: (form.elements.namedItem("firstName") as HTMLInputElement).value,
       lastName: (form.elements.namedItem("lastName") as HTMLInputElement).value,
       occupation,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
-      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       practice: (form.elements.namedItem("practice") as HTMLInputElement).value,
+      email: (form.elements.namedItem("email") as HTMLInputElement).value,
       volume,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
     };
@@ -123,10 +124,26 @@ const Contact = () => {
                 </div>
                 <div className="px-6 pb-6">
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="title" className="text-sm">Title</Label>
+                        <Select value={title} onValueChange={setTitle}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mr">Mr</SelectItem>
+                            <SelectItem value="Mrs">Mrs</SelectItem>
+                            <SelectItem value="Ms">Ms</SelectItem>
+                            <SelectItem value="Miss">Miss</SelectItem>
+                            <SelectItem value="Dr">Dr</SelectItem>
+                            <SelectItem value="Prof">Prof</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                        <Input id="firstName" placeholder="Dr. John" required />
+                        <Input id="firstName" placeholder="John" required />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="lastName" className="text-sm">Last Name</Label>
@@ -150,16 +167,12 @@ const Contact = () => {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="email" className="text-sm">Email Address</Label>
-                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="phone" className="text-sm">Phone Number</Label>
-                      <Input id="phone" type="tel" placeholder="+44 20 7XXX XXXX" />
-                    </div>
-                    <div className="space-y-1.5">
                       <Label htmlFor="practice" className="text-sm">Practice Name</Label>
                       <Input id="practice" placeholder="Your Dental Practice" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email" className="text-sm">Email Address</Label>
+                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="volume" className="text-sm">Expected Monthly Volume</Label>
