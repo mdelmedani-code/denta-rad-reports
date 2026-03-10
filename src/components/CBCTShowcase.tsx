@@ -22,28 +22,32 @@ const CBCTShowcase = () => {
   });
 
   const count = images.length;
+  const spread = 0.85;
+  const segment = spread / count;
+  const overlap = segment * 0.4;
+
   const opacities = images.map((_, i) => {
-    const start = i * (0.7 / count);
-    const fadeIn = start + 0.08;
-    const hold = start + 0.7 / count - 0.05;
-    const fadeOut = start + 0.7 / count;
-    return useTransform(scrollYProgress, [start, fadeIn, hold, fadeOut], [0, 1, 1, i === count - 1 ? 0.6 : 0.3]);
+    const start = i * segment;
+    const fadeIn = start + segment * 0.35;
+    const hold = start + segment - overlap * 0.3;
+    const fadeOut = start + segment + overlap * 0.5;
+    return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [0, 1, 1, i === count - 1 ? 0.8 : 0.4]);
   });
 
   const ys = images.map((_, i) => {
-    const start = i * (0.7 / count);
-    const fadeIn = start + 0.08;
-    const hold = start + 0.7 / count - 0.05;
-    const fadeOut = start + 0.7 / count;
-    return useTransform(scrollYProgress, [start, fadeIn, hold, fadeOut], [60, 0, 0, -20]);
+    const start = i * segment;
+    const fadeIn = start + segment * 0.35;
+    const hold = start + segment - overlap * 0.3;
+    const fadeOut = start + segment + overlap * 0.5;
+    return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [40, 0, 0, -10]);
   });
 
   const scales = images.map((_, i) => {
-    const start = i * (0.7 / count);
-    const fadeIn = start + 0.08;
-    const hold = start + 0.7 / count - 0.05;
-    const fadeOut = start + 0.7 / count;
-    return useTransform(scrollYProgress, [start, fadeIn, hold, fadeOut], [0.9, 1, 1, 0.95]);
+    const start = i * segment;
+    const fadeIn = start + segment * 0.35;
+    const hold = start + segment - overlap * 0.3;
+    const fadeOut = start + segment + overlap * 0.5;
+    return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [0.95, 1, 1, 0.98]);
   });
 
   return (
