@@ -23,7 +23,7 @@ const Pricing = () => {
             Transparent Pricing
           </h2>
           <p className="text-base text-muted-foreground max-w-lg mx-auto">
-            Clear pricing based on field of view. No subscription fees.
+            Clear pricing based on field of view.
           </p>
         </div>
 
