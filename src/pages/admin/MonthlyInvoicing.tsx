@@ -143,7 +143,7 @@ export default function MonthlyInvoicing() {
           };
         }
 
-        const price = priceMap[c.field_of_view] || 125;
+        const price = priceMap[c.field_of_view] || 130;
         acc[clinicId].case_count++;
         acc[clinicId].total_amount += price;
         acc[clinicId].cases.push({
