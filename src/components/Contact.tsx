@@ -59,7 +59,7 @@ const Contact = () => {
       setSubmitted(true);
       toast({
         title: "Interest registered",
-        description: "We'll be in touch within 24 hours.",
+        description: "Thank you for registering. We'll be in touch soon.",
       });
     } catch (error) {
       console.error("Failed to send registration:", error);
@@ -87,10 +87,6 @@ const Contact = () => {
           <h2 className="text-2xl sm:text-3xl font-semibold text-primary tracking-tight mb-3">
             Register Your Interest
           </h2>
-          <p className="text-base text-muted-foreground max-w-lg mx-auto">
-            Get access to our secure referral portal. We'll contact you within
-            24 hours to get you set up.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -122,8 +118,7 @@ const Contact = () => {
                   Thank you
                 </h3>
                 <p className="text-sm text-muted-foreground text-center max-w-sm">
-                  Your interest has been registered. We'll be in touch within
-                  24 hours to set up your portal access.
+                  Your interest has been registered. We'll be in touch soon to set up your portal access.
                 </p>
               </div>
             ) : (
