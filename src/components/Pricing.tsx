@@ -36,7 +36,13 @@ const Pricing = () => {
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-            >
+              <img
+                src={tier.image}
+                alt={tier.label}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+                  hoveredIndex === index ? 'opacity-15' : 'opacity-0'
+                }`}
+              />
               <div className="h-px bg-accent" />
               <div className="pb-2 pt-6 px-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medium">
