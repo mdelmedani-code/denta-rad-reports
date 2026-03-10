@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import dentaradLogo from "@/assets/dentarad-logo-new.png";
+import dentaradLogo from "@/assets/dentarad-logo-new.svg";
 import heroMandible from "@/assets/hero-mandible.png";
 import heroMandibleBg from "@/assets/hero-mandible-bg.png";
 
