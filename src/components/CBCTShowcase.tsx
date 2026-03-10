@@ -72,8 +72,11 @@ const CBCTShowcase = () => {
                 <img
                   src={image.src}
                   alt={image.alt}
-                  className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105 opacity-60"
                 />
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-accent/20 via-primary/10 to-black/70 mix-blend-screen" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-accent/15" />
                 {/* Overlay label */}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                   <span className="text-xs tracking-[0.2em] uppercase text-accent font-medium">
