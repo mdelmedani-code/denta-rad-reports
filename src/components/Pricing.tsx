@@ -3,10 +3,10 @@ import { Check } from "lucide-react";
 
 const Pricing = () => {
   const tiers = [
-    { size: "Up to 5×5cm", price: "£125", label: "Small FOV" },
-    { size: "Up to 8×5cm", price: "£145", label: "Medium FOV" },
-    { size: "Up to 8×8cm", price: "£165", label: "Large FOV" },
-    { size: "Over 8×8cm", price: "£185", label: "Extended FOV" },
+    { size: "Up to 5×5cm", price: "£130", label: "Small FOV" },
+    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV" },
+    { size: "Up to 8×8cm", price: "£170", label: "Large FOV" },
+    { size: "Over 8×8cm", price: "£195", label: "Extended FOV" },
   ];
 
   return (
@@ -60,7 +60,33 @@ const Pricing = () => {
         </div>
 
         {/* Add-ons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
+            <div>
+              <p className="font-semibold text-foreground text-sm">
+                OPG Report
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Standalone OPG radiograph report
+              </p>
+            </div>
+            <Badge className="bg-accent/10 text-accent-foreground border-accent/20 font-bold">
+              £55
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
+            <div>
+              <p className="font-semibold text-foreground text-sm">
+                OPG + CBCT Bundle
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Add OPG to any CBCT scan (1 per CBCT)
+              </p>
+            </div>
+            <Badge className="bg-accent/10 text-accent-foreground border-accent/20 font-bold">
+              +£20
+            </Badge>
+          </div>
           <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
             <div>
               <p className="font-semibold text-foreground text-sm">
