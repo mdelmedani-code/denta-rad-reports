@@ -49,7 +49,7 @@ const Pricing = () => {
               <img
                 src={tier.image}
                 alt={tier.label}
-                className="h-24 w-auto object-contain"
+                className="h-48 w-auto object-contain"
               />
             </div>
           ))}
