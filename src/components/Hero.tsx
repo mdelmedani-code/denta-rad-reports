@@ -2,10 +2,24 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import dentaradLogo from "@/assets/dentarad-logo-new.png";
 import heroMandible from "@/assets/hero-mandible.png";
+import heroMandibleBg from "@/assets/hero-mandible-bg.png";
 
 const Hero = () => {
   return (
     <section className="relative min-h-[85vh] flex items-center bg-background overflow-hidden">
+      {/* Translucent mandible background */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${heroMandibleBg})`,
+          backgroundSize: 'contain',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.06,
+          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+        }}
+      />
       {/* Subtle warm glow */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[150px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/3 rounded-full blur-[120px] pointer-events-none" />
