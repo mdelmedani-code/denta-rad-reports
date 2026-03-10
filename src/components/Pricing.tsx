@@ -32,7 +32,10 @@ const Pricing = () => {
           {tiers.map((tier, index) => (
             <div
               key={index}
-              className="text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300 overflow-hidden"
+              className="relative text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300 overflow-hidden"
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
             >
               <div className="h-px bg-accent" />
               <div className="pb-2 pt-6 px-4">
