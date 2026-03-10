@@ -59,7 +59,7 @@ const Contact = () => {
       setSubmitted(true);
       toast({
         title: "Interest registered",
-        description: "We'll be in touch within 24 hours.",
+        description: "Thank you for registering. We'll be in touch soon.",
       });
     } catch (error) {
       console.error("Failed to send registration:", error);
