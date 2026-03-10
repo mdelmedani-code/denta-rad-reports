@@ -28,7 +28,7 @@ const WhyChoose = () => {
   ];
 
   return (
-    <section className="py-24 bg-[hsl(215,84%,6%)]">
+    <section className="py-24 bg-transparent">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-3">
@@ -43,7 +43,7 @@ const WhyChoose = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group text-center p-6 rounded-xl border border-primary-foreground/10 bg-primary-foreground/5 hover:border-accent/30 hover:bg-primary-foreground/8 transition-all duration-300"
+              className="group text-center p-6 rounded-xl border border-primary-foreground/10 bg-white/10 backdrop-blur-sm hover:border-accent/30 hover:bg-white/15 transition-all duration-300"
             >
               <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-accent/20 transition-colors">
                 <feature.icon className="w-7 h-7 text-accent" />

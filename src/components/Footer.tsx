@@ -3,7 +3,7 @@ import dentaradLogo from "@/assets/dentarad-logo-new.png";
 
 const Footer = () => {
   return (
-    <footer className="bg-[hsl(215,84%,4%)] text-primary-foreground">
+    <footer className="bg-primary text-primary-foreground">
       {/* Main footer */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -38,9 +38,9 @@ const Footer = () => {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-primary-foreground/5">
+      <div className="border-t border-primary-foreground/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-xs text-primary-foreground/30">
+          <p className="text-center text-xs text-primary-foreground/40">
             © {new Date().getFullYear()} DentaRad — Radelm Ltd. All rights reserved.
           </p>
         </div>
