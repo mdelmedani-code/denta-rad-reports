@@ -137,6 +137,7 @@ const Contact = () => {
                           <SelectItem value="dental-nurse">Dental Nurse</SelectItem>
                           <SelectItem value="nurse">Nurse</SelectItem>
                         </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="message" className="text-sm">
