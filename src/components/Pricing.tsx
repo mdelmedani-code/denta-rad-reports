@@ -39,8 +39,8 @@ const Pricing = () => {
               <img
                 src={tier.image}
                 alt={tier.label}
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
-                  hoveredIndex === index ? 'opacity-15' : 'opacity-0'
+                className={`absolute bottom-2 left-1/2 -translate-x-1/2 h-[70%] w-auto object-contain transition-opacity duration-300 pointer-events-none ${
+                  hoveredIndex === index ? 'opacity-40' : 'opacity-0'
                 }`}
               />
               <div className="h-px bg-accent" />
