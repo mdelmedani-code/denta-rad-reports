@@ -92,19 +92,6 @@ const Pricing = () => {
           <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
             <div>
               <p className="font-semibold text-foreground text-sm">
-                OPG + CBCT Bundle
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Add OPG to any CBCT scan (1 per CBCT)
-              </p>
-            </div>
-            <Badge className="bg-accent/10 text-accent-foreground border-accent/20 font-bold">
-              +£20
-            </Badge>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
-            <div>
-              <p className="font-semibold text-foreground text-sm">
                 Priority 24h Service
               </p>
               <p className="text-xs text-muted-foreground">
