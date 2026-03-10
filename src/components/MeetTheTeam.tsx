@@ -42,7 +42,7 @@ const MeetTheTeam = () => {
             <img
               src={nooneProfile}
               alt="Dr. Noone Osman"
-              className="w-28 h-28 rounded-full object-cover mx-auto mb-4 border-2 border-border"
+              className="w-28 h-28 rounded-full object-cover object-top mx-auto mb-4 border-2 border-border"
             />
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Co-Director
