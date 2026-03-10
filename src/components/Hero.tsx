@@ -11,8 +11,9 @@ const Hero = () => {
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${heroBg})` }}
       />
-      {/* Dark overlay with navy tint */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/80 to-primary/50" />
+      {/* Gray overlay with translucent rounded gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900/90 via-gray-800/75 to-gray-700/50 backdrop-blur-sm" />
+      <div className="absolute inset-8 rounded-3xl bg-gradient-to-br from-white/10 via-white/5 to-transparent border border-white/10" />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
         <div className="max-w-2xl">
