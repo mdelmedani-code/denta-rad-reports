@@ -43,7 +43,7 @@ const MeetTheTeam = () => {
             </p>
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Co-director of DentaRad, bringing dental expertise to ensure our reporting service meets the clinical needs of dental practitioners.
+                Co-founder of DentaRad, advisor and practicing dentist, bringing dental expertise to ensure our reporting service meets the clinical needs of dental practitioners.
               </p>
             </div>
           </div>
