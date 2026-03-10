@@ -18,6 +18,7 @@ const Contact = () => {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [title, setTitle] = useState("");
   const [occupation, setOccupation] = useState("");
   const [volume, setVolume] = useState("");
 
