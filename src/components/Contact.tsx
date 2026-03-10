@@ -43,6 +43,7 @@ const Contact = () => {
       lastName: (form.elements.namedItem("lastName") as HTMLInputElement).value,
       occupation,
       practice: (form.elements.namedItem("practice") as HTMLInputElement).value,
+      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
       volume,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
