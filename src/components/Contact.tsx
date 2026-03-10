@@ -99,6 +99,22 @@ const Contact = () => {
                       </div>
                     </div>
                     <div className="space-y-1.5">
+                      <Label htmlFor="occupation" className="text-sm">Occupation</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your occupation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dentist">Dentist</SelectItem>
+                          <SelectItem value="medical-doctor">Medical Doctor</SelectItem>
+                          <SelectItem value="practice-manager">Practice Manager</SelectItem>
+                          <SelectItem value="dental-nurse">Dental Nurse</SelectItem>
+                          <SelectItem value="nurse">Nurse</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-sm">Email Address</Label>
                       <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
                     </div>
@@ -121,21 +137,6 @@ const Contact = () => {
                           <SelectItem value="6-15">6-15 scans per month</SelectItem>
                           <SelectItem value="16-30">16-30 scans per month</SelectItem>
                           <SelectItem value="30+">30+ scans per month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="occupation" className="text-sm">Occupation</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your occupation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="dentist">Dentist</SelectItem>
-                          <SelectItem value="medical-doctor">Medical Doctor</SelectItem>
-                          <SelectItem value="practice-manager">Practice Manager</SelectItem>
-                          <SelectItem value="dental-nurse">Dental Nurse</SelectItem>
-                          <SelectItem value="nurse">Nurse</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
