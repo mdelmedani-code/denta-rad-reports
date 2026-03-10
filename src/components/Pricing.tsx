@@ -3,10 +3,10 @@ import { Check } from "lucide-react";
 
 const Pricing = () => {
   const tiers = [
-    { size: "Up to 5×5cm", price: "£125", label: "Small FOV" },
-    { size: "Up to 8×5cm", price: "£145", label: "Medium FOV" },
-    { size: "Up to 8×8cm", price: "£165", label: "Large FOV" },
-    { size: "Over 8×8cm", price: "£185", label: "Extended FOV" },
+    { size: "Up to 5×5cm", price: "£130", label: "Small FOV" },
+    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV" },
+    { size: "Up to 8×8cm", price: "£170", label: "Large FOV" },
+    { size: "Over 8×8cm", price: "£195", label: "Extended FOV" },
   ];
 
   return (
