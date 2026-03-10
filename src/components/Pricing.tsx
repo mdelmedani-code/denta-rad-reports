@@ -53,22 +53,9 @@ const Pricing = () => {
                 </p>
               </div>
               <div className="pt-0 pb-6 px-4">
-                <p className="text-3xl font-bold text-primary mb-4">
+                <p className="text-3xl font-bold text-primary">
                   {tier.price}
                 </p>
-                <div className="space-y-2 text-left">
-                  {["Comprehensive report", "2-3 working days", "Incidental findings"].map(
-                    (item) => (
-                      <div
-                        key={item}
-                        className="flex items-center text-xs text-muted-foreground"
-                      >
-                        <Check className="w-3.5 h-3.5 text-accent mr-2 flex-shrink-0" />
-                        <span>{item}</span>
-                      </div>
-                    )
-                  )}
-                </div>
               </div>
             </div>
           ))}
