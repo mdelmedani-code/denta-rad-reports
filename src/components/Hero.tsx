@@ -27,7 +27,7 @@ const Hero = () => {
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
         <div className="flex flex-col items-center text-center">
           {/* Logo + Mandible side by side */}
-          <div className="flex items-center justify-center mb-2">
+          <div className="flex items-center justify-center mb-0">
             <img
               src={dentaradLogo}
               alt="DentaRad Logo"
@@ -36,7 +36,7 @@ const Hero = () => {
           </div>
 
           {/* Gold accent line */}
-          <div className="w-12 h-px bg-accent mb-3" />
+          <div className="w-12 h-px bg-accent mb-2" />
 
           {/* Heading */}
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-primary mb-4">
