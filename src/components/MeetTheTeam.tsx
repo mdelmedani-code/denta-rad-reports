@@ -1,4 +1,5 @@
 import mohamedProfile from "@/assets/mohamed-profile.png";
+import nooneProfile from "@/assets/noone-profile.png";
 
 const MeetTheTeam = () => {
   return (
@@ -38,6 +39,11 @@ const MeetTheTeam = () => {
           </div>
 
           <div className="bg-background rounded-2xl border border-border p-8 shadow-sm">
+            <img
+              src={nooneProfile}
+              alt="Dr. Noone Osman"
+              className="w-28 h-28 rounded-full object-cover mx-auto mb-4 border-2 border-border"
+            />
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Co-Director
             </p>
