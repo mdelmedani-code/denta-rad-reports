@@ -135,7 +135,7 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="occupation" className="text-sm">Occupation</Label>
-                      <Select>
+                      <Select value={occupation} onValueChange={setOccupation}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your occupation" />
                         </SelectTrigger>
