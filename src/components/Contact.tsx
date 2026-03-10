@@ -12,18 +12,53 @@ import {
 } from "@/components/ui/select";
 import { Mail, Clock, MapPin, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [occupation, setOccupation] = useState("");
+  const [volume, setVolume] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    toast({
-      title: "Interest registered",
-      description: "We'll be in touch within 24 hours.",
-    });
+    setIsSubmitting(true);
+
+    const form = e.target as HTMLFormElement;
+    const formData = {
+      firstName: (form.elements.namedItem("firstName") as HTMLInputElement).value,
+      lastName: (form.elements.namedItem("lastName") as HTMLInputElement).value,
+      occupation,
+      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
+      practice: (form.elements.namedItem("practice") as HTMLInputElement).value,
+      volume,
+      message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
+    };
+
+    try {
+      const { error } = await supabase.functions.invoke("register-interest", {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      toast({
+        title: "Interest registered",
+        description: "We'll be in touch within 24 hours.",
+      });
+    } catch (error) {
+      console.error("Failed to send registration:", error);
+      toast({
+        title: "Something went wrong",
+        description: "Please try again or email us directly at admin@dentarad.co.uk",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [
