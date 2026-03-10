@@ -1372,6 +1372,7 @@ export type Database = {
       }
     }
     Functions: {
+      _temp_fix_pricing: { Args: never; Returns: undefined }
       acquire_case_lock: {
         Args: { p_patient_first_name: string; p_patient_last_name: string }
         Returns: boolean
