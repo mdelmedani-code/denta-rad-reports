@@ -39,22 +39,6 @@ const CBCTShowcase = () => {
       className="relative py-24 bg-[hsl(220,30%,8%)]"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section heading */}
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="w-8 h-px bg-accent mx-auto mb-6" />
-          <h2 className="text-2xl sm:text-3xl font-light text-white tracking-tight mb-3">
-            Precision <span className="font-semibold">CBCT Imaging</span>
-          </h2>
-          <p className="text-white/50 text-sm sm:text-base max-w-md mx-auto">
-            Multi-planar analysis across axial, coronal and occlusal views
-          </p>
-        </motion.div>
 
         {/* Image grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
@@ -75,11 +59,6 @@ const CBCTShowcase = () => {
                   className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 {/* Overlay label */}
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <span className="text-xs tracking-[0.2em] uppercase text-accent font-medium">
-                    {image.label}
-                  </span>
-                </div>
               </div>
             </motion.div>
           ))}
