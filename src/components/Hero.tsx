@@ -31,7 +31,7 @@ const Hero = () => {
             <img
               src={dentaradLogo}
               alt="DentaRad Logo"
-              className="w-72 sm:w-96 lg:w-[28rem] xl:w-[32rem] object-contain"
+              className="w-80 sm:w-[28rem] lg:w-[36rem] xl:w-[42rem] object-contain"
             />
           </div>
 
