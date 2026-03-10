@@ -12,7 +12,7 @@ const Hero = () => {
           <img
             src={dentaradLogo}
             alt="DentaRad Logo"
-            className="h-32 sm:h-40 lg:h-48 mx-auto object-contain"
+            className="w-full max-w-3xl mx-auto object-contain"
           />
         </div>
 
