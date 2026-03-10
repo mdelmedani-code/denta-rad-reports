@@ -87,10 +87,6 @@ const Contact = () => {
           <h2 className="text-2xl sm:text-3xl font-semibold text-primary tracking-tight mb-3">
             Register Your Interest
           </h2>
-          <p className="text-base text-muted-foreground max-w-lg mx-auto">
-            Get access to our secure referral portal. We'll contact you within
-            24 hours to get you set up.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
