@@ -59,11 +59,6 @@ const CBCTShowcase = () => {
                   className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 {/* Overlay label */}
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <span className="text-xs tracking-[0.2em] uppercase text-accent font-medium">
-                    {image.label}
-                  </span>
-                </div>
               </div>
             </motion.div>
           ))}
