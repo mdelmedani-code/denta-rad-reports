@@ -45,11 +45,6 @@ const Hero = () => {
             <span className="font-semibold">Reporting Service</span>
           </h1>
 
-          {/* Description */}
-          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-12 max-w-xl">
-            Specialist CBCT and OPG reporting by UK trained and registered
-            Dental &amp; Oral Maxillofacial Radiologists.
-          </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col items-center gap-2">
