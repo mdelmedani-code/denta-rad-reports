@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import dentaradLogo from "@/assets/dentarad-logo-new.png";
+import heroMandible from "@/assets/hero-mandible.png";
 
 const Hero = () => {
   return (
@@ -9,14 +10,26 @@ const Hero = () => {
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[150px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-primary/3 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
         <div className="flex flex-col items-center text-center">
-          {/* Logo */}
-          <img
-            src={dentaradLogo}
-            alt="DentaRad Logo"
-            className="w-56 sm:w-72 lg:w-80 mb-8 object-contain"
-          />
+          {/* Logo + Mandible side by side */}
+          <div className="flex items-center justify-center gap-6 sm:gap-10 mb-10">
+            <img
+              src={heroMandible}
+              alt="Mandible anatomy illustration"
+              className="hidden sm:block w-40 lg:w-56 xl:w-64 object-contain opacity-80 -scale-x-100"
+            />
+            <img
+              src={dentaradLogo}
+              alt="DentaRad Logo"
+              className="w-72 sm:w-96 lg:w-[28rem] xl:w-[32rem] object-contain"
+            />
+            <img
+              src={heroMandible}
+              alt="Mandible anatomy illustration"
+              className="hidden sm:block w-40 lg:w-56 xl:w-64 object-contain opacity-80"
+            />
+          </div>
 
           {/* Gold accent line */}
           <div className="w-12 h-px bg-accent mb-8" />
