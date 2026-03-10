@@ -47,9 +47,9 @@ const Hero = () => {
 
 
           {/* CTA Buttons */}
-          <div className="flex flex-col items-center mt-8">
-            <p className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-[0.2em] font-light italic" style={{ color: '#C4A265' }}>Coming Soon</p>
-            <a href="#register" className="mt-6">
+          <div className="flex flex-col items-center gap-2 mt-8">
+            <p className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-[0.2em] font-semibold" style={{ color: '#C4A265' }}>Coming Soon</p>
+            <a href="#register">
               <Button
                 size="lg"
                 variant="outline"
