@@ -3,7 +3,7 @@ import dentaradLogo from "@/assets/dentarad-logo-new.png";
 
 const Footer = () => {
   return (
-    <footer className="bg-primary text-primary-foreground">
+    <footer className="bg-[hsl(215,84%,4%)] text-primary-foreground">
       {/* Main footer */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -13,24 +13,24 @@ const Footer = () => {
               alt="DentaRad"
               className="h-12 object-contain mb-3 mx-auto sm:mx-0"
             />
-            <p className="text-sm text-primary-foreground/70">
+            <p className="text-sm text-primary-foreground/50">
               Dental Radiology Reporting Service
             </p>
-            <p className="text-sm text-primary-foreground/70 mt-1">
+            <p className="text-sm text-primary-foreground/50 mt-1">
               info@dentarad.co.uk
             </p>
-            <p className="text-xs text-primary-foreground/40 mt-2">
+            <p className="text-xs text-primary-foreground/30 mt-2">
               Trading name of Radelm Ltd.
             </p>
           </div>
-          <div className="flex flex-col items-center sm:items-end gap-2 text-sm text-primary-foreground/60">
-            <Link to="/privacy" className="hover:text-primary-foreground transition-colors">
+          <div className="flex flex-col items-center sm:items-end gap-2 text-sm text-primary-foreground/40">
+            <Link to="/privacy" className="hover:text-accent transition-colors">
               Privacy Policy
             </Link>
-            <Link to="/terms-of-service" className="hover:text-primary-foreground transition-colors">
+            <Link to="/terms-of-service" className="hover:text-accent transition-colors">
               Terms of Service
             </Link>
-            <Link to="/meet-the-team" className="hover:text-primary-foreground transition-colors">
+            <Link to="/meet-the-team" className="hover:text-accent transition-colors">
               Meet the Team
             </Link>
           </div>
@@ -38,9 +38,9 @@ const Footer = () => {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-primary-foreground/10">
+      <div className="border-t border-primary-foreground/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-xs text-primary-foreground/40">
+          <p className="text-center text-xs text-primary-foreground/30">
             © {new Date().getFullYear()} DentaRad — Radelm Ltd. All rights reserved.
           </p>
         </div>
