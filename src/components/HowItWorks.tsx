@@ -97,7 +97,7 @@ const HowItWorks = () => {
                 <div className="w-10 h-10 rounded-full border border-accent bg-accent/5 text-accent font-semibold text-sm flex items-center justify-center mx-auto mb-5">
                   {step.num}
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   {step.text}
                 </p>
               </div>

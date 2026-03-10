@@ -48,8 +48,8 @@ const WhyChoose = () => {
               <div className="w-12 h-12 rounded-full border border-accent/30 bg-accent/5 flex items-center justify-center mx-auto mb-5 group-hover:bg-accent/10 transition-colors">
                 <feature.icon className="w-5 h-5 text-accent" strokeWidth={1.5} />
               </div>
-              <h3 className="font-semibold text-foreground mb-2 text-sm tracking-wide uppercase">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="font-semibold text-foreground mb-2 text-base tracking-wide uppercase">{feature.title}</h3>
+              <p className="text-base text-muted-foreground leading-relaxed">
                 {feature.description}
               </p>
             </div>
