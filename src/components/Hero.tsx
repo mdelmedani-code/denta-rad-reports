@@ -53,7 +53,7 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col items-center gap-2">
-            <p className="text-sm uppercase tracking-[0.2em] text-accent font-medium">Coming Soon</p>
+            <p className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-[0.2em] text-accent font-semibold">Coming Soon</p>
             <a href="#register">
               <Button
                 size="lg"
