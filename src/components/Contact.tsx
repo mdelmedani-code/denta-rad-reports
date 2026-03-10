@@ -24,6 +24,16 @@ const Contact = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!occupation) {
+      toast({ title: "Occupation is required", description: "Please select your occupation.", variant: "destructive" });
+      return;
+    }
+    if (!volume) {
+      toast({ title: "Volume is required", description: "Please select your expected monthly volume.", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const form = e.target as HTMLFormElement;
