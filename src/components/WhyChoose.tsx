@@ -33,7 +33,7 @@ const WhyChoose = () => {
         {/* Section divider */}
         <div className="flex items-center justify-center mb-16">
           <div className="h-px flex-1 bg-border" />
-          <h2 className="px-8 text-xl sm:text-2xl font-semibold text-primary tracking-tight">
+          <h2 className="px-8 text-2xl sm:text-3xl font-semibold text-primary tracking-tight">
             Why Choose DentaRad
           </h2>
           <div className="h-px flex-1 bg-border" />
