@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.monitor-system-health]
 verify_jwt = true
+
+[functions.register-interest]
+verify_jwt = false
