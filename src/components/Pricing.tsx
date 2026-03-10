@@ -1,13 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
+import { useState } from "react";
+import fovSmall from "@/assets/fov-small.png";
+import fovMedium from "@/assets/fov-medium.png";
+import fovLarge from "@/assets/fov-large.png";
+import fovExtended from "@/assets/fov-extended.png";
 
 const Pricing = () => {
   const tiers = [
-    { size: "Up to 5×5cm", price: "£130", label: "Small FOV" },
-    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV" },
-    { size: "Up to 8×8cm", price: "£170", label: "Large FOV" },
-    { size: "Over 8×8cm", price: "£195", label: "Extended FOV" },
+    { size: "Up to 5×5cm", price: "£130", label: "Small FOV", image: fovSmall },
+    { size: "Up to 8×5cm", price: "£150", label: "Medium FOV", image: fovMedium },
+    { size: "Up to 8×8cm", price: "£170", label: "Large FOV", image: fovLarge },
+    { size: "Over 8×8cm", price: "£195", label: "Extended FOV", image: fovExtended },
   ];
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
     <section className="py-24 bg-secondary/30">
@@ -26,8 +32,17 @@ const Pricing = () => {
           {tiers.map((tier, index) => (
             <div
               key={index}
-              className="text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300 overflow-hidden"
+              className="relative text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300 overflow-hidden"
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
             >
+              <img
+                src={tier.image}
+                alt={tier.label}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+                  hoveredIndex === index ? 'opacity-15' : 'opacity-0'
+                }`}
+              />
               <div className="h-px bg-accent" />
               <div className="pb-2 pt-6 px-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medium">
