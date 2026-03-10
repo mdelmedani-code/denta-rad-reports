@@ -12,7 +12,7 @@ const Hero = () => {
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `url(${heroMandibleBg})`,
-          backgroundSize: '150%',
+          backgroundSize: 'contain',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           opacity: 0.06,
