@@ -24,6 +24,16 @@ const Contact = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!occupation) {
+      toast({ title: "Occupation is required", description: "Please select your occupation.", variant: "destructive" });
+      return;
+    }
+    if (!volume) {
+      toast({ title: "Volume is required", description: "Please select your expected monthly volume.", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const form = e.target as HTMLFormElement;
@@ -142,16 +152,16 @@ const Contact = () => {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                        <Label htmlFor="firstName" className="text-sm">First Name <span className="text-destructive">*</span></Label>
                         <Input id="firstName" placeholder="John" required />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                        <Label htmlFor="lastName" className="text-sm">Last Name <span className="text-destructive">*</span></Label>
                         <Input id="lastName" placeholder="Smith" required />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="occupation" className="text-sm">Occupation</Label>
+                      <Label htmlFor="occupation" className="text-sm">Occupation <span className="text-destructive">*</span></Label>
                       <Select value={occupation} onValueChange={setOccupation}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your occupation" />
@@ -168,14 +178,14 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="practice" className="text-sm">Practice Name</Label>
-                      <Input id="practice" placeholder="Your Dental Practice" required />
+                      <Input id="practice" placeholder="Your Dental Practice" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="email" className="text-sm">Email Address</Label>
+                      <Label htmlFor="email" className="text-sm">Email Address <span className="text-destructive">*</span></Label>
                       <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="volume" className="text-sm">Expected Monthly Volume</Label>
+                      <Label htmlFor="volume" className="text-sm">Expected Monthly Volume <span className="text-destructive">*</span></Label>
                       <Select value={volume} onValueChange={setVolume}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select expected volume" />
