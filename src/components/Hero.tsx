@@ -27,21 +27,11 @@ const Hero = () => {
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
         <div className="flex flex-col items-center text-center">
           {/* Logo + Mandible side by side */}
-          <div className="flex items-center justify-center gap-6 sm:gap-10 mb-10">
-            <img
-              src={heroMandible}
-              alt="Mandible anatomy illustration"
-              className="hidden sm:block w-40 lg:w-56 xl:w-64 object-contain opacity-80 -scale-x-100"
-            />
+          <div className="flex items-center justify-center mb-10">
             <img
               src={dentaradLogo}
               alt="DentaRad Logo"
               className="w-72 sm:w-96 lg:w-[28rem] xl:w-[32rem] object-contain"
-            />
-            <img
-              src={heroMandible}
-              alt="Mandible anatomy illustration"
-              className="hidden sm:block w-40 lg:w-56 xl:w-64 object-contain opacity-80"
             />
           </div>
 
