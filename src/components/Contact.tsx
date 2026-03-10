@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,16 +33,13 @@ const Contact = () => {
   ];
 
   return (
-    <section id="register" className="py-24 bg-[hsl(215,84%,6%)] relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-[150px] pointer-events-none" />
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="register" className="py-24 bg-transparent">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
             Register Your Interest
           </h2>
-          <p className="text-primary-foreground/50 max-w-2xl mx-auto">
+          <p className="text-muted-foreground max-w-2xl mx-auto">
             Get access to our secure referral portal. We'll contact you within
             24 hours to get you set up.
           </p>
@@ -53,14 +49,14 @@ const Contact = () => {
           {/* Contact Info */}
           <div className="space-y-4">
             {contactInfo.map((item) => (
-              <div key={item.title} className="flex items-start gap-3 p-5 rounded-xl border border-primary-foreground/10 bg-primary-foreground/5 hover:border-accent/30 transition-colors">
+              <div key={item.title} className="flex items-start gap-3 p-5 rounded-xl border border-border bg-white/70 backdrop-blur-sm hover:border-accent/30 transition-colors">
                 <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
                   <item.icon className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="font-semibold text-primary-foreground text-sm">{item.title}</p>
+                  <p className="font-semibold text-foreground text-sm">{item.title}</p>
                   {item.lines.map((line, i) => (
-                    <p key={i} className="text-primary-foreground/50 text-sm">{line}</p>
+                    <p key={i} className="text-muted-foreground text-sm">{line}</p>
                   ))}
                 </div>
               </div>
@@ -70,22 +66,22 @@ const Contact = () => {
           {/* Form */}
           <div className="lg:col-span-2">
             {submitted ? (
-              <div className="rounded-xl border border-accent/30 bg-primary-foreground/5 flex flex-col items-center justify-center py-16">
+              <div className="rounded-xl border border-accent/30 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center py-16">
                 <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4">
                   <CheckCircle2 className="w-8 h-8 text-accent" />
                 </div>
-                <h3 className="text-xl font-bold text-primary-foreground mb-2">
+                <h3 className="text-xl font-bold text-foreground mb-2">
                   Thank you!
                 </h3>
-                <p className="text-primary-foreground/50 text-center max-w-sm">
+                <p className="text-muted-foreground text-center max-w-sm">
                   Your interest has been registered. We'll be in touch within
                   24 hours to set up your portal access.
                 </p>
               </div>
             ) : (
-              <div className="rounded-xl border border-primary-foreground/10 bg-primary-foreground/5 overflow-hidden">
+              <div className="rounded-xl border border-border bg-white/70 backdrop-blur-sm overflow-hidden shadow-soft">
                 <div className="px-6 pt-6 pb-4">
-                  <h3 className="text-lg font-semibold text-primary-foreground">
+                  <h3 className="text-lg font-semibold text-foreground">
                     Practice Details
                   </h3>
                 </div>
@@ -93,30 +89,30 @@ const Contact = () => {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="firstName" className="text-sm text-primary-foreground/70">First Name</Label>
-                        <Input id="firstName" placeholder="Dr. John" required className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/30" />
+                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                        <Input id="firstName" placeholder="Dr. John" required />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="lastName" className="text-sm text-primary-foreground/70">Last Name</Label>
-                        <Input id="lastName" placeholder="Smith" required className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/30" />
+                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                        <Input id="lastName" placeholder="Smith" required />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="email" className="text-sm text-primary-foreground/70">Email Address</Label>
-                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/30" />
+                      <Label htmlFor="email" className="text-sm">Email Address</Label>
+                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="phone" className="text-sm text-primary-foreground/70">Phone Number</Label>
-                      <Input id="phone" type="tel" placeholder="+44 20 7XXX XXXX" className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/30" />
+                      <Label htmlFor="phone" className="text-sm">Phone Number</Label>
+                      <Input id="phone" type="tel" placeholder="+44 20 7XXX XXXX" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="practice" className="text-sm text-primary-foreground/70">Practice Name</Label>
-                      <Input id="practice" placeholder="Your Dental Practice" required className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/30" />
+                      <Label htmlFor="practice" className="text-sm">Practice Name</Label>
+                      <Input id="practice" placeholder="Your Dental Practice" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="volume" className="text-sm text-primary-foreground/70">Expected Monthly Volume</Label>
+                      <Label htmlFor="volume" className="text-sm">Expected Monthly Volume</Label>
                       <Select>
-                        <SelectTrigger className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select expected volume" />
                         </SelectTrigger>
                         <SelectContent>
@@ -128,10 +124,10 @@ const Contact = () => {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="message" className="text-sm text-primary-foreground/70">
-                        Additional Information <span className="text-primary-foreground/30">(optional)</span>
+                      <Label htmlFor="message" className="text-sm">
+                        Additional Information <span className="text-muted-foreground">(optional)</span>
                       </Label>
-                      <Textarea id="message" placeholder="Any specific requirements or questions..." rows={3} className="bg-primary-foreground/5 border-primary-foreground/15 text-primary-foreground placeholder:text-primary-foreground/30" />
+                      <Textarea id="message" placeholder="Any specific requirements or questions..." rows={3} />
                     </div>
                     <Button
                       type="submit"
@@ -139,7 +135,7 @@ const Contact = () => {
                     >
                       Register Interest
                     </Button>
-                    <p className="text-xs text-primary-foreground/30 text-center">
+                    <p className="text-xs text-muted-foreground text-center">
                       By registering, you agree to our terms and conditions.
                     </p>
                   </form>
