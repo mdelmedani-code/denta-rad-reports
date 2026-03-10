@@ -52,44 +52,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/meet-the-team" element={<MeetTheTeamPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
-            <Route path="/verify/:token?" element={<SignatureVerification />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
-            
-            {/* All routes - auth removed for exploration */}
-            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
-            <Route path="/upload-case" element={<AppLayout><UploadCase /></AppLayout>} />
-            <Route path="/invoices" element={<AppLayout><ClinicInvoices /></AppLayout>} />
-            <Route path="/admin/audit-logs" element={<AppLayout><AuditLogs /></AppLayout>} />
-            <Route path="/admin/security-dashboard" element={<AppLayout><SecurityDashboard /></AppLayout>} />
-            <Route path="/admin/users" element={<AppLayout><UserManagementPage /></AppLayout>} />
-            <Route path="/admin/email-templates" element={<AppLayout><EmailTemplateSettings /></AppLayout>} />
-            <Route path="/admin/report-template-settings" element={<AppLayout><ReportTemplateSettings /></AppLayout>} />
-            <Route path="/admin/data-retention" element={<AppLayout><DataRetentionPage /></AppLayout>} />
-            <Route path="/admin/pdf-template" element={<AppLayout><PDFTemplateSettings /></AppLayout>} />
-            <Route path="/admin/template-editor" element={<AppLayout><TemplateEditor /></AppLayout>} />
-            <Route path="/admin/invoicing" element={<AppLayout><UnifiedInvoicing /></AppLayout>} />
-            <Route path="/admin/invoice-settings" element={<AppLayout><InvoiceSettings /></AppLayout>} />
-            <Route path="/admin/invoice-history" element={<AppLayout><InvoiceHistory /></AppLayout>} />
-            <Route path="/admin/incidents" element={<IncidentRegister />} />
-            
-            <Route path="/admin/monthly-invoicing" element={<Navigate to="/admin/invoicing" replace />} />
-            <Route path="/admin/invoicing-page" element={<Navigate to="/admin/invoicing" replace />} />
-            <Route path="/admin/invoice-viewer" element={<Navigate to="/admin/invoicing" replace />} />
-            <Route path="/admin/billing-export" element={<Navigate to="/admin/invoicing" replace />} />
-            
-            <Route path="/reporter" element={<AppLayout><UnifiedDashboard /></AppLayout>} />
-            <Route path="/billing-export" element={<AppLayout><BillingExport /></AppLayout>} />
-            <Route path="/snippets" element={<AppLayout><SnippetManager /></AppLayout>} />
-            <Route path="/viewer/:caseId" element={<AppLayout><ViewerPage /></AppLayout>} />
-            <Route path="/reporter/case/:id" element={<AppLayout><AdminCaseReview /></AppLayout>} />
-            <Route path="/reporter/report/:caseId" element={<ReportBuilder />} />
-            <Route path="/admin/reports/:reportId" element={<AppLayout><CaseReportPage /></AppLayout>} />
-            
-            <Route path="/admin" element={<Navigate to="/reporter" replace />} />
-            <Route path="/admin/reporter" element={<Navigate to="/reporter" replace />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
