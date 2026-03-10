@@ -185,7 +185,7 @@ const Contact = () => {
                       <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="volume" className="text-sm">Expected Monthly Volume</Label>
+                      <Label htmlFor="volume" className="text-sm">Expected Monthly Volume <span className="text-destructive">*</span></Label>
                       <Select value={volume} onValueChange={setVolume}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select expected volume" />
