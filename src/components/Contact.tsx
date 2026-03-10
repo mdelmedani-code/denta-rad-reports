@@ -182,7 +182,7 @@ const Contact = () => {
                       <Input id="practice" placeholder="Your Dental Practice" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="phone" className="text-sm">Phone Number <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="phone" className="text-sm">Contact Number <span className="text-destructive">*</span></Label>
                       <Input id="phone" type="tel" placeholder="+44 7700 900000" required />
                     </div>
                     <div className="space-y-1.5">
