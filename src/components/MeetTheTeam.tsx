@@ -7,7 +7,7 @@ const MeetTheTeam = () => {
         </h2>
         <div className="w-16 h-0.5 bg-accent mx-auto mb-12" />
 
-        <div className="max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <div className="bg-background rounded-2xl border border-border p-8 shadow-sm">
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Reporting Clinician
@@ -26,6 +26,24 @@ const MeetTheTeam = () => {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 GMC-registered consultant radiologist with subspecialty expertise in head and neck imaging, 
                 providing professional teleradiology services to dental practitioners across the UK.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-background rounded-2xl border border-border p-8 shadow-sm">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+              Co-Director
+            </p>
+            <h3 className="text-2xl font-bold text-foreground mb-1">
+              Dr. Noone Osman
+            </h3>
+            <p className="text-muted-foreground">
+              Dentist |{" "}
+              <span className="italic">BChD</span>
+            </p>
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Co-director of DentaRad, bringing dental expertise to ensure our reporting service meets the clinical needs of dental practitioners.
               </p>
             </div>
           </div>
