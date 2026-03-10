@@ -211,9 +211,6 @@ const Contact = () => {
                     >
                       {isSubmitting ? "Submitting..." : "Register Interest"}
                     </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      By registering, you agree to our terms and conditions.
-                    </p>
                   </form>
                 </div>
               </div>
