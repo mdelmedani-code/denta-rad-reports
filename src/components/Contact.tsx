@@ -163,7 +163,7 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="volume" className="text-sm">Expected Monthly Volume</Label>
-                      <Select>
+                      <Select value={volume} onValueChange={setVolume}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select expected volume" />
                         </SelectTrigger>
