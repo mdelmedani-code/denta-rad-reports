@@ -118,8 +118,7 @@ const Contact = () => {
                   Thank you
                 </h3>
                 <p className="text-sm text-muted-foreground text-center max-w-sm">
-                  Your interest has been registered. We'll be in touch within
-                  24 hours to set up your portal access.
+                  Your interest has been registered. We'll be in touch soon to set up your portal access.
                 </p>
               </div>
             ) : (
