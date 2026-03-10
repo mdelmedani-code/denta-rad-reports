@@ -1,3 +1,5 @@
+import mohamedProfile from "@/assets/mohamed-profile.png";
+
 const MeetTheTeam = () => {
   return (
     <section id="team" className="py-16 sm:py-20 bg-muted/30">
@@ -9,6 +11,11 @@ const MeetTheTeam = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           <div className="bg-background rounded-2xl border border-border p-8 shadow-sm">
+            <img
+              src={mohamedProfile}
+              alt="Dr. Mohamed Elmedani"
+              className="w-28 h-28 rounded-full object-cover mx-auto mb-4 border-2 border-border"
+            />
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Reporting Clinician
             </p>
