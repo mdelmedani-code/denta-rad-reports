@@ -28,12 +28,12 @@ const Contact = () => {
 
     const form = e.target as HTMLFormElement;
     const formData = {
+      title,
       firstName: (form.elements.namedItem("firstName") as HTMLInputElement).value,
       lastName: (form.elements.namedItem("lastName") as HTMLInputElement).value,
       occupation,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
-      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       practice: (form.elements.namedItem("practice") as HTMLInputElement).value,
+      email: (form.elements.namedItem("email") as HTMLInputElement).value,
       volume,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
     };
