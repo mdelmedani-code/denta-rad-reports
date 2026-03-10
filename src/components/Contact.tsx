@@ -183,9 +183,10 @@ const Contact = () => {
                     </div>
                     <Button
                       type="submit"
+                      disabled={isSubmitting}
                       className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 text-sm font-medium"
                     >
-                      Register Interest
+                      {isSubmitting ? "Submitting..." : "Register Interest"}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
                       By registering, you agree to our terms and conditions.
