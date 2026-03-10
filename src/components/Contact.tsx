@@ -152,7 +152,7 @@ const Contact = () => {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                        <Label htmlFor="firstName" className="text-sm">First Name <span className="text-destructive">*</span></Label>
                         <Input id="firstName" placeholder="John" required />
                       </div>
                       <div className="space-y-1.5">
