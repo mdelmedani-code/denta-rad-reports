@@ -178,7 +178,7 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="practice" className="text-sm">Practice Name</Label>
-                      <Input id="practice" placeholder="Your Dental Practice" required />
+                      <Input id="practice" placeholder="Your Dental Practice" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-sm">Email Address</Label>
