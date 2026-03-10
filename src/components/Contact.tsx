@@ -125,6 +125,21 @@ const Contact = () => {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
+                      <Label htmlFor="occupation" className="text-sm">Occupation</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your occupation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dentist">Dentist</SelectItem>
+                          <SelectItem value="medical-doctor">Medical Doctor</SelectItem>
+                          <SelectItem value="practice-manager">Practice Manager</SelectItem>
+                          <SelectItem value="dental-nurse">Dental Nurse</SelectItem>
+                          <SelectItem value="nurse">Nurse</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label htmlFor="message" className="text-sm">
                         Additional Information <span className="text-muted-foreground">(optional)</span>
                       </Label>
