@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { useState } from "react";
 import { useState } from "react";
 import fovSmall from "@/assets/fov-small.png";
 import fovMedium from "@/assets/fov-medium.png";
