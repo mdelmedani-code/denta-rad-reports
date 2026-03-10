@@ -28,13 +28,13 @@ const WhyChoose = () => {
   ];
 
   return (
-    <section className="py-20 bg-background">
+    <section className="py-24 bg-[hsl(215,84%,6%)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+        <div className="text-center mb-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-3">
             Why Choose DentaRad?
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-primary-foreground/50 max-w-2xl mx-auto">
             Expert dental radiology reporting you can rely on
           </p>
         </div>
@@ -43,13 +43,13 @@ const WhyChoose = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group text-center p-6 rounded-xl border border-border bg-card hover:shadow-medium hover:border-accent/30 transition-all duration-300"
+              className="group text-center p-6 rounded-xl border border-primary-foreground/10 bg-primary-foreground/5 hover:border-accent/30 hover:bg-primary-foreground/8 transition-all duration-300"
             >
               <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-accent/20 transition-colors">
                 <feature.icon className="w-7 h-7 text-accent" />
               </div>
-              <h3 className="font-bold text-foreground mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="font-bold text-primary-foreground mb-2">{feature.title}</h3>
+              <p className="text-sm text-primary-foreground/60 leading-relaxed">
                 {feature.description}
               </p>
             </div>
