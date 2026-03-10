@@ -33,13 +33,14 @@ const Contact = () => {
   ];
 
   return (
-    <section id="register" className="py-24 bg-transparent">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="register" className="py-24 bg-background">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Get Started</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight mb-3">
             Register Your Interest
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm text-muted-foreground max-w-lg mx-auto">
             Get access to our secure referral portal. We'll contact you within
             24 hours to get you set up.
           </p>
@@ -49,9 +50,9 @@ const Contact = () => {
           {/* Contact Info */}
           <div className="space-y-4">
             {contactInfo.map((item) => (
-              <div key={item.title} className="flex items-start gap-3 p-5 rounded-xl border border-border bg-white/70 backdrop-blur-sm hover:border-accent/30 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <item.icon className="w-5 h-5 text-accent" />
+              <div key={item.title} className="flex items-start gap-3 p-5 rounded-lg border border-border bg-card hover:border-accent/30 transition-colors">
+                <div className="w-9 h-9 rounded-full border border-accent/20 bg-accent/5 flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-4 h-4 text-accent" strokeWidth={1.5} />
                 </div>
                 <div>
                   <p className="font-semibold text-foreground text-sm">{item.title}</p>
@@ -66,22 +67,22 @@ const Contact = () => {
           {/* Form */}
           <div className="lg:col-span-2">
             {submitted ? (
-              <div className="rounded-xl border border-accent/30 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center py-16">
-                <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-accent" />
+              <div className="rounded-lg border border-accent/30 bg-card flex flex-col items-center justify-center py-16">
+                <div className="w-14 h-14 rounded-full border border-accent/20 bg-accent/5 flex items-center justify-center mb-4">
+                  <CheckCircle2 className="w-7 h-7 text-accent" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">
-                  Thank you!
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Thank you
                 </h3>
-                <p className="text-muted-foreground text-center max-w-sm">
+                <p className="text-sm text-muted-foreground text-center max-w-sm">
                   Your interest has been registered. We'll be in touch within
                   24 hours to set up your portal access.
                 </p>
               </div>
             ) : (
-              <div className="rounded-xl border border-border bg-white/70 backdrop-blur-sm overflow-hidden shadow-soft">
+              <div className="rounded-lg border border-border bg-card overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
-                  <h3 className="text-lg font-semibold text-foreground">
+                  <h3 className="text-base font-semibold text-foreground">
                     Practice Details
                   </h3>
                 </div>
@@ -131,7 +132,7 @@ const Contact = () => {
                     </div>
                     <Button
                       type="submit"
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-base font-semibold shadow-gold"
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-11 text-sm font-medium"
                     >
                       Register Interest
                     </Button>

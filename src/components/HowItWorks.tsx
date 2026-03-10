@@ -50,28 +50,26 @@ const HowItWorks = () => {
   return (
     <>
       {/* Services Grid */}
-      <section className="py-24 bg-transparent">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-24 bg-secondary/30">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-3">
-              Expert Radiology Reporting for Dental Imaging
+            <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Reporting Services</p>
+            <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight">
+              Comprehensive Reports
             </h2>
-            <p className="text-accent-foreground font-medium">
-              CBCT reports, panoramic interpretation, and more
-            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service, index) => (
               <div
                 key={index}
-                className="group p-6 rounded-xl border border-primary-foreground/10 bg-white/10 backdrop-blur-sm hover:border-accent/30 hover:bg-white/15 transition-all duration-300"
+                className="group p-6 rounded-lg border border-border bg-card hover:border-accent/30 hover:shadow-soft transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
-                  <service.icon className="w-6 h-6 text-accent" />
+                <div className="w-10 h-10 rounded-full border border-accent/20 bg-accent/5 flex items-center justify-center mb-4 group-hover:bg-accent/10 transition-colors">
+                  <service.icon className="w-5 h-5 text-accent" strokeWidth={1.5} />
                 </div>
-                <h3 className="font-bold text-primary-foreground mb-2">{service.title}</h3>
-                <p className="text-sm text-primary-foreground/60 leading-relaxed">
+                <h3 className="font-semibold text-foreground mb-2 text-sm">{service.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {service.description}
                 </p>
               </div>
@@ -81,27 +79,25 @@ const HowItWorks = () => {
       </section>
 
       {/* How to Submit */}
-      <section className="py-24 bg-transparent relative overflow-hidden">
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-24 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-2xl sm:text-3xl font-bold text-accent-foreground mb-3">
-              How It Works
+            <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Simple Process</p>
+            <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight">
+              How to Submit Cases
             </h2>
-            <p className="text-accent-foreground/60">
-              Simple, secure, and efficient
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {steps.map((step, index) => (
               <div key={step.num} className="text-center relative">
                 {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-7 left-[60%] w-[80%] h-px bg-gradient-to-r from-accent-foreground/30 to-transparent" />
+                  <div className="hidden md:block absolute top-5 left-[60%] w-[80%] h-px bg-border" />
                 )}
-                <div className="w-14 h-14 rounded-full border-2 border-accent-foreground/30 bg-white/20 backdrop-blur-sm text-accent-foreground font-bold text-xl flex items-center justify-center mx-auto mb-5">
+                <div className="w-10 h-10 rounded-full border border-accent bg-accent/5 text-accent font-semibold text-sm flex items-center justify-center mx-auto mb-5">
                   {step.num}
                 </div>
-                <p className="text-accent-foreground/70 leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {step.text}
                 </p>
               </div>

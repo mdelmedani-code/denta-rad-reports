@@ -10,13 +10,14 @@ const Pricing = () => {
   ];
 
   return (
-    <section className="py-24 bg-transparent">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-24 bg-secondary/30">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-accent font-medium mb-3">Pricing</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight mb-3">
             Transparent Pricing
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm text-muted-foreground max-w-lg mx-auto">
             Clear pricing based on field of view. No subscription fees.
           </p>
         </div>
@@ -25,9 +26,9 @@ const Pricing = () => {
           {tiers.map((tier, index) => (
             <div
               key={index}
-              className="text-center rounded-xl border border-border bg-white/70 backdrop-blur-sm hover:border-accent/50 hover:shadow-gold transition-all duration-300 overflow-hidden"
+              className="text-center rounded-lg border border-border bg-card hover:border-accent/40 hover:shadow-soft transition-all duration-300 overflow-hidden"
             >
-              <div className="h-0.5 bg-accent" />
+              <div className="h-px bg-accent" />
               <div className="pb-2 pt-6 px-4">
                 <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1 font-medium">
                   {tier.label}
@@ -60,7 +61,7 @@ const Pricing = () => {
 
         {/* Add-ons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between rounded-xl border border-border bg-white/70 backdrop-blur-sm p-5 hover:border-accent/30 transition-colors">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
             <div>
               <p className="font-semibold text-foreground text-sm">
                 Priority 24h Service
@@ -73,7 +74,7 @@ const Pricing = () => {
               +£50
             </Badge>
           </div>
-          <div className="flex items-center justify-between rounded-xl border border-border bg-white/70 backdrop-blur-sm p-5 hover:border-accent/30 transition-colors">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
             <div>
               <p className="font-semibold text-foreground text-sm">
                 IAN Nerve Tracing
