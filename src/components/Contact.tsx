@@ -178,7 +178,7 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="phone" className="text-sm">Contact Number <span className="text-destructive">*</span></Label>
-                      <Input id="phone" type="tel" placeholder="+44 7700 900000" required />
+                      <Input id="phone" type="tel" placeholder="+44 7700 900000" required maxLength={25} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-sm">Email Address <span className="text-destructive">*</span></Label>
