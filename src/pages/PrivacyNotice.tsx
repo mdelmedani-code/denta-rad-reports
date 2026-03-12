@@ -178,13 +178,12 @@ export default function PrivacyNotice() {
               <div className="bg-muted border rounded-lg p-4">
                 <p className="text-foreground mb-2"><strong>Primary data storage is within the UK/EU.</strong></p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Where data is transferred to sub-processors outside the UK (for example, AI providers based in the United States), we ensure appropriate safeguards are in place:
+                  Where data is transferred to sub-processors outside the UK, we ensure appropriate safeguards are in place:
                 </p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• <strong>Standard Contractual Clauses (SCCs)</strong> approved by the ICO</li>
                   <li>• <strong>UK GDPR International Data Transfer Agreement (IDTA)</strong> where required</li>
                   <li>• Transfer Impact Assessments completed for each sub-processor</li>
-                  <li>• Only anonymised data is shared with non-UK/EU AI providers</li>
                 </ul>
               </div>
             </section>

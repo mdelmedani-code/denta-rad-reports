@@ -102,7 +102,7 @@ export default function TermsOfService() {
                 <ul className="list-disc ml-6 space-y-1 text-muted-foreground">
                   <li>ICO-approved Standard Contractual Clauses (SCCs)</li>
                   <li>UK International Data Transfer Agreement (IDTA) where applicable</li>
-                  <li>Only anonymised data is shared with non-UK/EU AI sub-processors</li>
+                  <li>Only anonymised data is shared with non-UK/EU sub-processors where necessary</li>
                 </ul>
               </section>
 
