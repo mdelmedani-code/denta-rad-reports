@@ -160,13 +160,6 @@ export default function PrivacyNotice() {
                       Transfer mechanism: UK GDPR Adequacy / Standard Contractual Clauses
                     </li>
                     <li>
-                      <strong>AI Providers (Report drafting assistance):</strong><br />
-                      Purpose: Assisting with report drafting<br />
-                      Data shared: <strong>Anonymised clinical findings only</strong> — no patient names, dates of birth, NHS numbers, or other identifiers are transmitted<br />
-                      Transfer mechanism: Standard Contractual Clauses where applicable<br />
-                      Note: All AI-generated content is reviewed and approved by a qualified radiologist before delivery
-                    </li>
-                    <li>
                       <strong>Resend (Email notifications):</strong><br />
                       Purpose: Sending system notifications and registration confirmations<br />
                       Data shared: Email addresses only<br />
