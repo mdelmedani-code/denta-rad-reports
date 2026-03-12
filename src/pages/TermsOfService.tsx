@@ -88,7 +88,7 @@ export default function TermsOfService() {
                 <ul className="list-disc ml-6 space-y-1 text-muted-foreground">
                   <li><strong>Upload:</strong> Secure portal with encrypted transfer to UK/EU hosted storage</li>
                   <li><strong>Processing:</strong> Automated metadata extraction followed by expert radiologist review</li>
-                  <li><strong>Reporting:</strong> AI-assisted report drafting (anonymised data only) with full expert validation and sign-off</li>
+                  <li><strong>Reporting:</strong> Expert radiologist prepares diagnostic report with full review and sign-off</li>
                   <li><strong>Delivery:</strong> Secure portal download only — reports are never sent via email</li>
                   <li><strong>Retention:</strong> 8 years from scan date for adult patients; until 25th birthday or 8 years (whichever is longer) for patients under 18, per the NHS Records Management Code of Practice</li>
                 </ul>
