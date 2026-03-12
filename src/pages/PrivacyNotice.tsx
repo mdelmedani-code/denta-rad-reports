@@ -87,6 +87,9 @@ export default function PrivacyNotice() {
                 <p className="font-semibold text-foreground mb-2">Special Category Data — Additional Legal Basis (Article 9(2)(h)):</p>
                 <p className="text-sm text-muted-foreground">
                   Patient health data (CBCT scans and clinical information) is processed under <strong>Article 9(2)(h) of UK GDPR</strong> — processing necessary for the purposes of preventive or occupational medicine, medical diagnosis, the provision of health or social care, or the management of health or social care systems and services. This processing is carried out by or under the responsibility of a health professional subject to professional secrecy obligations. Our reporting radiologists are registered with the General Dental Council (GDC) and/or General Medical Council (GMC).
+                </p>
+              </div>
+            </section>
 
             <section>
               <h2 className="text-xl font-bold mb-3">How We Use Your Data</h2>
