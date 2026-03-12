@@ -107,7 +107,7 @@ export default function PrivacyNotice() {
             <section>
               <h2 className="text-xl font-bold mb-3">Automated Decision-Making</h2>
               <p className="text-muted-foreground">
-                We use AI tools to assist in drafting radiology reports. However, <strong>no automated decisions are made without human oversight</strong>. All AI-assisted reports are reviewed, edited, and approved by a qualified radiologist before delivery. The AI processes anonymised clinical findings only — no patient identifiers are shared with AI providers.
+                We do not use automated decision-making or profiling in relation to patient data. All diagnostic reports are prepared and reviewed by qualified, GDC/GMC registered radiologists.
               </p>
             </section>
 
