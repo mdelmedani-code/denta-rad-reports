@@ -182,7 +182,7 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-sm">Email Address <span className="text-destructive">*</span></Label>
-                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
+                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required maxLength={255} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="volume" className="text-sm">Expected Monthly Volume <span className="text-destructive">*</span></Label>
