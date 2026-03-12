@@ -202,7 +202,7 @@ const Contact = () => {
                       <Label htmlFor="message" className="text-sm">
                         Additional Information <span className="text-muted-foreground">(optional)</span>
                       </Label>
-                      <Textarea id="message" placeholder="Any specific requirements or questions..." rows={3} />
+                      <Textarea id="message" placeholder="Any specific requirements or questions..." rows={3} maxLength={1000} />
                     </div>
                     <Button
                       type="submit"
