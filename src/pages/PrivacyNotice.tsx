@@ -97,7 +97,7 @@ export default function PrivacyNotice() {
                 <li><strong>Receive:</strong> You upload CBCT scan via our secure portal</li>
                 <li><strong>Store:</strong> Encrypted storage in UK data centres (Supabase UK/EU region)</li>
                 <li><strong>Analyse:</strong> Expert radiologist reviews scan using specialist software</li>
-                <li><strong>Report:</strong> Diagnostic report created with AI assistance (anonymised data only — see sub-processors below)</li>
+                <li><strong>Report:</strong> Expert radiologist creates a detailed diagnostic report</li>
                 <li><strong>Deliver:</strong> Secure portal download only (no email transmission of reports)</li>
                 <li><strong>Retain:</strong> Stored per NHS Records Management Code of Practice</li>
                 <li><strong>Audit:</strong> All access logged for security and regulatory compliance</li>
@@ -107,7 +107,7 @@ export default function PrivacyNotice() {
             <section>
               <h2 className="text-xl font-bold mb-3">Automated Decision-Making</h2>
               <p className="text-muted-foreground">
-                We use AI tools to assist in drafting radiology reports. However, <strong>no automated decisions are made without human oversight</strong>. All AI-assisted reports are reviewed, edited, and approved by a qualified radiologist before delivery. The AI processes anonymised clinical findings only — no patient identifiers are shared with AI providers.
+                We do not use automated decision-making or profiling in relation to patient data. All diagnostic reports are prepared and reviewed by qualified, GDC/GMC registered radiologists.
               </p>
             </section>
 
@@ -160,13 +160,6 @@ export default function PrivacyNotice() {
                       Transfer mechanism: UK GDPR Adequacy / Standard Contractual Clauses
                     </li>
                     <li>
-                      <strong>AI Providers (Report drafting assistance):</strong><br />
-                      Purpose: Assisting with report drafting<br />
-                      Data shared: <strong>Anonymised clinical findings only</strong> — no patient names, dates of birth, NHS numbers, or other identifiers are transmitted<br />
-                      Transfer mechanism: Standard Contractual Clauses where applicable<br />
-                      Note: All AI-generated content is reviewed and approved by a qualified radiologist before delivery
-                    </li>
-                    <li>
                       <strong>Resend (Email notifications):</strong><br />
                       Purpose: Sending system notifications and registration confirmations<br />
                       Data shared: Email addresses only<br />
@@ -185,13 +178,12 @@ export default function PrivacyNotice() {
               <div className="bg-muted border rounded-lg p-4">
                 <p className="text-foreground mb-2"><strong>Primary data storage is within the UK/EU.</strong></p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Where data is transferred to sub-processors outside the UK (for example, AI providers based in the United States), we ensure appropriate safeguards are in place:
+                  Where data is transferred to sub-processors outside the UK, we ensure appropriate safeguards are in place:
                 </p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   <li>• <strong>Standard Contractual Clauses (SCCs)</strong> approved by the ICO</li>
                   <li>• <strong>UK GDPR International Data Transfer Agreement (IDTA)</strong> where required</li>
                   <li>• Transfer Impact Assessments completed for each sub-processor</li>
-                  <li>• Only anonymised data is shared with non-UK/EU AI providers</li>
                 </ul>
               </div>
             </section>
