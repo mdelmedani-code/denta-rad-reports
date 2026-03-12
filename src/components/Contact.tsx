@@ -149,7 +149,7 @@ const Contact = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="firstName" className="text-sm">First Name <span className="text-destructive">*</span></Label>
-                        <Input id="firstName" placeholder="John" required />
+                        <Input id="firstName" placeholder="John" required maxLength={50} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="lastName" className="text-sm">Last Name <span className="text-destructive">*</span></Label>
