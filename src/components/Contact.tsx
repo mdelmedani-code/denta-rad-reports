@@ -149,11 +149,11 @@ const Contact = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="firstName" className="text-sm">First Name <span className="text-destructive">*</span></Label>
-                        <Input id="firstName" placeholder="John" required />
+                        <Input id="firstName" placeholder="John" required maxLength={50} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="lastName" className="text-sm">Last Name <span className="text-destructive">*</span></Label>
-                        <Input id="lastName" placeholder="Smith" required />
+                        <Input id="lastName" placeholder="Smith" required maxLength={50} />
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -174,15 +174,15 @@ const Contact = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="practice" className="text-sm">Practice Name</Label>
-                      <Input id="practice" placeholder="Your Practice/Clinic" />
+                      <Input id="practice" placeholder="Your Practice/Clinic" maxLength={100} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="phone" className="text-sm">Contact Number <span className="text-destructive">*</span></Label>
-                      <Input id="phone" type="tel" placeholder="+44 7700 900000" required />
+                      <Input id="phone" type="tel" placeholder="+44 7700 900000" required maxLength={25} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-sm">Email Address <span className="text-destructive">*</span></Label>
-                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required />
+                      <Input id="email" type="email" placeholder="john.smith@dentalclinic.co.uk" required maxLength={255} />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="volume" className="text-sm">Expected Monthly Volume <span className="text-destructive">*</span></Label>
@@ -202,7 +202,7 @@ const Contact = () => {
                       <Label htmlFor="message" className="text-sm">
                         Additional Information <span className="text-muted-foreground">(optional)</span>
                       </Label>
-                      <Textarea id="message" placeholder="Any specific requirements or questions..." rows={3} />
+                      <Textarea id="message" placeholder="Any specific requirements or questions..." rows={3} maxLength={1000} />
                     </div>
                     <Button
                       type="submit"

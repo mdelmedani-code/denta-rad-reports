@@ -702,6 +702,27 @@ export type Database = {
           },
         ]
       }
+      registration_submissions: {
+        Row: {
+          email: string | null
+          id: string
+          ip_address: string
+          submitted_at: string
+        }
+        Insert: {
+          email?: string | null
+          id?: string
+          ip_address: string
+          submitted_at?: string
+        }
+        Update: {
+          email?: string | null
+          id?: string
+          ip_address?: string
+          submitted_at?: string
+        }
+        Relationships: []
+      }
       report_images: {
         Row: {
           caption: string | null
@@ -1399,6 +1420,7 @@ export type Database = {
         Args: { p_clinic_id: string }
         Returns: boolean
       }
+      cleanup_old_registration_submissions: { Args: never; Returns: undefined }
       create_report_share: { Args: { p_report_id: string }; Returns: string }
       create_report_version: {
         Args: { p_new_version_number: number; p_original_report_id: string }
