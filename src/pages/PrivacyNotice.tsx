@@ -97,7 +97,7 @@ export default function PrivacyNotice() {
                 <li><strong>Receive:</strong> You upload CBCT scan via our secure portal</li>
                 <li><strong>Store:</strong> Encrypted storage in UK data centres (Supabase UK/EU region)</li>
                 <li><strong>Analyse:</strong> Expert radiologist reviews scan using specialist software</li>
-                <li><strong>Report:</strong> Diagnostic report created with AI assistance (anonymised data only — see sub-processors below)</li>
+                <li><strong>Report:</strong> Expert radiologist creates a detailed diagnostic report</li>
                 <li><strong>Deliver:</strong> Secure portal download only (no email transmission of reports)</li>
                 <li><strong>Retain:</strong> Stored per NHS Records Management Code of Practice</li>
                 <li><strong>Audit:</strong> All access logged for security and regulatory compliance</li>
