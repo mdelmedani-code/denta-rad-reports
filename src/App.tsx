@@ -9,6 +9,7 @@ import MeetTheTeamPage from "./pages/MeetTheTeamPage";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyNotice from "./pages/PrivacyNotice";
+import DataProcessingAgreement from "./pages/DataProcessingAgreement";
 
 const queryClient = new QueryClient();
 
