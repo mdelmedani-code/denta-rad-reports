@@ -9,6 +9,7 @@ import MeetTheTeamPage from "./pages/MeetTheTeamPage";
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyNotice from "./pages/PrivacyNotice";
+import DataProcessingAgreement from "./pages/DataProcessingAgreement";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/meet-the-team" element={<MeetTheTeamPage />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/data-processing-agreement" element={<DataProcessingAgreement />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

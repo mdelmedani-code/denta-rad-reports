@@ -30,6 +30,9 @@ const Footer = () => {
             <Link to="/terms-of-service" className="hover:text-primary transition-colors">
               Terms of Service
             </Link>
+            <Link to="/data-processing-agreement" className="hover:text-primary transition-colors">
+              Data Processing Agreement
+            </Link>
             <Link to="/meet-the-team" className="hover:text-primary transition-colors">
               Meet the Team
             </Link>
