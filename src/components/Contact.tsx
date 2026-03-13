@@ -123,12 +123,7 @@ const Contact = () => {
               </div>
             ) : (
               <div className="rounded-lg border border-border bg-card overflow-hidden">
-                <div className="px-6 pt-6 pb-4">
-                  <h3 className="text-base font-semibold text-foreground">
-                    Practice Details
-                  </h3>
-                </div>
-                <div className="px-6 pb-6">
+                <div className="p-6">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
