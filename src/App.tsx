@@ -24,6 +24,7 @@ const App = () => (
             <Route path="/meet-the-team" element={<MeetTheTeamPage />} />
             <Route path="/privacy" element={<PrivacyNotice />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/data-processing-agreement" element={<DataProcessingAgreement />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
