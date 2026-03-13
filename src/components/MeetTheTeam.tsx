@@ -52,7 +52,7 @@ const MeetTheTeam = () => {
             </h3>
             <p className="text-muted-foreground">
               Dentist |{" "}
-              <span className="italic">BChD</span>
+              <span className="italic">MChD/BChD, BSc</span>
             </p>
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground leading-relaxed">
