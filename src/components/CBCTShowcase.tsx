@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import cbctAxial from "@/assets/cbct-axial.png";
 import cbctCoronal from "@/assets/cbct-coronal.png";
 import cbctOcclusal from "@/assets/cbct-occlusal.png";
@@ -16,19 +17,21 @@ const images = [
 
 const CBCTShowcase = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"],
   });
 
   const count = images.length;
-  const spread = 0.85;
+  // On mobile: faster transitions with more spread and less overlap
+  const spread = isMobile ? 0.95 : 0.85;
   const segment = spread / count;
-  const overlap = segment * 0.4;
+  const overlap = segment * (isMobile ? 0.6 : 0.4);
 
   const opacities = images.map((_, i) => {
     const start = i * segment;
-    const fadeIn = start + segment * 0.35;
+    const fadeIn = start + segment * (isMobile ? 0.2 : 0.35);
     const hold = start + segment - overlap * 0.3;
     const fadeOut = start + segment + overlap * 0.5;
     return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [0, 1, 1, i === count - 1 ? 0.8 : 0.4]);
@@ -36,15 +39,15 @@ const CBCTShowcase = () => {
 
   const ys = images.map((_, i) => {
     const start = i * segment;
-    const fadeIn = start + segment * 0.35;
+    const fadeIn = start + segment * (isMobile ? 0.2 : 0.35);
     const hold = start + segment - overlap * 0.3;
     const fadeOut = start + segment + overlap * 0.5;
-    return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [40, 0, 0, -10]);
+    return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [isMobile ? 20 : 40, 0, 0, -10]);
   });
 
   const scales = images.map((_, i) => {
     const start = i * segment;
-    const fadeIn = start + segment * 0.35;
+    const fadeIn = start + segment * (isMobile ? 0.2 : 0.35);
     const hold = start + segment - overlap * 0.3;
     const fadeOut = start + segment + overlap * 0.5;
     return useTransform(scrollYProgress, [start, fadeIn, hold, Math.min(fadeOut, 1)], [0.95, 1, 1, 0.98]);
