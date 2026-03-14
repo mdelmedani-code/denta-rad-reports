@@ -68,7 +68,7 @@ const Pricing = () => {
               </p>
             </div>
             <Badge className="bg-accent/10 text-accent-foreground border-accent/20 font-bold">
-              £55
+              £75
             </Badge>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
