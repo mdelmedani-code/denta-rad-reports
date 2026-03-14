@@ -21,6 +21,9 @@ const Contact = () => {
   const [title, setTitle] = useState("");
   const [occupation, setOccupation] = useState("");
   const [volume, setVolume] = useState("");
+  const [scanTypes, setScanTypes] = useState("");
+  const [currentArrangement, setCurrentArrangement] = useState("");
+  const [preferredTurnaround, setPreferredTurnaround] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
