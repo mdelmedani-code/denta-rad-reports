@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Clock } from "lucide-react";
 
 import fovSmall from "@/assets/fov-small.png";
 import fovMedium from "@/assets/fov-medium.png";
