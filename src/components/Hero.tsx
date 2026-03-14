@@ -32,6 +32,8 @@ const Hero = () => {
               src={dentaradLogo}
               alt="DentaRad Logo"
               className="w-80 sm:w-[28rem] lg:w-[36rem] xl:w-[42rem] object-contain"
+              style={{ imageRendering: 'auto', WebkitFontSmoothing: 'antialiased' }}
+              draggable={false}
             />
           </div>
 
