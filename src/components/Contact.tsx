@@ -61,6 +61,9 @@ const Contact = () => {
       phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
       volume,
+      scanTypes,
+      currentArrangement,
+      preferredTurnaround,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
     };
 
