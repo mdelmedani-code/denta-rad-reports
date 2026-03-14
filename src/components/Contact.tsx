@@ -36,6 +36,18 @@ const Contact = () => {
       toast({ title: "Volume is required", description: "Please select your expected monthly volume.", variant: "destructive" });
       return;
     }
+    if (!scanTypes) {
+      toast({ title: "Scan Types is required", description: "Please select your required scan types.", variant: "destructive" });
+      return;
+    }
+    if (!currentArrangement) {
+      toast({ title: "Current Reporting Arrangement is required", description: "Please select your current reporting arrangement.", variant: "destructive" });
+      return;
+    }
+    if (!preferredTurnaround) {
+      toast({ title: "Preferred Turnaround is required", description: "Please select your preferred turnaround.", variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
 
