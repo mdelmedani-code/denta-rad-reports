@@ -30,7 +30,7 @@ const HowItWorks = () => {
             {services.map((service) => (
               <div
                 key={service}
-                className="flex items-center justify-center rounded-lg border border-border bg-card text-lg font-medium text-foreground hover:border-accent/30 transition-colors py-6 px-4"
+                className="flex items-center justify-center text-center rounded-lg border border-border bg-card text-lg font-medium text-foreground hover:border-accent/30 transition-colors py-6 px-4"
               >
                 {service}
               </div>
