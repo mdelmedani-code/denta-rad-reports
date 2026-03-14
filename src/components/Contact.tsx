@@ -21,6 +21,9 @@ const Contact = () => {
   const [title, setTitle] = useState("");
   const [occupation, setOccupation] = useState("");
   const [volume, setVolume] = useState("");
+  const [scanTypes, setScanTypes] = useState("");
+  const [currentArrangement, setCurrentArrangement] = useState("");
+  const [preferredTurnaround, setPreferredTurnaround] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +34,18 @@ const Contact = () => {
     }
     if (!volume) {
       toast({ title: "Volume is required", description: "Please select your expected monthly volume.", variant: "destructive" });
+      return;
+    }
+    if (!scanTypes) {
+      toast({ title: "Scan Types is required", description: "Please select your required scan types.", variant: "destructive" });
+      return;
+    }
+    if (!currentArrangement) {
+      toast({ title: "Current Reporting Arrangement is required", description: "Please select your current reporting arrangement.", variant: "destructive" });
+      return;
+    }
+    if (!preferredTurnaround) {
+      toast({ title: "Preferred Turnaround is required", description: "Please select your preferred turnaround.", variant: "destructive" });
       return;
     }
 
@@ -46,6 +61,9 @@ const Contact = () => {
       phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
       volume,
+      scanTypes,
+      currentArrangement,
+      preferredTurnaround,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
     };
 
@@ -188,6 +206,45 @@ const Contact = () => {
                           <SelectItem value="6-15">6-15 scans per month</SelectItem>
                           <SelectItem value="16-30">16-30 scans per month</SelectItem>
                           <SelectItem value="30+">30+ scans per month</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="scanTypes" className="text-sm">Scan Types Required <span className="text-destructive">*</span></Label>
+                      <Select value={scanTypes} onValueChange={setScanTypes}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select scan types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cbct-only">CBCT Only</SelectItem>
+                          <SelectItem value="opg-only">OPG Only</SelectItem>
+                          <SelectItem value="both">Both CBCT and OPG</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="currentArrangement" className="text-sm">Current Reporting Arrangement <span className="text-destructive">*</span></Label>
+                      <Select value={currentArrangement} onValueChange={setCurrentArrangement}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select current arrangement" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="in-house">I report in-house</SelectItem>
+                          <SelectItem value="another-service">I use another reporting service</SelectItem>
+                          <SelectItem value="no-solution">I have no current reporting solution</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="preferredTurnaround" className="text-sm">Preferred Turnaround <span className="text-destructive">*</span></Label>
+                      <Select value={preferredTurnaround} onValueChange={setPreferredTurnaround}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select preferred turnaround" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard (2-3 working days)</SelectItem>
+                          <SelectItem value="priority-24h">Priority 24h (where possible)</SelectItem>
+                          <SelectItem value="no-preference">No preference</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
