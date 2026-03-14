@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Clock } from "lucide-react";
 
 import fovSmall from "@/assets/fov-small.png";
 import fovMedium from "@/assets/fov-medium.png";
@@ -55,7 +56,7 @@ const Pricing = () => {
           ))}
         </div>
 
-        {/* Add-ons */}
+        {/* Add-ons & Turnaround */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center justify-between rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
             <div>
@@ -82,6 +83,16 @@ const Pricing = () => {
             <Badge className="bg-accent/10 text-accent-foreground border-accent/20 font-bold">
               +50%
             </Badge>
+          </div>
+          <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-5 hover:border-accent/30 transition-colors">
+            <div className="w-9 h-9 rounded-full border border-accent/20 bg-accent/5 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-4 h-4 text-accent" strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Turnaround</p>
+              <p className="text-xs text-muted-foreground">Standard: 2-3 working days</p>
+              <p className="text-xs text-muted-foreground">Priority: 24 hours</p>
+            </div>
           </div>
         </div>
       </div>

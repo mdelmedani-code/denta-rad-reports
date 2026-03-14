@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mail, Clock, MapPin, CheckCircle2 } from "lucide-react";
+import { Mail, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -75,8 +75,6 @@ const Contact = () => {
 
   const contactInfo = [
     { icon: Mail, title: "Email", lines: ["info@dentarad.co.uk"] },
-    { icon: Clock, title: "Turnaround", lines: ["Standard: 2-3 working days", "Priority: 24 hours"] },
-    { icon: MapPin, title: "Coverage", lines: ["UK-wide teleradiology service"] },
   ];
 
   return (
