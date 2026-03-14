@@ -210,6 +210,45 @@ const Contact = () => {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
+                      <Label htmlFor="scanTypes" className="text-sm">Scan Types Required <span className="text-destructive">*</span></Label>
+                      <Select value={scanTypes} onValueChange={setScanTypes}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select scan types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cbct-only">CBCT Only</SelectItem>
+                          <SelectItem value="opg-only">OPG Only</SelectItem>
+                          <SelectItem value="both">Both CBCT and OPG</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="currentArrangement" className="text-sm">Current Reporting Arrangement <span className="text-destructive">*</span></Label>
+                      <Select value={currentArrangement} onValueChange={setCurrentArrangement}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select current arrangement" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="in-house">I report in-house</SelectItem>
+                          <SelectItem value="another-service">I use another reporting service</SelectItem>
+                          <SelectItem value="no-solution">I have no current reporting solution</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="preferredTurnaround" className="text-sm">Preferred Turnaround <span className="text-destructive">*</span></Label>
+                      <Select value={preferredTurnaround} onValueChange={setPreferredTurnaround}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select preferred turnaround" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard (2-3 working days)</SelectItem>
+                          <SelectItem value="priority-24h">Priority 24h (where possible)</SelectItem>
+                          <SelectItem value="no-preference">No preference</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label htmlFor="message" className="text-sm">
                         Additional Information <span className="text-muted-foreground">(optional)</span>
                       </Label>
