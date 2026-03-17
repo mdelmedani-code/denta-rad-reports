@@ -1,14 +1,21 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+Allow: /meet-the-team
+Allow: /privacy
+Allow: /terms-of-service
+Allow: /data-processing-agreement
+
+Disallow: /admin*
+Disallow: /dashboard*
+Disallow: /login*
+Disallow: /upload*
+Disallow: /report*
+Disallow: /billing*
+Disallow: /audit*
+Disallow: /security*
+Disallow: /invoic*
+Disallow: /snippet*
+Disallow: /template*
+Disallow: /viewer*
+
+Sitemap: https://denta-rad-reports.lovable.app/sitemap.xml
