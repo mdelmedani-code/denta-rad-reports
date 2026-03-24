@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import dentaradLogo from "@/assets/dentarad-logo-clean.png";
+import icoLogo from "@/assets/ico-logo.png";
 
 const Footer = () => {
   return (
