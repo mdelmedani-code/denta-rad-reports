@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import dentaradLogo from "@/assets/dentarad-logo-clean.png";
+import icoLogo from "@/assets/ico-logo.png";
 
 const Footer = () => {
   return (
@@ -22,13 +23,9 @@ const Footer = () => {
             <p className="text-xs text-muted-foreground/60 mt-2">
               Trading name of Radelm Ltd.
             </p>
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded px-2 py-1">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                <span>ICO Registered: ZC105797</span>
-              </div>
+            <div className="flex items-center gap-2.5 mt-3">
+              <img src={icoLogo} alt="ICO - Information Commissioner's Office" className="h-8 rounded" />
+              <span className="text-xs text-muted-foreground">ICO Registered: ZC105797</span>
             </div>
           </div>
           <div className="flex flex-col items-center sm:items-end gap-2 text-sm text-muted-foreground">
